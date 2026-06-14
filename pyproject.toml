@@ -1,0 +1,23 @@
+[project]
+name = "games-store-api"
+version = "0.1.0"
+description = "REST API about games"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "asyncpg>=0.31.0",
+    "celery>=5.6.3",
+    "fastapi>=0.136.3",
+    "fastapi-mail>=1.6.4",
+    "pwdlib[argon2]>=0.3.0",
+    "pyjwt>=2.13.0",
+    "pytest>=9.1.0",
+    "redis>=8.0.0",
+    "sqlmodel>=0.0.38",
+    "uvicorn[standard]>=0.49.0",
+]
+
+[tool.uv.workspace]
+members = [
+    "venv",
+]

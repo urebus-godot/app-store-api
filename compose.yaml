@@ -1,0 +1,18 @@
+services:
+  db:
+    image: #postgres:17-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - name=value
+
+  web:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+  
+  redis:
+    image: #redis:7
+    ports:
+      - "6379:6379"
