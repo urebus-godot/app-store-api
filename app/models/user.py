@@ -1,6 +1,14 @@
 from datetime import date, UTC
+from uuid import UUID, uuid4
+from enum import StrEnum
 from pydantic import EmailStr
 from sqlmodel import SQLModel, Field
+
+class UserRole(StrEnum):
+    DEVELOPER = "developer"
+    MODERATOR = "moderator"
+    USER = "user"
+
 
 class BaseUser(SQLModel):
     username: str
@@ -8,7 +16,10 @@ class BaseUser(SQLModel):
 
 
 class UserDB(BaseUser):
+    id: UUID = Field(default_factory=lambda: uuid4())
     registration_date: date = Field(default=function.now(UTC))
+    hashed_password: str
+    role: UserRole = UserRole.USER
 
 
 class UserRequest(BaseUser):
@@ -16,4 +27,9 @@ class UserRequest(BaseUser):
 
 
 class UserResponse(BaseUser):
-    pass
+    id: UUID
+
+
+class UserUpdate(BaseUser):
+    email: EmailStr | None = None
+    

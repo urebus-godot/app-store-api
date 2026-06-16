@@ -6,5 +6,6 @@ class Settings(BaseSettings):
     API_DESC: str = "REST API of the videogame store"
 
     DB_URL: str = environ.get("DB_URL")
+    REDIS_URL: str  = environ.get("REDIS_URL")
 
 settings = Settings()

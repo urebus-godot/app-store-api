@@ -1,3 +1,4 @@
+from uuid import UUID, uuid4
 from sqlmodel import SQLModel, Field
 
 class BaseReview(SQLModel):
@@ -7,7 +8,7 @@ class BaseReview(SQLModel):
 
 
 class ReviewDB(BaseReview):
-    pass
+    id: UUID = Field(default_factory=lambda: uuid4())
 
 
 class ReviewRequest(BaseReview):
@@ -15,4 +16,4 @@ class ReviewRequest(BaseReview):
 
 
 class ReviewResponse(BaseReview):
-    pass
+    id: UUID
