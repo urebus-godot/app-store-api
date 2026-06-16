@@ -1,6 +1,8 @@
 from datetime import date, UTC
 from uuid import UUID, uuid4
 from enum import StrEnum
+from decimal import Decimal
+
 from pydantic import EmailStr
 from sqlmodel import SQLModel, Field
 
@@ -20,6 +22,7 @@ class UserDB(BaseUser):
     registration_date: date = Field(default=function.now(UTC))
     hashed_password: str
     role: UserRole = UserRole.USER
+    balance: Decimal = Field(default=0, ge=0)
 
 
 class UserRequest(BaseUser):

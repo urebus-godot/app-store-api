@@ -18,7 +18,7 @@ async def get_app_reviews(
     return await review_repo.get_app_reviews(app_id, session)
 
 
-async def create_review(
+async def delete_review(
     app_id: str,
     request: ReviewRequest,
     session: AsyncSession

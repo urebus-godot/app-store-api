@@ -24,10 +24,10 @@ async def get_app_reviews(
     return await review_service.get_app_reviews(app_id, session)
 
 
-@router.post("/reviews/{app_id}")
-async def create_review(
-    app_id: str,
+@router.delete("/reviews/{id}")
+async def delete_review(
+    id: str,
     request: ReviewRequest,
     session: SessionDep
     ):
-    return await review_service.create_review()
+    return await review_service.delete_review()

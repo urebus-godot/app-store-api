@@ -1,7 +1,7 @@
 [project]
 name = "app-store-api"
 version = "0.1.0"
-description = "REST API of the service where you can find and upload apps"
+description = "REST API of the web store where you can purchase and upload apps"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [

@@ -1,4 +1,7 @@
+from decimal import Decimal
+
 from fastapi import APIRouter
+
 from app.core.dependencies import SessionDep, UserDep
 from app.models.user import UserRequest
 from app.service import user_service
@@ -14,13 +17,21 @@ async def register_user(
     return await user_service.register_user(request, session)
 
 
-@router.post("/users/register-user")
-async def send_bid_to_become_developer(
-    request: UserRequest,
+@router.get("/users/{username}")
+async def update_current_user(
+    username: str,
     session: SessionDep
-    ):    
-    return await user_service.send_bid_to_become_developer(
-        request, session)
+    ):
+    return await user_service.update_user(username, session)
+
+
+@router.post("/users/me/increase-balance")
+async def increase_balance(
+    amount: Decimal,
+    user: UserDep,
+    session: SessionDep
+    ):
+    return await user_service.increase_balance(amount, session, username=user.username)
 
 
 @router.get("/users/{username}")
@@ -31,12 +42,12 @@ async def get_user(
     return await user_service.get_user(username, session)
 
 
-@router.get("/users/{username}")
-async def update_current_user(
-    username: str,
+@router.get("/users")
+async def get_user(
+    search_query: str,
     session: SessionDep
     ):
-    return await user_service.update_current_user(username, session)
+    return await user_service.get_users(search_query, session)
 
 
 @router.delete("/users/{username}")

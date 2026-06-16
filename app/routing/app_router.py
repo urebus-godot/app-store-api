@@ -32,14 +32,15 @@ async def get_app(
 
 @router.get("/apps")
 async def get_apps(
-    tags: set[str],
+    search_query: str,
     session: SessionDep
     ):
     return await app_service.get_apps()
 
 
-@router.delete("/apps")
+@router.delete("/apps/{id}")
 async def delete_app(
+    id: str,
     user: UserDep,
     session: SessionDep
     ):
