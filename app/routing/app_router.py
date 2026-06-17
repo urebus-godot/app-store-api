@@ -1,4 +1,7 @@
+from uuid import UUID
+
 from fastapi import APIRouter
+
 from app.core.dependencies import SessionDep, UserDep
 from app.models.app import AppRequest, AppUpdate
 from app.service import app_service
@@ -14,17 +17,18 @@ async def upload_app(
     return await app_service.upload_app(request, session)
 
 
-@router.patch("/apps")
+@router.patch("/apps/{id}")
 async def update_app(
+    id: UUID,
     update: AppUpdate,
     session: SessionDep
     ):
-    return await app_service.update_app(update, session)
+    return await app_service.update_app(update, session, id=id)
 
 
 @router.get("/apps/{id}")
 async def get_app(
-    id: str,
+    id: UUID,
     session: SessionDep
     ):
     return await app_service.get_app()
@@ -40,7 +44,7 @@ async def get_apps(
 
 @router.delete("/apps/{id}")
 async def delete_app(
-    id: str,
+    id: UUID,
     user: UserDep,
     session: SessionDep
     ):

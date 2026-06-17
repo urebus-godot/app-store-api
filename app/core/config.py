@@ -8,4 +8,6 @@ class Settings(BaseSettings):
     DB_URL: str = environ.get("DB_URL")
     REDIS_URL: str  = environ.get("REDIS_URL")
 
+    DB_OUTPUT: str = False
+
 settings = Settings()

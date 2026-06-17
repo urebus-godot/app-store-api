@@ -18,7 +18,8 @@ async def upload_app(
 
 async def update_app(
     update: AppUpdate,
-    session: AsyncSession
+    session: AsyncSession,
+    id: str
     ):
     return await app_repo.update_app(update, session)
 

@@ -2,7 +2,7 @@
 This is API made with Python language using FastAPI framework which serves as web store where you can purchase applications.
 ## Intructions to use project locally
 1. Download repository
-2. Make project directory current
+2. Make the project directory current
 ``` bash
 cd path_to_project/app_store_api
 ```

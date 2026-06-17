@@ -1,8 +1,10 @@
 from decimal import Decimal
 
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 from app.models.user import UserRequest, UserDB, UserUpdate
 from app.repo import user_repo
+from app.core.exceptions import user_not_found_exception
 
 async def register_user(
         data: UserRequest, session: AsyncSession
@@ -24,9 +26,14 @@ async def update_user(
 
 
 async def get_user(
-        username: str, session: AsyncSession
+        session: AsyncSession, username: str
         ):
-    return await user_repo.get_user(session, username=username)
+    user = await user_repo.get_user(session, username=username)
+
+    if user is None:
+        raise user_not_found_exception
+
+    return 
 
 
 async def get_users(
@@ -36,7 +43,7 @@ async def get_users(
 
 
 async def delete_user(
-        username: str, session: AsyncSession
+        session: AsyncSession, user: UserDB
         ) -> dict[str, str]:
-    return await user_repo.delete_user(username, session)
+    return await user_repo.delete_user(user, session)
     

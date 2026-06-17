@@ -1,41 +1,69 @@
-from sqlmodel.ext.asyncio.session import AsyncSession
+from uuid import UUID
 
-async def app_exists(
-        session: AsyncSession,
-        app_id: str
-        ) -> bool:
-    return
+from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlmodel import select
+
+from app.models.app import AppRequest, AppDB, AppUpdate
 
 
 async def upload_app(
         request: AppRequest, session: AsyncSession
         ):
+    app = AppDB(
+        title=request.title,
+        description=request.description
+    )
+    session.add(app)
+    await session.commit()
+    await session.refresh(app)
+    
     return
 
 
 async def update_app(
-    update: AppUpdate,
+    data: AppUpdate,
+    id: UUID,
     session: AsyncSession
     ):
-    return
+    data = data.model_dump(exclude_unset=True)
+
+    app = await get_app(id, session)
+    app.sqlmodel_update(data)
+
+    session.add(app)
+    await session.commit()
+    await session.refresh(app)
+
+    return app
 
 
 async def get_app(
-    id: str,
+    id: UUID,
     session: AsyncSession
     ):
-    return
+    app = (await session.exec(
+        select(AppDB).where(AppDB.id == id)
+    )).one_or_none()
+    return app
 
 
 async def get_apps(
-    tags: set[str],
-    session: AsyncSession
+    session: AsyncSession, skip: int, limit: int
     ):
-    return
+    apps = (await session.exec(
+        select(AppDB).offset(skip).limit(limit)
+    )).all()
+    return apps
 
 
 async def delete_app(
-    user: UserDB,
+    id: UUID,
     session: AsyncSession
     ):
-    return
+    app = await get_app(id, session)
+
+    await session.delete(app)
+    await session.commit()
+    await session.flush(app)
+
+    return {"detail": "App has been deleted"}
