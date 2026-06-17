@@ -9,3 +9,5 @@ simple_testing/
 
 # Virtual environments
 .venv
+
+.env
