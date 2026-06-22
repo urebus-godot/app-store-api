@@ -2,6 +2,7 @@ from uuid import UUID, uuid4
 from typing import Optional
 from datetime import date, datetime, UTC
 
+from pydantic import ConfigDict
 from sqlmodel import SQLModel, Field, Relationship
 
 class BaseReview(SQLModel):
@@ -34,4 +35,9 @@ class ReviewResponse(BaseReview):
     id: UUID
     creation_date: date
     author_username: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
     #author: "UserResponse"
+
+
+class ReviewResponseWithAuthor(ReviewResponse):
+    author: "UserResponse"

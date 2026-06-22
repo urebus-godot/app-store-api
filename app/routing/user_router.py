@@ -57,7 +57,9 @@ async def update_current_user(
     user: UserDep,
     session: SessionDep
 ) -> UserResponse:
-    return await user_service.update_user(data, user, session)
+    return await user_service.update_user(
+        data=data, user=user, session=session
+        )
 
 
 @router.post("/users/me/top-up-balance")

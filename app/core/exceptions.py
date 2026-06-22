@@ -12,6 +12,11 @@ no_rights_exception = HTTPException(
     "You have no rights to perform this action"
 )
 
+email_registered_exception = HTTPException(
+    status.HTTP_400_BAD_REQUEST,
+    "Email is used by another user"
+)
+
 
 # ----- App -----
 

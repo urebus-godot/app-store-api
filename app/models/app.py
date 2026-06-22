@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Annotated
 
 from uuid import UUID, uuid4
 from decimal import Decimal
@@ -7,7 +7,7 @@ from enum import StrEnum
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy import String
 from sqlmodel import SQLModel, Field, Relationship
-from pydantic import model_validator
+from pydantic import model_validator, ConfigDict, field_validator
 from fastapi import UploadFile
 
 from app.core.config import settings
@@ -35,15 +35,15 @@ class BaseApp(SQLModel):
         min_length=settings.MIN_TITLE_LEN,
         max_length=settings.MAX_TITLE_LEN
         )
-    description: str | None = Field(
+    description: Optional[str] = Field(
         default=None,
         max_length=settings.MAX_DESC_LEN
         )
     category: AppCategory = AppCategory.APPLICATION
-    price: Decimal = Decimal(0)
+    price: Decimal = Field(default=0.0, ge=0.0)
     public: bool = True
-    keywords: set[str] = Field(
-        default=[title], min_items=1, max_items=20
+    keywords: Optional[set[str]] = Field(
+        default=None
         )
 
 
@@ -84,6 +84,7 @@ class AppRequest(BaseApp):
 
 class AppResponse(BaseApp):
     id: UUID
+    model_config = ConfigDict(from_attributes=True)
     #publisher: "UserResponse"
 
 

@@ -10,4 +10,7 @@ wheels/
 .venv
 
 .env
+<<<<<<< HEAD
 simple_testing/
+=======
+>>>>>>> 636e4dc62f7d1a60a065d2a818d7b963dc9266b7

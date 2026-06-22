@@ -98,7 +98,7 @@ async def get_games(
 ):
     games = (await session.exec(
         select(AppDB).where(
-            AppDB.game_genre == genre
+            AppDB.genre == genre
             ).offset(skip).limit(limit)
     )).all()
     return games

@@ -3,10 +3,12 @@ from uuid import UUID, uuid4
 from enum import StrEnum
 from decimal import Decimal
 
-from pydantic import EmailStr
+from pydantic import EmailStr, ConfigDict
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy import String
+
+from app.core.config import settings
 
 class UserRole(StrEnum):
     USER = "user"
@@ -15,7 +17,11 @@ class UserRole(StrEnum):
 
 
 class BaseUser(SQLModel):
-    username: str = Field(index=True)
+    username: str = Field(
+        index=True,
+        min_length=settings.MIN_NAME_LEN,
+        max_length=settings.MAX_NAME_LEN
+        )
     email: EmailStr | None = None
 
 
@@ -44,14 +50,14 @@ class UserDB(BaseUser, table=True):
     purchased_apps: list["AppDB"] = Relationship(
         back_populates="users_purchased"
         )
+    published_apps: list["AppDB"] = Relationship(
+        back_populates="publisher"
+        )
 
     reviews: list["ReviewDB"] = Relationship(
         back_populates="author"
         )
 
-    published_apps: list["AppDB"] = Relationship(
-        back_populates="publisher"
-        )
 
 
 class UserRequest(BaseUser):
@@ -63,6 +69,7 @@ class UserResponse(BaseUser):
     registration_date: date
 
     roles: list[UserRole]
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserResponseWithReviewsAndApps(UserResponse):

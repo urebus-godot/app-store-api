@@ -70,7 +70,7 @@ async def download_purchased_app(
     return await app_service.download_purchased_app(id, user, session)
 
 
-@router.get("/apps/{id}")
+@router.get("/apps/by-id/{id}")
 async def get_app(
     id: UUID,
     session: SessionDep

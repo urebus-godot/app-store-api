@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     MIN_TITLE_LEN: int = 3
     MAX_TITLE_LEN: int = 40
 
+    MIN_NAME_LEN: int = 3
+    MAX_NAME_LEN: int = 30
+
     MAX_DESC_LEN: int = 400
 
     DUMMY_HASH: str = "dummypassword"

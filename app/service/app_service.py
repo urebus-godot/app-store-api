@@ -95,7 +95,9 @@ async def get_apps(
     skip: int, limit: int
 ):
     apps = await app_repo.get_apps(session, skip, limit)
-    apps = filter_apps(apps, search_query)
+
+    if search_query is not None:
+        apps = filter_apps(apps, search_query)
 
     if apps:
         return apps
@@ -110,7 +112,9 @@ async def get_games(
     session: AsyncSession
 ) -> list[AppDB]:
     games = await app_repo.get_games(genre, session, skip, limit)
-    games = filter_apps(games, search_query)
+
+    if search_query is not None:
+        games = filter_apps(games, search_query)
 
     if games:
         return games

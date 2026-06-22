@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:18-alpine
+    image: postgres:16-alpine
     ports:
       - "5432:5432"
     environment:
@@ -9,6 +9,7 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=db
     container_name: db
+    restart: unless-stopped
     volumes:
       - db-data:/var/lib/postgresql/data
     networks: 
@@ -27,8 +28,10 @@ services:
     ports:
       - "6379:6379"
     container_name: redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass MySecurePassword
     volumes:
-      - redis-data:/var/lib/redis/data
+      - redis_data:/data
     networks: 
       - app-network
 
@@ -37,5 +40,6 @@ networks:
     driver: bridge
 
 volumes:
-  db-data:
-  redis-data:
+  db_data:
+  redis_data:
+    driver: local

@@ -6,7 +6,8 @@ from fastapi.security import HTTPAuthorizationCredentials
 from app.models.user import UserRequest, UserDB, UserUpdate
 from app.models.token import LoginResponse, RefreshTokenRequest
 from app.repo import user_repo
-from app.core.exceptions import user_not_found_exception
+from app.core.exceptions import (
+    user_not_found_exception, email_registered_exception)
 from app.core.security import verify_password
 from app.core.config import settings
 from app.core.auth import create_token_pair, blacklist_token, revoke_refresh_token
@@ -14,6 +15,8 @@ from app.core.auth import create_token_pair, blacklist_token, revoke_refresh_tok
 async def register_user(
     data: UserRequest, session: AsyncSession
 ) -> UserDB:
+    if await user_repo.email_registered(data.email, session):
+        raise email_registered_exception
     return await user_repo.register_user(data, session)
 
 
@@ -70,9 +73,9 @@ async def top_up_balance(
         
 
 async def update_user(
-    username: str, data: UserUpdate, session: AsyncSession
+    user: UserDB, data: UserUpdate, session: AsyncSession
 ):
-    return await user_repo.update_user(username, data, session)
+    return await user_repo.update_user(data=data, session=session, user=user)
 
 
 async def get_user(

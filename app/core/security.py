@@ -1,6 +1,6 @@
 import pwdlib
 
-password_hash = pwdlib.PasswordHash("argon2")
+password_hash = pwdlib.PasswordHash.recommended()
 
 
 def get_password_hash(password: str) -> str:

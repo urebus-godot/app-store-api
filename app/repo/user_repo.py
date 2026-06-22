@@ -1,15 +1,27 @@
 from decimal import Decimal
 
+from pydantic import EmailStr
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
 from app.models.user import UserRequest, UserDB, UserUpdate
 from app.core.security import get_password_hash
 
+async def email_registered(
+    email: EmailStr, session: AsyncSession
+) -> bool:
+    user = (await session.exec(
+        select(UserDB).where(UserDB.email == email)
+    )).one_or_none()
+    return user is not None
+
+
 async def register_user(
     data: UserRequest, session: AsyncSession
 ) -> UserDB:
-    user = UserDB.model_validate(data)
+    user = UserDB(**data.model_dump())
+    user.hashed_password = get_password_hash(data.password)
+
     session.add(user)
     await session.commit()
     await session.refresh(user)
