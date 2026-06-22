@@ -7,13 +7,9 @@ from app.models.user import UserRequest, UserDB, UserUpdate
 from app.core.security import get_password_hash
 
 async def register_user(
-        data: UserRequest, session: AsyncSession
-        ) -> UserDB:
-    user = UserDB(
-        username=data.username,
-        email=data.email,
-        hashed_password=get_password_hash(data.password)
-    )
+    data: UserRequest, session: AsyncSession
+) -> UserDB:
+    user = UserDB.model_validate(data)
     session.add(user)
     await session.commit()
     await session.refresh(user)
@@ -21,30 +17,34 @@ async def register_user(
     return user
 
 
-async def increase_balance(
-        amount: Decimal, user: UserDB, session: AsyncSession
-        ):
+async def top_up_balance(
+    amount: Decimal, user: UserDB, session: AsyncSession
+):
+    user.balance += amount
+
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
     
-    
-    return
+    return {"message": "Balance has been replenished"}
 
 
 async def update_user(
-        data: UserUpdate, session: AsyncSession, user: UserDB
-    ):
-    data = data.model_dump(exclude_unset=True)
+    data: UserUpdate, session: AsyncSession, user: UserDB
+):
+    data = data.model_dump(exclude_unset=True, exclude_none=True)
     user.sqlmodel_update(data)
 
     session.add(user)
     await session.commit()
     await session.refresh(user)
 
-    return
+    return user
 
 
 async def get_user(
     session: AsyncSession, username: str
-    ):
+):
     user = (await session.exec(
         select(UserDB).where(UserDB.username == username)
     )).one_or_none()
@@ -53,8 +53,8 @@ async def get_user(
 
 
 async def get_users(
-        skip: int, limit: int, session: AsyncSession
-        ) -> UserDB:
+    skip: int, limit: int, session: AsyncSession
+) -> UserDB:
     users = (await session.exec(
         select(UserDB).offset(skip).limit(limit)
     ))
@@ -62,9 +62,9 @@ async def get_users(
 
 
 async def delete_user(
-        user: UserDB, session: AsyncSession
-        ) -> dict[str, str]:
+    user: UserDB, session: AsyncSession
+) -> dict[str, str]:
     await session.delete(user)
     await session.flush(user)
 
-    return
+    return {"message": "User has been deleted"}

@@ -1,5 +1,5 @@
-# App Store API
-This is API made with Python language using FastAPI framework which serves as web store where you can purchase applications.
+# [App Store API]
+REST API for an online store where you can purchase and upload applications and games.
 ## Intructions to use project locally
 1. Download repository
 2. Make the project directory current

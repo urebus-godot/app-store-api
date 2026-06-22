@@ -1,5 +1,6 @@
 from uuid import UUID, uuid4
 from enum import StrEnum
+
 from sqlmodel import SQLModel, Field
 
 

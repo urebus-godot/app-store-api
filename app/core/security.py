@@ -1,9 +1,11 @@
 import pwdlib
 
+password_hash = pwdlib.PasswordHash("argon2")
+
 
 def get_password_hash(password: str) -> str:
-    return 
+    return password_hash.hash(password)
 
 
-def verify_password(plain: str, hashed: str) -> str:
-    return plain
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return password_hash.verify(plain_password, hashed_password)
