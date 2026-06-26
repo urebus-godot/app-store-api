@@ -12,9 +12,25 @@ no_rights_exception = HTTPException(
     "You have no rights to perform this action"
 )
 
-email_registered_exception = HTTPException(
-    status.HTTP_400_BAD_REQUEST,
+email_used_exception = HTTPException(
+    status.HTTP_409_CONFLICT,
     "Email is used by another user"
+)
+
+username_used_exception = HTTPException(
+    status.HTTP_409_CONFLICT,
+    "Username is used by another user"
+)
+
+already_has_role_exception = HTTPException(
+    status.HTTP_409_CONFLICT,
+    "You already have the requested role"
+)
+
+incorrect_creds_exception = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="Incorrect username or password",
+    headers={"WWW-Authenticate": "Bearer"},
 )
 
 
@@ -22,7 +38,7 @@ email_registered_exception = HTTPException(
 
 app_not_found_exception = HTTPException(
     status.HTTP_404_NOT_FOUND,
-    "Application not found"
+    "The application not found"
 )
 
 apps_not_found_exception = HTTPException(
@@ -32,7 +48,7 @@ apps_not_found_exception = HTTPException(
 
 app_not_purchased_exception = HTTPException(
     status.HTTP_402_PAYMENT_REQUIRED,
-    "Application must be purchased"
+    "The pplication must be purchased"
 )
 
 not_enough_funds_exception = HTTPException(
@@ -41,9 +57,37 @@ not_enough_funds_exception = HTTPException(
 )
 
 
+# ----- Cart -----
+
+app_purchased_exception = HTTPException(
+    status.HTTP_409_CONFLICT,
+    "The application has already been purchased"
+)
+
+app_in_cart_exception = HTTPException(
+    status.HTTP_409_CONFLICT,
+    "The application has already been added to the cart"
+)
+
+app_published_exception = HTTPException(
+    status.HTTP_409_CONFLICT,
+    "The application is published by you"
+)
+
+empty_cart_exception = HTTPException(
+    status.HTTP_400_BAD_REQUEST,
+    "The cart is empty"
+)
+
+app_not_in_cart_exception = HTTPException(
+    status.HTTP_404_NOT_FOUND,
+    "The application not in the cart"
+)
+
+
 # ----- Comment -----
 
 review_not_found_exception = HTTPException(
     status.HTTP_404_NOT_FOUND,
-    "Review not found"
+    "The review not found"
 )

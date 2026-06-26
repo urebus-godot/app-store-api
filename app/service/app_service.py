@@ -3,132 +3,103 @@ from uuid import UUID
 from decimal import Decimal
 from typing import Optional
 
-from sqlmodel.ext.asyncio.session import AsyncSession
+from fastapi import UploadFile
 
 from app.core.exceptions import (
     app_not_found_exception, 
-    not_enough_funds_exception,
     app_not_purchased_exception,
     apps_not_found_exception,
     no_rights_exception)
-from app.core.utils import filter_apps
+from app.utils import filter_apps
 from app.models.app import AppRequest, AppUpdate, GameGenre, AppDB, AppFile
 from app.models.user import UserDB
-from app.repo import app_repo
-
-async def upload_app(
-    data: AppRequest, user: UserDB, session: AsyncSession
-) -> AppDB:
-    return await app_repo.upload_app(data, user.id, session)
+from app.repo.app_repo import AppRepository
 
 
-async def upload_app_file(
-        data: AppFile, user: UserDB, session: AsyncSession
-):
-    with open(f"app_files/{data.filename}") as file:
-        file.write(data.file.file)
-    return {"message": "File has been uploaded"}
+class AppService:
+    def __init__(self, app_repo: AppRepository):
+        self.app_repo = app_repo
 
+    def upload_app_file(
+        self, file: UploadFile, app_id: UUID
+    ):
+        if file is not None:
+            name, ext = file.filename.split(".")
+            filename = app_id + "." + ext
+            with open(f"C:/Users/user/Desktop/AppData/{filename}", "wb") as f:
+                f.write(file.file.read())
 
-async def add_app_to_purchases(
-    id: UUID, user: UserDB, session: AsyncSession
-):
-    app = await get_app(id, session)
+    async def upload_app(
+        self, data: AppRequest, user: UserDB, file: UploadFile = None
+    ) -> AppDB:
+        app = await self.app_repo.upload_app(data, user.id)
+        self.upload_app_file(file, app.id)
 
-    return await app_repo.add_app_to_purchases(
-        user=user, app=app, session=session
-        )
+        return app
 
+    async def download_purchased_app(
+        self, id: UUID, user: UserDB
+    ):
+        app = await self.get_app(id)
 
-async def purchase_apps_in_purchases(
-    user: UserDB, session: AsyncSession
-):
-    total_cost = Decimal(0)
+        if not app in user.purchased_apps:
+            raise app_not_purchased_exception
 
-    for app in user.apps_to_purchase:
-        total_cost += app.price
+        return await self.app_repo.download_purchased_app(app)
 
-    if user.balance < total_cost:
-        raise not_enough_funds_exception
+    async def update_app(
+        self, id: UUID,
+        data: AppUpdate
+    ) -> AppDB:
+        app = await self.get_app(id)
 
-    return await app_repo.purchase_apps_in_purchases(
-        user, total_cost, session
-        )
+        return await self.app_repo.update_app(data, app=app)
 
+    async def get_app(
+        self, id: UUID
+    ) -> AppDB:
+        app = await self.app_repo.get_app(id)
 
-async def download_purchased_app(
-    id: UUID, user: UserDB, session: AsyncSession
-):
-    app = await get_app(id, session)
+        if not app or not app.public:
+            raise app_not_found_exception
 
-    if not id in user.purchased_app_ids:
-        raise app_not_purchased_exception
+        return app
 
-    return await app_repo.download_purchased_app(id, session)
+    async def get_apps(
+        self, search_query: Optional[str],
+        skip: int, limit: int
+    ) -> list[AppDB]:
+        apps = await self.app_repo.get_apps(skip, limit)
 
+        if search_query is not None:
+            apps = filter_apps(apps, search_query)
 
-async def update_app(
-    id: UUID,
-    data: AppUpdate,
-    session: AsyncSession,
-):
-    app = await get_app(id, session)
+        if apps:
+            return apps
+        raise apps_not_found_exception
 
-    return await app_repo.update_app(data, session, app=app)
+    async def get_games(
+        self, search_query: Optional[str], 
+        genre: Optional[GameGenre],
+        skip: int,
+        limit: int
+    ) -> list[AppDB]:
+        games = await self.app_repo.get_games(genre, skip, limit)
 
+        if search_query is not None:
+            games = filter_apps(games, search_query)
 
-async def get_app(
-    id: UUID,
-    session: AsyncSession
-):
-    app = await app_repo.get_app(id, session)
+        if games:
+            return games
+        raise apps_not_found_exception
 
-    if not app or not app.public:
-        raise app_not_found_exception
+    async def delete_app(
+        self, id: UUID,
+        user: UserDB
+    ) -> dict[str, str]:
+        app = await self.get_app(id)
 
-    return app
-
-
-async def get_apps(
-    search_query: str,
-    session: AsyncSession,
-    skip: int, limit: int
-):
-    apps = await app_repo.get_apps(session, skip, limit)
-
-    if search_query is not None:
-        apps = filter_apps(apps, search_query)
-
-    if apps:
-        return apps
-    raise apps_not_found_exception
-
-
-async def get_games(
-    search_query: Optional[str], 
-    genre: Optional[GameGenre],
-    skip: int,
-    limit: int,
-    session: AsyncSession
-) -> list[AppDB]:
-    games = await app_repo.get_games(genre, session, skip, limit)
-
-    if search_query is not None:
-        games = filter_apps(games, search_query)
-
-    if games:
-        return games
-    raise apps_not_found_exception
-
-
-async def delete_app(
-    id: UUID,
-    user: UserDB,
-    session: AsyncSession
-) -> dict[str, str]:
-    app = await get_app(id, session)
-
-    if not app.publisher_id == user.id:
-        raise no_rights_exception
-    
-    return await app_repo.delete_app(session=session, app=app)
+        if not app.publisher == user:
+            raise no_rights_exception
+        
+        return await self.app_repo.delete_app(app=app)

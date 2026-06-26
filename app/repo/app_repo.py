@@ -1,119 +1,147 @@
 from uuid import UUID
 from typing import Optional
 from decimal import Decimal
+from abc import ABC, abstractmethod
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
+from fastapi import UploadFile
 
-from app.models.app import AppRequest, AppDB, AppUpdate, GameGenre
+from app.models.app import (
+    AppRequest, GameRequest, AppDB, AppUpdate, 
+    GameGenre, AppCategory)
 from app.models.user import UserDB
 
-async def upload_app(
-    data: AppRequest, user_id: UUID, session: AsyncSession
-) -> AppDB:
-    app = AppDB(
-        **data.model_dump(),
-        publisher_id=user_id
-    )
-    session.add(app)
-    await session.commit()
-    await session.refresh(app)
-    
-    return app
+
+class AbstractAppRepository(ABC):
+    @abstractmethod
+    async def upload_app(
+        self, data: AppRequest, user_id: UUID
+    ) -> AppDB:
+        pass
+
+    @abstractmethod
+    async def update_app(
+        self, data: AppUpdate,
+        id: Optional[UUID] = None,
+        app: Optional[AppDB] = None,
+    ) -> AppDB:
+        pass
+
+    @abstractmethod
+    async def get_app(
+        self, id: UUID
+    ) -> AppDB:
+        pass
+
+    @abstractmethod
+    async def get_apps(
+        self, skip: int, limit: int
+    ) -> list[AppDB]:
+        pass
+
+    @abstractmethod
+    async def get_games(
+        self, genre: GameGenre,
+        skip: int, limit: int
+    ) -> list[AppDB]:
+        pass
+
+    @abstractmethod
+    async def delete_app(
+        self,
+        id: Optional[UUID] = None,
+        app: Optional[AppDB] = None
+    ) -> dict[str, str]:
+        pass
 
 
-async def add_app_to_purchases(
-    user: UserDB, session: AsyncSession,
-    id: Optional[UUID] = None,
-    app: Optional[AppDB] = None
-):
-    if app is None:
-        app = await get_app(id, session)
+class AppRepository(AbstractAppRepository):
+    def __init__(self, session: AsyncSession):
+        self.session = session
 
-    user.apps_to_purchase.append(app)
+    async def upload_app(
+        self, data: AppRequest, user_id: UUID
+    ) -> AppDB:
+        app = AppDB(
+                **data.model_dump(),
+                publisher_id=user_id
+            )
+        
+        if isinstance(data, GameRequest):
+            app.category = AppCategory.GAME
+        else:
+            app.category = AppCategory.APPLICATION
+            
+        self.session.add(app)
+        await self.session.commit()
+        await self.session.refresh(app)
+        
+        return app
 
-    session.add(user)
-    await session.commit()
-    await session.refresh(user)
+    async def update_app(
+        self, data: AppUpdate,
+        id: Optional[UUID] = None,
+        app: Optional[AppDB] = None,
+    ) -> AppDB:
+        if app is None:
+            app = await self.get_app(id)
 
-    return {"message": "App has been added to purchases"}
+        data = data.model_dump(exclude_unset=True, exclude_none=True)
 
+        app.sqlmodel_update(data)
 
-async def purchase_apps_in_purchases(
-    user: UserDB, total_cost: Decimal, session: AsyncSession
-):
-    user.purchased_apps = user.purchased_apps + user.apps_to_purchase
-    user.apps_to_purchase = []
-    user.balance -= total_cost
+        self.session.add(app)
+        await self.session.commit()
+        await self.session.refresh(app)
 
-    session.add(user)
-    await session.commit()
-    await session.refresh(user)
+        return app
 
-    return {"message": "Apps has been purchased"}
+    async def get_app(
+        self, id: UUID
+    ) -> AppDB:
+        app = (await self.session.exec(
+            select(AppDB).where(AppDB.id == id)
+        )).one_or_none()
+        return app
 
+    async def get_apps(
+        self, skip: int, limit: int
+    ) -> list[AppDB]:
+        apps = (await self.session.exec(
+            select(AppDB).offset(skip).limit(limit)
+        )).all()
+        return apps
 
-async def update_app(
-    data: AppUpdate,
-    session: AsyncSession,
-    id: Optional[UUID] = None,
-    app: Optional[AppDB] = None,
-):
-    if app is None:
-        app = await get_app(id, session)
+    async def get_games(
+        self, genre: Optional[GameGenre],
+        skip: int, limit: int
+    ) -> list[AppDB]:
+        if genre is not None:
+            games = (await self.session.exec(
+                select(AppDB).where(
+                    AppDB.genre == genre,
+                    AppDB.category == "game"
+                    ).offset(skip).limit(limit)
+            )).all()
+        else:
+            games = (await self.session.exec(
+                select(AppDB).where(
+                    AppDB.category == "game"
+                    ).offset(skip).limit(limit)
+            )).all()
+        return games
 
-    data = data.model_dump(exclude_unset=True, exclude_none=True)
+    async def delete_app(
+        self,
+        id: Optional[UUID] = None,
+        app: Optional[AppDB] = None
+    ) -> dict[str, str]:
+        if app is None:
+            app = await self.get_app(id)
 
-    app.sqlmodel_update(data)
+        await self.session.delete(app)
+        await self.session.commit()
+        #await self.session.flush(app)
 
-    session.add(app)
-    await session.commit()
-    await session.refresh(app)
-
-    return app
-
-
-async def get_app(
-    id: UUID,
-    session: AsyncSession
-):
-    app = (await session.exec(
-        select(AppDB).where(AppDB.id == id)
-    )).one_or_none()
-    return app
-
-
-async def get_apps(
-    session: AsyncSession, skip: int, limit: int
-    ):
-    apps = (await session.exec(
-        select(AppDB).offset(skip).limit(limit)
-    )).all()
-    return apps
-
-
-async def get_games(
-    genre: GameGenre, session: AsyncSession,
-    skip: int, limit: int
-):
-    games = (await session.exec(
-        select(AppDB).where(
-            AppDB.genre == genre
-            ).offset(skip).limit(limit)
-    )).all()
-    return games
-
-
-async def delete_app(
-    session: AsyncSession,
-    id: Optional[UUID] = None,
-    app: Optional[AppDB] = None
-):
-    if app is None:
-        app = await get_app(id, session)
-
-    await session.delete(app)
-    await session.commit()
-    await session.flush(app)
-
-    return {"detail": "App has been deleted"}
+        return {"detail": "App has been deleted"}

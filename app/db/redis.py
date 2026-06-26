@@ -4,10 +4,10 @@ from redis.asyncio import Redis
 
 from app.core.config import settings
 
-class RedisConnection:
-    def __init__(self):
+class RedisClient:
+    def __init__(self, url: str):
         self.redis = Redis.from_url(
-            settings.REDIS_URL, decode_responses=True
+            url, decode_responses=True
             )
 
     async def set(self, key: str, value) -> None:
@@ -21,3 +21,7 @@ class RedisConnection:
     async def delete(self, key: str) -> None:
         await self.redis.delete(key)
         await self.redis.aclose()
+
+
+def get_redis_client(url: str = settings.REDIS_URL) -> RedisClient:
+    return RedisClient(url)

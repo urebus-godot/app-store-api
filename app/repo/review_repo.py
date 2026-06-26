@@ -1,69 +1,105 @@
 from uuid import UUID
 from typing import Optional
+from abc import ABC, abstractmethod
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
-from app.repo.app_repo import get_app
+from app.repo.app_repo import AppRepository
 from app.models.review import ReviewRequest, ReviewDB
 from app.models.app import AppDB
 
-async def create_review(
-    data: ReviewRequest,
-    user_id: UUID,
-    session: AsyncSession,
-    app_id: Optional[UUID] = None,
-    app: Optional[AppDB] = None
-) -> ReviewDB:
-    if app is None:
-        app = await get_app(app_id, session)
 
-    review = ReviewDB(
-        **data.model_dump(),
-        author_id=user_id,
-        #app_id=app.id,
-        app=app
-        )
+class AbstractReviewRepository(ABC):
+    @abstractmethod
+    async def create_review(
+        self, data: ReviewRequest,
+        user_id: UUID,
+        app_id: Optional[UUID] = None,
+        app: Optional[AppDB] = None
+    ) -> ReviewDB:
+        pass
 
-    session.add(review)
-    await session.commit()
-    await session.refresh(review)
+    @abstractmethod
+    async def get_review(
+        self, id: UUID
+    ) -> ReviewDB | None:
+        pass
 
-    return review
+    @abstractmethod
+    async def get_app_reviews(
+        self,
+        app_id: Optional[UUID] = None,
+        app: Optional[AppDB] = None
+    ) -> list[ReviewDB]:
+        pass
 
-
-async def get_review(
-    id: UUID,
-    session: AsyncSession
-) -> ReviewDB | None:
-    review = (await session.exec(
-        select(ReviewDB).where(ReviewDB.id == id)
-    )).one_or_none()
-
-    return review
-
-
-async def get_app_reviews(
-    session: AsyncSession,
-    app_id: Optional[UUID] = None,
-    app: Optional[AppDB] = None
-) -> list[ReviewDB]:
-    if app is None:
-        app = await get_app(id=app_id, session=session)
-
-    return app.reviews
+    @abstractmethod
+    async def delete_review(
+        self,   
+        id: Optional[UUID] = None,
+        review: Optional[ReviewDB] = None
+    ) -> dict[str, str]:
+        pass
 
 
-async def delete_review(
-    session: AsyncSession,    
-    id: Optional[UUID] = None,
-    review: Optional[ReviewDB] = None
-) -> dict[str, str]:
-    if review is None:
-        review = await get_review(id, session)
+class ReviewRepository(AbstractReviewRepository):
+    def __init__(
+        self, session: AsyncSession, app_repo: AppRepository
+    ):
+        self.session = session
+        self.app_repo = app_repo
+            
+    async def create_review(
+        self, data: ReviewRequest,
+        user_id: UUID,
+        app_id: Optional[UUID] = None,
+        app: Optional[AppDB] = None
+    ) -> ReviewDB:
+        if app is None:
+            app = await self.app_repo.get_app(app_id)
 
-    await session.delete(review)
-    await session.commit()
-    await session.flush(review)
+        review = ReviewDB(
+            **data.model_dump(),
+            author_id=user_id,
+            app_id=app.id
+            )
 
-    return {"message": "Review has been deleted"}
+        self.session.add(review)
+        await self.session.commit()
+        await self.session.refresh(review)
+
+        return review
+
+    async def get_review(
+        self, id: UUID
+    ) -> ReviewDB | None:
+        review = (await self.session.exec(
+            select(ReviewDB).where(ReviewDB.id == id)
+        )).one_or_none()
+
+        return review
+
+    async def get_app_reviews(
+        self,
+        app_id: Optional[UUID] = None,
+        app: Optional[AppDB] = None
+    ) -> list[ReviewDB]:
+        if app is None:
+            app = await self.app_repo.get_app(app_id)
+
+        return app.reviews
+
+    async def delete_review(
+        self,   
+        id: Optional[UUID] = None,
+        review: Optional[ReviewDB] = None
+    ) -> dict[str, str]:
+        if review is None:
+            review = await self.get_review(id)
+
+        await self.session.delete(review)
+        await self.session.commit()
+        #await session.flush(review)
+
+        return {"message": "Review has been deleted"}

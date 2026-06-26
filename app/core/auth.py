@@ -6,16 +6,11 @@ from fastapi import HTTPException, status
 from fastapi.security import HTTPBearer, OAuth2PasswordBearer
 
 from app.core.config import settings
+from app.db.redis import RedisClient
 
-# Simple in-memory token blacklist store
-# In production, use Redis or a database
 blacklisted_tokens: dict[str, datetime] = {}
 
-# Refresh token store (in production, use database)
 refresh_tokens: dict[str, dict] = {}  # token -> {"username": str, "exp": datetime}
-
-# JWT Security
-security = OAuth2PasswordBearer(tokenUrl="/api/v1/login")#HTTPBearer()
 
 def create_access_token(
     username: str,
@@ -31,18 +26,18 @@ def create_access_token(
         "iat": int(
             datetime.now(timezone.utc).timestamp()
         ),  # Issued at as Unix timestamp
-        "jti": secrets.token_urlsafe(16),  # JWT ID (unique identifier)
-        "type": "access",  # Token type
+        "jti": secrets.token_urlsafe(16)  # JWT ID (unique identifier)
+        #"type": "access",  # Token type
     }
 
-    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.ALGORITHM)
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
 def create_refresh_token(
     username: str,
 ) -> str:
     """Create a refresh token for the user."""
-    expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_EXPIRE_DAYS)
+    expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
 
     refresh_token = secrets.token_urlsafe(32)
 
@@ -91,6 +86,7 @@ def revoke_refresh_token(refresh_token: str) -> None:
 def decode_access_token(token: str) -> dict:
     """Decode and validate a JWT token."""
     try:
+        #blacklisted_tokens = await redis.get(settings.TOKEN_BLACKLIST_KEY)
         # Check if token is blacklisted
         if token in blacklisted_tokens:
             raise HTTPException(
@@ -99,7 +95,7 @@ def decode_access_token(token: str) -> dict:
             )
 
         # Decode the token
-        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
         return payload
 
     except jwt.ExpiredSignatureError:
@@ -115,11 +111,12 @@ def decode_access_token(token: str) -> dict:
 def blacklist_token(token: str) -> None:
     """Add token to blacklist (for logout functionality)."""
     try:
-        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
         exp_timestamp = payload.get("exp")
         if exp_timestamp:
             exp_datetime = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
             blacklisted_tokens[token] = exp_datetime
+            #await redis.set(token, exp_datetime)
 
             # Clean up expired blacklisted tokens
             cleanup_expired_blacklisted_tokens()
@@ -139,6 +136,7 @@ def cleanup_expired_blacklisted_tokens() -> None:
 
     for token in expired_tokens:
         del blacklisted_tokens[token]
+        #await redis.delete(token)
 
 
 def cleanup_expired_refresh_tokens() -> None:
@@ -150,3 +148,4 @@ def cleanup_expired_refresh_tokens() -> None:
 
     for token in expired_tokens:
         del refresh_tokens[token]
+        #await redis.delete(token)

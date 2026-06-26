@@ -2,12 +2,14 @@ from datetime import date, UTC, datetime
 from uuid import UUID, uuid4
 from enum import StrEnum
 from decimal import Decimal
+from typing import Optional
 
 from pydantic import EmailStr, ConfigDict
-from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlmodel import SQLModel, Field, Relationship, Column, DateTime, func
+from sqlalchemy.dialects.postgresql import ARRAY, UUID as DB_UUID
 from sqlalchemy import String
 
+from app.models.app_purchase import Purchase, CartItem
 from app.core.config import settings
 
 class UserRole(StrEnum):
@@ -20,35 +22,41 @@ class BaseUser(SQLModel):
     username: str = Field(
         index=True,
         min_length=settings.MIN_NAME_LEN,
-        max_length=settings.MAX_NAME_LEN
+        max_length=settings.MAX_NAME_LEN,
+        unique=True
         )
-    email: EmailStr | None = None
+    email: Optional[EmailStr] = Field(default=None, unique=True)
 
 
 class UserDB(BaseUser, table=True):
     __tablename__ = "user"
 
     id: UUID = Field(
-        default_factory=lambda: uuid4(),
+        default_factory=uuid4,
         primary_key=True
         )
 
     hashed_password: str
     roles: list["UserRole"] = Field(
         sa_type=ARRAY(String),
-        default=[UserRole.USER]
+        default={UserRole.USER}
         )
 
-    registration_date: date = Field(
-        default=datetime.now(UTC)
+    registered_at: datetime = Field(
+        sa_column=Column(
+            DateTime(timezone=True),
+            server_default=func.now(),
+            nullable=False
+        )
     )
     balance: Decimal = Field(default=0, ge=0)
 
-    apps_to_purchase: list["AppDB"] = Relationship(
-        back_populates="users_want_to_purchase"
+    #apps_cart_id: UUID = Field(foreign_key="cart.id")
+    cart: Optional["Cart"] = Relationship(
+        back_populates="user"#, link_model=CartItem
         )
     purchased_apps: list["AppDB"] = Relationship(
-        back_populates="users_purchased"
+        back_populates="users_purchased", link_model=Purchase
         )
     published_apps: list["AppDB"] = Relationship(
         back_populates="publisher"
@@ -59,27 +67,42 @@ class UserDB(BaseUser, table=True):
         )
 
 
-
 class UserRequest(BaseUser):
     password: str
 
 
 class UserResponse(BaseUser):
     id: UUID
-    registration_date: date
+    registered_at: datetime
 
-    roles: list[UserRole]
+    roles: set[UserRole]
     model_config = ConfigDict(from_attributes=True)
+
+
+class CurrentUserResponse(UserResponse):
+    balance: Decimal
+
+    #reviews: list["ReviewResponse"]
+    #cart: list["CartAppResponse"]
+    #purchased_apps: list["AppPurchaseResponse"]
+    #published_apps: list["AppResponse"]
 
 
 class UserResponseWithReviewsAndApps(UserResponse):
     reviews: list["ReviewResponse"]
-    apps_to_purchase: list["AppResponse"]
+    cart: list["AppResponse"]
     purchased_apps: list["AppResponse"]
     published_apps: list["AppResponse"]
 
 
 class UserUpdate(BaseUser):
-    email: EmailStr | None = None
-    password: str | None = None
-    
+    email: Optional[EmailStr] = None
+    password: Optional[str] = None
+
+
+def rebuild_models() -> None:
+    UserResponse.model_rebuild()
+    CurrentUserResponse.model_rebuild()
+
+
+#rebuild_models()

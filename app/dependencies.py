@@ -1,0 +1,131 @@
+from typing import Annotated, Any
+
+from sqlmodel.ext.asyncio.session import AsyncSession
+from fastapi import Depends, Query, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+
+from app.db.postgres import get_session
+from app.core.exceptions import no_rights_exception
+from app.core.auth import decode_access_token #, oauth_scheme
+from app.models.user import UserDB, UserRole
+
+from app.repo.user_repo import UserRepository
+from app.repo.app_repo import AppRepository
+from app.repo.review_repo import ReviewRepository
+from app.repo.cart_repo import CartRepository
+
+from app.service.user_service import UserService
+from app.service.app_service import AppService
+from app.service.review_service import ReviewService
+from app.service.cart_service import CartService
+
+from app.core.logging import logger
+
+oauth_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/login") #HTTPBearer()
+
+
+def skip_limit_params(
+    skip: Annotated[int, Query(ge=0, lt=99)] = 0, 
+    limit: Annotated[int, Query(ge=0, lt=100)] = 10,
+) -> tuple[int, int]:
+    return skip, limit
+
+
+async def get_current_user(
+    session: SessionDep,   
+    token: TokenDep,
+    user_service: UserServiceDep
+) -> UserDB | None:
+    payload = decode_access_token(token)
+    logger.info(payload)
+    username = payload.get("sub")
+
+    if username is None:
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED, 
+            "Invalid token payload"
+        )
+
+    user = await user_service.get_user(username=username)
+
+    return user
+
+
+def require_role(role: UserRole) -> UserDB:
+    def wrapper(user: UserDep) -> UserDB:
+        if role not in user.roles:
+            exception = no_rights_exception
+            exception.detail = f"{exception.detail}. Role '{role}' required"
+            raise no_rights_exception
+        return user
+    return wrapper
+
+
+def get_user_repo(
+    session: SessionDep
+) -> UserRepository:
+    return UserRepository(session)
+
+def get_user_service(
+    user_repo: UserRepoDep
+) -> UserService:
+    return UserService(user_repo)
+
+
+def get_app_repo(
+    session: SessionDep
+) -> AppRepository:
+    return AppRepository(session)
+
+def get_app_service(
+    app_repo: AppRepoDep
+) -> AppService:
+    return AppService(app_repo)
+
+
+def get_review_repo(
+    app_repo: AppRepoDep,
+    session: SessionDep
+) -> ReviewRepository:
+    return ReviewRepository(session, app_repo)
+
+def get_review_service(
+    review_repo: ReviewRepoDep,
+    app_service: AppServiceDep
+) -> ReviewService:
+    return ReviewService(review_repo, app_service)
+
+
+def get_cart_repo(
+    session: SessionDep,
+    app_repo: AppRepoDep
+) -> CartRepository:
+    return CartRepository(session, app_repo)
+
+def get_cart_service(
+    app_service: AppServiceDep,
+    cart_repo: CartRepoDep
+) -> CartService:
+    return CartService(app_service, cart_repo)
+
+
+SessionDep = Annotated[AsyncSession, Depends(get_session)]
+
+UserDep = Annotated[UserDB, Depends(get_current_user)]
+PublisherDep = Annotated[UserDB, Depends(require_role(UserRole.PUBLISHER))]
+
+TokenDep = Annotated[str, Depends(oauth_scheme)]
+
+SkipLimitParams = Annotated[tuple[int, int], Depends(skip_limit_params)]
+
+UserServiceDep = Annotated[UserService, Depends(get_user_service)]
+UserRepoDep = Annotated[UserRepository, Depends(get_user_repo)]
+
+AppServiceDep = Annotated[AppService, Depends(get_app_service)]
+AppRepoDep = Annotated[AppRepository, Depends(get_app_repo)]
+
+ReviewServiceDep = Annotated[ReviewService, Depends(get_review_service)]
+ReviewRepoDep = Annotated[ReviewRepository, Depends(get_review_repo)]
+
+CartServiceDep = Annotated[CartService, Depends(get_cart_service)]
+CartRepoDep = Annotated[CartRepository, Depends(get_cart_repo)]

@@ -1,4 +1,6 @@
 from os import environ
+from typing import Optional
+import logging
 
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
@@ -8,13 +10,16 @@ class Settings(BaseSettings):
     API_DESC: str = "REST API of an online store for desktop applications and video games"
     API_DESC_FULL: str = API_DESC
 
+    APP_HOST: str = "0.0.0.0"
+    APP_PORT: int = 8000
+
     DB_URL: str = environ.get("DB_URL")
     REDIS_URL: str  = environ.get("REDIS_URL")
 
-    DB_OUTPUT: bool = False
+    DB_OUTPUT: bool = True
     DEBUG: bool = True
 
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 90
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     SECRET_KEY: str = environ.get("SECRET_KEY")
@@ -31,6 +36,10 @@ class Settings(BaseSettings):
     DUMMY_HASH: str = "dummypassword"
 
     REFRESH_TOKEN_KEY: str = "cache:refresh-token"
+    TOKEN_BLACKLIST_KEY: str = "cache:token_blacklist"
+
+    LOGGING_LEVEL: int = logging.INFO
+    LOG_FILE_PATH: Optional[str] = None#"app_store_api.log"
     
 load_dotenv()
 

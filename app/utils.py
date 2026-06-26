@@ -1,4 +1,4 @@
-from typing import Annotated, Sequence
+from typing import Annotated, Sequence, Optional
 from string import punctuation
 
 from fastapi import Query
@@ -26,10 +26,6 @@ def filter_apps(apps: list[AppDB], search_query: str) -> list[AppDB]:
     return apps
 
 
-SearchQuery = Annotated[str, 
-    Query(description="Enter keywords separated by 1 space")
-    ]
-
-
-string = "game eshkre! lol kek kruto CHERBUrek bogHEmas intuitsya"
-print(format_keywords(string.split()))
+SearchQuery = Annotated[
+    str, Query(default=None, description="Enter keywords separated by 1 space")
+]
