@@ -13,3 +13,4 @@ wheels/
 safe_scripts/
 x/
 *.sql
+*.python-version
