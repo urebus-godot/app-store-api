@@ -1,7 +1,7 @@
-FROM python:3.14.3-slim
+FROM python:3.14.3-slim AS builder
 
 RUN pip install uv
 
 COPY . .
 
-CMD ["uv", "run", ""]
+CMD ["python", "app.main:app"]

@@ -1,151 +1,184 @@
-import secrets
+from uuid import uuid4
 from datetime import datetime, timedelta, timezone
 
-import jwt
 from fastapi import HTTPException, status
-from fastapi.security import HTTPBearer, OAuth2PasswordBearer
+from jwt import PyJWTError
+import jwt
 
+from app.core.logging import logger
 from app.core.config import settings
-from app.db.redis import RedisClient
-
-blacklisted_tokens: dict[str, datetime] = {}
-
-refresh_tokens: dict[str, dict] = {}  # token -> {"username": str, "exp": datetime}
+from app.core.exceptions import (
+    invalid_refresh_token_exception,
+    invalid_access_token_exception
+    )
+from app.db.redis import Redis
 
 def create_access_token(
-    username: str,
+    user_id: str,
 ) -> str:
     """Create a JWT access token for the user."""
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
-
+    
     payload = {
-        "sub": username,  # Subject (user identifier)
+        "sub": user_id,  # Subject (user identifier)
         "exp": int(expire.timestamp()),  # Expiration time as Unix timestamp
-        "iat": int(
-            datetime.now(timezone.utc).timestamp()
-        ),  # Issued at as Unix timestamp
-        "jti": secrets.token_urlsafe(16)  # JWT ID (unique identifier)
-        #"type": "access",  # Token type
+        #"iat": int(
+        #    datetime.now(timezone.utc).timestamp()
+        #),  # Issued at as Unix timestamp
+        #"jti": secrets.token_urlsafe(16),  # JWT ID (unique identifier)
+        "type": "access"  # Token type
     }
 
-    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return jwt.encode(
+        payload, 
+        settings.SECRET_KEY, 
+        algorithm=settings.JWT_ALGORITHM
+        )
 
 
-def create_refresh_token(
-    username: str,
+async def create_refresh_token(
+    user_id: str, redis: Redis
 ) -> str:
     """Create a refresh token for the user."""
-    expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    jti = str(uuid4())
+    family_id = str(uuid4())
+    expire = (datetime.now(timezone.utc) 
+    + settings.REFRESH_TTL_DAYS)
 
-    refresh_token = secrets.token_urlsafe(32)
+    payload = {
+        "sub": user_id,
+        "type": "refresh",
+        "exp": expire,
+        "jti": jti,
+        "family_id": family_id
+    }
 
-    # Store refresh token info
-    refresh_tokens[refresh_token] = {"username": username, "exp": expire}
-
-    # Clean up expired refresh tokens
-    cleanup_expired_refresh_tokens()
+    refresh_token = jwt.encode(
+        payload, 
+        settings.SECRET_KEY, 
+        algorithm=settings.JWT_ALGORITHM
+        )
+    refresh_ttl = int(settings.REFRESH_TTL_DAYS.total_seconds())
+    logger.info(f"{refresh_ttl = }")
+    await redis.set(
+        name=f"refresh_token:{jti}",
+        value=family_id, 
+        ex=refresh_ttl
+    )
+    await redis.sadd(f"user_tokens:{user_id}", jti)
+    await redis.expire(f"user_tokens:{user_id}", refresh_ttl)
 
     return refresh_token
 
 
-def create_token_pair(username: str) -> tuple[str, str]:
+async def create_token_pair(
+    user_id: str, redis: Redis
+) -> dict[str, str]:
     """Create both access and refresh tokens for the user."""
-    access_token = create_access_token(username)
-    refresh_token = create_refresh_token(username)
-    return access_token, refresh_token
+    logger.info(f"{redis.connection_pool.connection_kwargs=}")
+    access_token = create_access_token(user_id)
+    refresh_token = await create_refresh_token(user_id, redis)
+    return {
+        "access_token": access_token, 
+        "refresh_token": refresh_token
+        }
 
 
-def validate_refresh_token(refresh_token: str) -> str:
-    """Validate refresh token and return username."""
-    if refresh_token not in refresh_tokens:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
-        )
-
-    token_info = refresh_tokens[refresh_token]
-
-    # Check if token is expired
-    if token_info["exp"] < datetime.now(timezone.utc):
-        # Remove expired token
-        del refresh_tokens[refresh_token]
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token has expired"
-        )
-
-    return token_info["username"]
-
-
-def revoke_refresh_token(refresh_token: str) -> None:
-    """Revoke a refresh token (for logout)."""
-    if refresh_token in refresh_tokens:
-        del refresh_tokens[refresh_token]
-
-
-def decode_access_token(token: str) -> dict:
+async def decode_access_token(
+    token: str, redis: Redis
+    ) -> dict:
     """Decode and validate a JWT token."""
     try:
-        #blacklisted_tokens = await redis.get(settings.TOKEN_BLACKLIST_KEY)
-        # Check if token is blacklisted
-        if token in blacklisted_tokens:
+        logger.info(f"Token in blacklist: {await redis.exists(f"blacklist:{token}")}")
+        if await redis.exists(f"blacklist:{token}"):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token has been revoked",
             )
 
         # Decode the token
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=["HS256"]
+            )
         return payload
 
     except jwt.ExpiredSignatureError:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired"
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="Token has expired"
         )
     except jwt.InvalidTokenError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
-        )
+        raise invalid_access_token_exception
 
 
-def blacklist_token(token: str) -> None:
-    """Add token to blacklist (for logout functionality)."""
+async def revoke_all_user_tokens(
+    user_id: str, redis: Redis
+):
+    jtis = await redis.smembers(f"user_tokens:{user_id}")
+    for jti in jtis:
+        jti_str = jti.decode() if isinstance(jti, bytes) else jti
+        ttl = await redis.ttl(f"refresh_token:{jti_str}")
+
+        if ttl > 0:
+            await redis.set(
+                f"blacklist:{jti_str}", "1", ex=ttl
+                )
+        await redis.delete(f"refresh_token:{jti_str}")
+
+    await redis.delete(f"user_tokens:{user_id}")
+
+
+async def refresh_tokens(
+    refresh_token: str, redis: Redis
+) -> dict[str, str]:
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-        exp_timestamp = payload.get("exp")
-        if exp_timestamp:
-            exp_datetime = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
-            blacklisted_tokens[token] = exp_datetime
-            #await redis.set(token, exp_datetime)
+        payload = jwt.decode(
+            refresh_token, 
+            settings.SECRET_KEY, 
+            algorithms=settings.JWT_ALGORITHM
+            )
+        logger.info(f"Decoded refresh token: \n {payload = }")
+    except PyJWTError:
+        raise invalid_refresh_token_exception
 
-            # Clean up expired blacklisted tokens
-            cleanup_expired_blacklisted_tokens()
-    except jwt.InvalidTokenError:
-        # If token is invalid, no need to blacklist
-        pass
+    if payload.get("type") != "refresh":
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            "Wrong token type"
+        )
 
+    jti = payload.get("jti")
+    user_id = payload.get("sub")
+    family_id = payload.get("family_id")
 
-def cleanup_expired_blacklisted_tokens() -> None:
-    """Remove expired tokens from blacklist to prevent memory leaks."""
-    current_time = datetime.now(timezone.utc)
-    expired_tokens = [
-        token
-        for token, exp_time in blacklisted_tokens.items()
-        if exp_time < current_time
-    ]
+    token_blacklisted = await redis.exists(f"blacklist:{jti}")
 
-    for token in expired_tokens:
-        del blacklisted_tokens[token]
-        #await redis.delete(token)
+    if token_blacklisted:
+        await revoke_all_user_tokens(user_id, redis)
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            "Token reuse detected. All sessions revoked"
+        )
+    logger.info(f"Looking for family with key: 'refresh_token:{jti}' \nvalue={await redis.get(f"refresh_token:{jti}")}")
+    stored_family = await redis.get(f"refresh_token:{jti}")
+    logger.info(f"{stored_family = }")
+    logger.info(f"{family_id = }")
+    if stored_family is None or stored_family != family_id:
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            "Refresh token not found or invalid"
+        )
 
+    remaining_ttl = await redis.ttl(f"refresh_token:{jti}")
+    await redis.set(
+        f"blacklist:{jti}", "1", 
+        ex=max(remaining_ttl, 1)
+        )
+    logger.info(f"Redis set blacklist: {await redis.exists(f"blacklist:{jti}")}")
+    await redis.delete(f"refresh_token:{jti}")
+    logger.info(f"Redis is deleting 'refresh_token:{jti}' key-value pair")
 
-def cleanup_expired_refresh_tokens() -> None:
-    """Remove expired refresh tokens to prevent memory leaks."""
-    current_time = datetime.now(timezone.utc)
-    expired_tokens = [
-        token for token, info in refresh_tokens.items() if info["exp"] < current_time
-    ]
-
-    for token in expired_tokens:
-        del refresh_tokens[token]
-        #await redis.delete(token)
+    new_tokens = await create_token_pair(user_id, redis)
+    return new_tokens

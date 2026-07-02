@@ -1,12 +1,15 @@
 from typing import Annotated, Any
+from uuid import UUID
 
+from redis.asyncio import Redis
 from sqlmodel.ext.asyncio.session import AsyncSession
 from fastapi import Depends, Query, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
 from app.db.postgres import get_session
+from app.db.redis import get_redis_client
 from app.core.exceptions import no_rights_exception
-from app.core.auth import decode_access_token #, oauth_scheme
+from app.core.auth import decode_access_token
 from app.models.user import UserDB, UserRole
 
 from app.repo.user_repo import UserRepository
@@ -21,8 +24,7 @@ from app.service.cart_service import CartService
 
 from app.core.logging import logger
 
-oauth_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/login") #HTTPBearer()
-
+oauth_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/login")
 
 def skip_limit_params(
     skip: Annotated[int, Query(ge=0, lt=99)] = 0, 
@@ -31,22 +33,40 @@ def skip_limit_params(
     return skip, limit
 
 
-async def get_current_user(
-    session: SessionDep,   
+async def get_current_user_id(
     token: TokenDep,
-    user_service: UserServiceDep
-) -> UserDB | None:
-    payload = decode_access_token(token)
+    user_service: UserServiceDep,
+    redis: RedisDep
+) -> UUID | None:
+    payload = await decode_access_token(token, redis)
     logger.info(payload)
-    username = payload.get("sub")
+    user_id = payload.get("sub")
 
-    if username is None:
+    if user_id is None:
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED, 
             "Invalid token payload"
         )
 
-    user = await user_service.get_user(username=username)
+    return user_id
+
+
+async def get_current_user(
+    token: TokenDep,
+    user_service: UserServiceDep,
+    redis: RedisDep
+) -> UserDB | None:
+    payload = await decode_access_token(token, redis)
+    logger.info(payload)
+    user_id = payload.get("sub")
+
+    if user_id is None:
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED, 
+            "Invalid token payload"
+        )
+
+    user = await user_service.get_user(id=UUID(user_id))
 
     return user
 
@@ -78,9 +98,10 @@ def get_app_repo(
     return AppRepository(session)
 
 def get_app_service(
-    app_repo: AppRepoDep
+    app_repo: AppRepoDep,
+    user_service: UserServiceDep
 ) -> AppService:
-    return AppService(app_repo)
+    return AppService(app_repo, user_service)
 
 
 def get_review_repo(
@@ -111,6 +132,7 @@ def get_cart_service(
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
+UserIdDep = Annotated[UUID, Depends(get_current_user_id)]
 UserDep = Annotated[UserDB, Depends(get_current_user)]
 PublisherDep = Annotated[UserDB, Depends(require_role(UserRole.PUBLISHER))]
 
@@ -129,3 +151,5 @@ ReviewRepoDep = Annotated[ReviewRepository, Depends(get_review_repo)]
 
 CartServiceDep = Annotated[CartService, Depends(get_cart_service)]
 CartRepoDep = Annotated[CartRepository, Depends(get_cart_repo)]
+
+RedisDep = Annotated[Redis, Depends(get_redis_client)]

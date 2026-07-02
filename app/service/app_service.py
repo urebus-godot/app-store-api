@@ -1,7 +1,7 @@
-import os
 from uuid import UUID
 from decimal import Decimal
 from typing import Optional
+from string import punctuation
 
 from fastapi import UploadFile
 
@@ -9,16 +9,43 @@ from app.core.exceptions import (
     app_not_found_exception, 
     app_not_purchased_exception,
     apps_not_found_exception,
-    no_rights_exception)
-from app.utils import filter_apps
-from app.models.app import AppRequest, AppUpdate, GameGenre, AppDB, AppFile
+    no_rights_exception
+    )
+from app.service.user_service import UserService
+from app.models.app import AppRequest, AppUpdate, GameGenre, AppDB
 from app.models.user import UserDB
 from app.repo.app_repo import AppRepository
 
 
 class AppService:
-    def __init__(self, app_repo: AppRepository):
+    def __init__(
+        self, app_repo: AppRepository, user_service: UserService
+    ):
         self.app_repo = app_repo
+        self.user_service = user_service
+
+    def format_keywords(self, keywords: list[str]) -> list[str]:
+        new_keywords = []
+        for kw in keywords:
+            kw = kw.strip()
+            kw = kw.lower()
+            kw = kw.format_map(
+                {c: "" for c in punctuation}
+                )
+        return new_keywords
+
+    def filter_apps(
+        self, 
+        apps: list[AppDB], 
+        search_query: str
+    ) -> list[AppDB]:
+        search_keywords = self.format_keywords(search_query.split())
+        apps = [
+            app for app in apps 
+            for kw in search_keywords
+            if kw in self.format_keywords(app.keywords)
+        ]
+        return apps
 
     def upload_app_file(
         self, file: UploadFile, app_id: UUID
@@ -66,28 +93,45 @@ class AppService:
         return app
 
     async def get_apps(
-        self, search_query: Optional[str],
-        skip: int, limit: int
+        self, 
+        skip: int, limit: int,
+        search_query: Optional[str] = None
     ) -> list[AppDB]:
         apps = await self.app_repo.get_apps(skip, limit)
 
         if search_query is not None:
-            apps = filter_apps(apps, search_query)
+            apps = self.filter_apps(apps, search_query)
 
         if apps:
             return apps
         raise apps_not_found_exception
 
+    async def get_purchased_apps(
+        self, user: UserDB
+    ) -> list[AppDB]:
+        purchased_apps = await self.app_repo.get_purchased_apps(user)
+        return purchased_apps
+    
+    async def get_publisher_apps(
+        self, skip: int, limit: int, 
+        user_id: UUID
+    ) -> list[AppDB]:
+        user = await self.user_service.get_user(id=user_id)
+        
+        publisher_apps = await self.app_repo.get_publisher_apps(
+            skip=skip, limit=limit, user_id=user_id
+            )
+        return publisher_apps
+
     async def get_games(
         self, search_query: Optional[str], 
         genre: Optional[GameGenre],
-        skip: int,
-        limit: int
+        skip: int, limit: int
     ) -> list[AppDB]:
         games = await self.app_repo.get_games(genre, skip, limit)
 
         if search_query is not None:
-            games = filter_apps(games, search_query)
+            games = self.filter_apps(games, search_query)
 
         if games:
             return games

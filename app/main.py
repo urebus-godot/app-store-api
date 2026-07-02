@@ -1,18 +1,29 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.logging import setup_logging
 from app.api.v1 import (
     app_router, review_router, user_router, cart_router
     )
 from app.core.config import settings
+from app.db.redis import connect_to_redis, RedisClient
 
-setup_logging()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.redis = connect_to_redis()
+    yield
+    await app.state.redis.close_conn()
+
 
 app = FastAPI(
     title=settings.API_TITLE,
     summary=settings.API_DESC,
     description=settings.API_DESC_FULL,
-    debug=settings.DEBUG
+    debug=settings.DEBUG,
+    version=settings.API_VERSION,
+    lifespan=lifespan
 )
 
 app.include_router(
@@ -28,17 +39,26 @@ app.include_router(
     cart_router.router, prefix="/api/v1", tags=["Cart"]
 )
 
-@app.get("/health")
-def health_check() -> dict[str, str]:
+cors = CORSMiddleware(
+    app=app,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE"]
+)
+
+@app.get("/health", tags=["Server"])
+async def health_check() -> dict[str, str]:
     return {"status": "Healthy"}
+
 
 if __name__ == "__main__":
     import uvicorn
 
+    setup_logging()
+
     uvicorn.run(
     "app.main:app", 
-    host=settings.APP_HOST, 
-    port=settings.APP_PORT, 
+    host=settings.API_HOST, 
+    port=settings.API_PORT, 
     reload=True,
     access_log=True
     )

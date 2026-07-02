@@ -1,6 +1,10 @@
 from decimal import Decimal
+from typing import Optional
+from uuid import UUID
 
-from fastapi.security import HTTPAuthorizationCredentials
+from pydantic import EmailStr
+from jwt.exceptions import DecodeError
+import jwt
 
 from app.models.user import UserRequest, UserDB, UserUpdate, UserRole
 from app.models.token import LoginResponse, RefreshTokenRequest, TokenResponse
@@ -10,22 +14,31 @@ from app.core.exceptions import (
     email_used_exception,
     username_used_exception,
     already_has_role_exception,
-    incorrect_creds_exception)
+    incorrect_creds_exception,
+    user_data_used_exception,
+    invalid_refresh_token_exception
+    )
 from app.core.security import verify_password, get_password_hash
-from app.core.auth import (
-    create_token_pair, blacklist_token, revoke_refresh_token)
+from app.core.auth import create_token_pair
 from app.core.logging import logger
+from app.core.config import settings
+from app.db.redis import Redis
 
 
 class UserService:
     def __init__(self, user_repo: UserRepository):
         self.user_repo = user_repo
 
+    async def username_registered(self, username: str) -> bool:
+        return await self.user_repo.username_registered(username)
+
+    async def email_registered(self, email: EmailStr) -> bool:
+        return await self.user_repo.email_registered(email)
+
     async def register_user(
         self, data: UserRequest
     ) -> UserDB:
-        username_used = await self.user_repo.username_registered(data.username)
-        if username_used:
+        if await self.username_registered(data.username):
             raise username_used_exception
 
         if data.email is not None:
@@ -51,8 +64,8 @@ class UserService:
         return user
 
     async def login(
-        self, username: str, password: str, 
-    ):
+        self, username: str, password: str, redis: Redis
+    ) -> LoginResponse:
         user = await self.authenticate_user(
             username, password
             )
@@ -60,27 +73,37 @@ class UserService:
         if not user:
             raise incorrect_creds_exception
         
-        access_token, refresh_token = create_token_pair(username)
+        tokens = await create_token_pair(str(user.id), redis)
 
         return LoginResponse(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            username=username
+            access_token=tokens["access_token"],
+            refresh_token=tokens["refresh_token"],
+            user_id=user.id
             )
-        return TokenResponse(access_token=access_token)
 
     async def logout(
-        self, refresh_request: RefreshTokenRequest | None, 
-        credentials: HTTPAuthorizationCredentials
-    ):
-        access_token = credentials.credentials
-        await blacklist_token(access_token)
+        self, 
+        refresh_token: str, 
+        redis: Redis
+    ) -> dict[str, str]:
+        try:
+            payload = jwt.decode(
+                refresh_token, 
+                settings.JWT_KEY, 
+                algorithms=settings.JWT_ALGORITHM
+                )
+            jti = payload.get("jti")
+            ttl = await redis.ttl(f"refresh_token:{jti}")
+            logger.info(f"{payload = }")
+            logger.info(f"{ttl = }")
+            if ttl > 0:
+                await redis.set(f"blacklisted_tokens:{jti}", "1", ex=ttl)
+            await redis.delete(f"refresh_token:{jti}")
 
-        # If refresh token provided, revoke it
-        if refresh_request and refresh_request.refresh_token:
-            await revoke_refresh_token(refresh_request.refresh_token)
+            return {"message": "Logout successful"}
 
-        return {"message": "Logout successful"}
+        except DecodeError:
+            raise invalid_refresh_token_exception
 
     async def top_up_balance(
         self, amount: Decimal, user: UserDB
@@ -99,15 +122,29 @@ class UserService:
     async def update_user(
         self, user: UserDB, data: UserUpdate, 
     ):
+        if user.username == data.username or user.email == data.email:
+            raise user_data_used_exception
+        
+        if await self.username_registered(data.username):
+            raise username_used_exception
+
+        if data.email is not None:
+            if await self.email_registered(data.email):
+                raise email_used_exception
+        
         return await self.user_repo.update_user(
             data=data, user=user
             )
 
     async def get_user(
-        self, username: str
-    ):
-        user = await self.user_repo.get_user(username=username)
-
+        self, 
+        username: Optional[str] = None, 
+        id: Optional[UUID] = None
+    ) -> Optional[UserDB]:
+        if username is not None:
+            user = await self.user_repo.get_user_by_username(username)
+        elif id is not None:
+            user = await self.user_repo.get_user_by_id(id)
         if user is None:
             raise user_not_found_exception
 

@@ -1,14 +1,17 @@
 from logging.config import fileConfig
 import asyncio
+import os
 
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlalchemy import pool
 from sqlmodel import SQLModel
 from alembic import context
+import alembic_postgresql_enum
 
 from app.models.app import AppDB
 from app.models.user import UserDB
 from app.models.review import ReviewDB
+from app.models.app_purchase import Cart, Purchase
 
 
 # this is the Alembic Config object, which provides
@@ -31,6 +34,9 @@ target_metadata = SQLModel.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
+def get_url() -> str:
+    return os.getenv("DB_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/db")
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -44,7 +50,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = get_url()#config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         target_metadata=target_metadata,

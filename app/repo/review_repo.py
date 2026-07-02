@@ -28,10 +28,12 @@ class AbstractReviewRepository(ABC):
 
     @abstractmethod
     async def get_app_reviews(
-        self,
-        app_id: Optional[UUID] = None,
-        app: Optional[AppDB] = None
+        self, app_id: UUID,
     ) -> list[ReviewDB]:
+        pass
+
+    @abstractmethod
+    async def get_user_reviews(self, user_id: UUID) -> list[ReviewDB]:
         pass
 
     @abstractmethod
@@ -82,13 +84,19 @@ class ReviewRepository(AbstractReviewRepository):
 
     async def get_app_reviews(
         self,
-        app_id: Optional[UUID] = None,
-        app: Optional[AppDB] = None
+        app_id: UUID,
     ) -> list[ReviewDB]:
-        if app is None:
-            app = await self.app_repo.get_app(app_id)
+        app_reviews = (await self.session.exec(
+            select(ReviewDB).where(ReviewDB.app_id == app_id)
+        )).all()
 
-        return app.reviews
+        return app_reviews
+
+    async def get_user_reviews(self, user_id: UUID) -> list[ReviewDB]:
+        user_reviews = await self.session.exec(
+            select(ReviewDB).where(ReviewDB.author_id == user_id)
+        )
+        return user_reviews
 
     async def delete_review(
         self,   

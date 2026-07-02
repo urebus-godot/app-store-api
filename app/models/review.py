@@ -27,10 +27,10 @@ class ReviewDB(BaseReview, table=True):
         )
     )
 
-    author_id: UUID = Field(foreign_key="user.id")
+    author_id: UUID = Field(foreign_key="user.id", ondelete="CASCADE")
     author: "UserDB" = Relationship(back_populates="reviews")
 
-    app_id: UUID = Field(foreign_key="app.id")
+    app_id: UUID = Field(foreign_key="app.id", ondelete="CASCADE")
     app: "AppDB" = Relationship(back_populates="reviews")
 
 
@@ -42,6 +42,7 @@ class ReviewResponse(BaseReview):
     id: UUID
     created_at: datetime
     author_id: UUID
+    app_id: UUID
     model_config = ConfigDict(from_attributes=True)
 
 

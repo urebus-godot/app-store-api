@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, status
 
-from app.dependencies import SessionDep, UserDep, ReviewServiceDep
+from app.dependencies import UserDep, UserIdDep, ReviewServiceDep
 from app.models.review import ReviewRequest, ReviewResponse
 
 router = APIRouter()
@@ -16,7 +16,7 @@ async def create_review(
     review_service: ReviewServiceDep
 ) -> ReviewResponse:
     return await review_service.create_review(
-        app_id, data, user.id
+        app_id, data, user
         )
 
 
@@ -31,9 +31,10 @@ async def get_app_reviews(
 
 @router.get("/users/me/reviews")
 async def get_own_reviews(
-    user: UserDep
+    user_id: UserIdDep,
+    review_service: ReviewServiceDep
 ) -> list[ReviewResponse]:
-    return user.reviews
+    return await review_service.get_user_reviews(user_id)
 
 
 @router.delete("/reviews/{id}")
@@ -42,4 +43,4 @@ async def delete_review(
     user: UserDep,
     review_service: ReviewServiceDep
 ) -> dict[str, str]:
-    return await review_service.delete_review(id, user.id,)
+    return await review_service.delete_review(id, user.id)

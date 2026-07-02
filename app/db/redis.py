@@ -1,27 +1,25 @@
-from typing import Any
+from typing import Any, Optional
+from collections.abc import AsyncIterator
 
+from redis.asyncio import from_url as redis_from_url
 from redis.asyncio import Redis
 
 from app.core.config import settings
+from app.core.logging import logger
 
 class RedisClient:
     def __init__(self, url: str):
-        self.redis = Redis.from_url(
+        self.redis = redis_from_url(
             url, decode_responses=True
             )
 
-    async def set(self, key: str, value) -> None:
-        await self.redis.set(key, value)
-        await self.redis.aclose()
-
-    async def get(self, key: str) -> Any:
-        await self.redis.get(key)
-        await self.redis.aclose()
-
-    async def delete(self, key: str) -> None:
-        await self.redis.delete(key)
+    async def close_conn(self) -> None:
         await self.redis.aclose()
 
 
-def get_redis_client(url: str = settings.REDIS_URL) -> RedisClient:
-    return RedisClient(url)
+def connect_to_redis() -> RedisClient:
+    return RedisClient(settings.REDIS_URL)
+
+def get_redis_client() -> Redis:
+    from app.main import app
+    return app.state.redis.redis
