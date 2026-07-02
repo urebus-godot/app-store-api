@@ -22,15 +22,33 @@ username_used_exception = HTTPException(
     "Username is used by another user"
 )
 
+user_data_used_exception = HTTPException(
+    status.HTTP_409_CONFLICT,
+    "Username or email is already used"
+)
+
 already_has_role_exception = HTTPException(
     status.HTTP_409_CONFLICT,
     "You already have the requested role"
 )
 
+
+# ----- Authentication -----
+
 incorrect_creds_exception = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
     detail="Incorrect username or password",
     headers={"WWW-Authenticate": "Bearer"},
+)
+
+invalid_refresh_token_exception =HTTPException(
+    status.HTTP_401_UNAUTHORIZED,
+    "Invalid refresh token"
+)
+
+invalid_access_token_exception = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED, 
+    detail="Invalid access token"
 )
 
 

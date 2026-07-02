@@ -4,12 +4,16 @@ from uuid import UUID
 from fastapi import APIRouter, UploadFile
 
 from app.dependencies import (
-    UserDep, SkipLimitParams, PublisherDep,
-    AppServiceDep)
-from app.utils import SearchQuery
+    UserDep, UserIdDep, SkipLimitParams, PublisherDep,
+    AppServiceDep, ReviewServiceDep
+    )
+from app.utils import SearchQuery, get_apps_with_rating, get_app_with_rating
 from app.models.app import (
-    AppRequest, AppUpdate, AppResponse, 
-    GameGenre, GameRequest, GameResponse)
+    AppRequest, AppUpdate, AppResponse,
+    GameGenre, GameRequest, GameResponse,
+    AppResponseWithPublisher
+    )
+from app.core.logging import logger
 
 router = APIRouter()
 
@@ -20,7 +24,8 @@ async def upload_app(
     user: PublisherDep,
     app_service: AppServiceDep
 ) -> AppResponse:
-    return await app_service.upload_app(data, user)
+    app = await app_service.upload_app(data, user)
+    return app
 
 
 @router.post("/apps/games/upload")
@@ -29,7 +34,8 @@ async def upload_game(
     user: PublisherDep,
     app_service: AppServiceDep
 ) -> GameResponse:
-    return await app_service.upload_app(data, user)
+    game = await app_service.upload_app(data, user)
+    return game
 
 
 @router.post("/apps/upload-file")
@@ -46,13 +52,14 @@ async def update_app(
     id: UUID,
     data: AppUpdate,
     app_service: AppServiceDep
-) -> AppResponse | None:
-    return await app_service.update_app(
+) -> Optional[AppResponse]:
+    app = await app_service.update_app(
         data=data, id=id
         )
+    return app
 
 
-@router.get("/apps/{id}/download")
+@router.get("/apps/by-id/{id}/download")
 async def download_purchased_app(
     id: UUID,
     user: UserDep,
@@ -65,55 +72,80 @@ async def download_purchased_app(
 async def get_app(
     id: UUID,
     app_service: AppServiceDep
-) -> AppResponse:
-    return await app_service.get_app(id)
+) -> AppResponseWithPublisher:
+    app = await app_service.get_app(id)
+    return get_app_with_rating(
+        app, app.reviews, "AppResponseWithPublisher"
+        )
 
 
 @router.get("/apps")
 async def get_apps(
     skip_limit: SkipLimitParams,
     app_service: AppServiceDep,
+    review_service: ReviewServiceDep,
     search_query: Optional[SearchQuery] = None,
-) -> list[GameResponse]:
+) -> list[AppResponseWithPublisher]:
     skip, limit = skip_limit
-    return await app_service.get_apps(
-        search_query, skip, limit
+    apps = await app_service.get_apps(
+        search_query=search_query, skip=skip, limit=limit
         )
+    return await get_apps_with_rating(apps, review_service)
 
 
 @router.get("/apps/games")
 async def get_games(
     skip_limit: SkipLimitParams,
     app_service: AppServiceDep,
+    review_service: ReviewServiceDep,
     search_query: Optional[SearchQuery] = None,
     genre: Optional[GameGenre] = None,
-) -> list[AppResponse]:
+) -> list[AppResponseWithPublisher]:
     skip, limit = skip_limit
-    return await app_service.get_games(
-        search_query=search_query, genre=genre, 
-        skip=skip, limit=limit
-        )
+    games = await app_service.get_games(
+        search_query, genre, skip, limit
+        ) 
+    return await get_apps_with_rating(games, review_service)
 
 
 @router.get("/users/me/purchased-apps")
 async def get_purchased_apps(
     user: UserDep,
-    app_service: AppServiceDep
+    app_service: AppServiceDep,
+    review_service: ReviewServiceDep,
 ) -> list[AppResponse]:
-    apps = user.purchased_apps
-    return apps
+    apps = await app_service.get_purchased_apps(user)
+    return await get_apps_with_rating(apps, review_service)
 
 
 @router.get("/users/me/published-apps")
-async def get_published_apps(
-    user: UserDep,
+async def get_own_published_apps(
+    user_id: UserIdDep,
+    skip_limit: SkipLimitParams,
+    review_service: ReviewServiceDep,
     app_service: AppServiceDep
 ) -> list[AppResponse]:
-    apps = user.published_apps
-    return apps
+    skip, limit = skip_limit
+    apps = await app_service.get_publisher_apps(skip, limit, user_id)
+    logger.info(f"publshed apps are \n {apps}")
+    return await get_apps_with_rating(apps, review_service)
 
 
-@router.delete("/apps/{id}")
+@router.get("/users/by-id/{user_id}/published-apps")
+async def get_publisher_apps(
+    user_id: UUID,
+    skip_limit: SkipLimitParams,
+    app_service: AppServiceDep,
+    review_service: ReviewServiceDep
+) -> list[AppResponse]:
+    skip, limit = skip_limit
+    apps = await app_service.get_publisher_apps(
+        skip, limit, user_id
+        )
+    return await get_apps_with_rating(apps, review_service)
+
+
+@router.delete("/apps/by-id/{id}")
 async def delete_app(
     id: UUID,
     user: PublisherDep,

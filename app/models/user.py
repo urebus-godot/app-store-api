@@ -6,7 +6,7 @@ from typing import Optional
 
 from pydantic import EmailStr, ConfigDict
 from sqlmodel import SQLModel, Field, Relationship, Column, DateTime, func
-from sqlalchemy.dialects.postgresql import ARRAY, UUID as DB_UUID
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy import String
 
 from app.models.app_purchase import Purchase, CartItem
@@ -51,19 +51,18 @@ class UserDB(BaseUser, table=True):
     )
     balance: Decimal = Field(default=0, ge=0)
 
-    #apps_cart_id: UUID = Field(foreign_key="cart.id")
     cart: Optional["Cart"] = Relationship(
-        back_populates="user"#, link_model=CartItem
+        back_populates="user", cascade_delete=True
         )
     purchased_apps: list["AppDB"] = Relationship(
         back_populates="users_purchased", link_model=Purchase
         )
     published_apps: list["AppDB"] = Relationship(
-        back_populates="publisher"
+        back_populates="publisher", cascade_delete=True
         )
 
     reviews: list["ReviewDB"] = Relationship(
-        back_populates="author"
+        back_populates="author", cascade_delete=True
         )
 
 
@@ -76,16 +75,18 @@ class UserResponse(BaseUser):
     registered_at: datetime
 
     roles: set[UserRole]
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PublisherResponse(BaseUser):
+    id: UUID
+
     model_config = ConfigDict(from_attributes=True)
 
 
 class CurrentUserResponse(UserResponse):
     balance: Decimal
-
-    #reviews: list["ReviewResponse"]
-    #cart: list["CartAppResponse"]
-    #purchased_apps: list["AppPurchaseResponse"]
-    #published_apps: list["AppResponse"]
 
 
 class UserResponseWithReviewsAndApps(UserResponse):
@@ -95,14 +96,7 @@ class UserResponseWithReviewsAndApps(UserResponse):
     published_apps: list["AppResponse"]
 
 
-class UserUpdate(BaseUser):
+class UserUpdate(SQLModel):
+    username: Optional[str] = None
     email: Optional[EmailStr] = None
     password: Optional[str] = None
-
-
-def rebuild_models() -> None:
-    UserResponse.model_rebuild()
-    CurrentUserResponse.model_rebuild()
-
-
-#rebuild_models()

@@ -1,12 +1,9 @@
-from typing import Optional, Annotated
-from datetime import date, datetime, UTC
-
+from datetime import datetime
 from uuid import UUID, uuid4
 from decimal import Decimal
-from enum import StrEnum
 
 from sqlmodel import SQLModel, Field, Relationship, Column, DateTime, func
-from sqlalchemy.dialects.postgresql import ARRAY
+from pydantic import ConfigDict
 
 class Purchase(SQLModel, table=True):
     id: UUID = Field(
@@ -29,10 +26,11 @@ class Purchase(SQLModel, table=True):
     price: Decimal = Field(ge=0.0)
 
 
-#class PurchaseResponse(SQLModel):
-#    id: UUID
-#    purchased_at: datetime
-#    model_config = ConfigDict(from_attributes=True)
+class PurchaseResponse(SQLModel):
+    id: UUID
+    purchased_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CartItem(SQLModel, table=True):
@@ -48,7 +46,7 @@ class CartItem(SQLModel, table=True):
     )
 
     cart_id: UUID = Field(foreign_key="cart.id", ondelete="CASCADE")
-    app_id: UUID = Field(foreign_key="app.id")
+    app_id: UUID = Field(foreign_key="app.id", ondelete="CASCADE")
 
     cart: Cart = Relationship(
         back_populates="items"
@@ -62,10 +60,12 @@ class CartItemResponse(SQLModel):
     #app: "AppResponse"
     added_at: datetime
 
+    model_config = ConfigDict(from_attributes=True)
 
-class BaseCart(SQLModel):
-    id: UUID
-    items: list["CartItem"]
+
+#class BaseCart(SQLModel):
+ #   id: UUID
+  #  items: list["CartItem"]
 
 
 class Cart(SQLModel, table=True):
@@ -73,7 +73,11 @@ class Cart(SQLModel, table=True):
         default_factory=uuid4,
         primary_key=True
     )
-    user_id: UUID = Field(foreign_key="user.id", unique=True)
+    user_id: UUID = Field(
+        foreign_key="user.id", 
+        unique=True, 
+        ondelete="CASCADE"
+        )
     user: "UserDB" = Relationship(back_populates="cart")
     items: list["CartItem"] = Relationship(
         back_populates="cart",
@@ -85,3 +89,5 @@ class CartResponse(SQLModel):
     id: UUID
     items: list["CartItemResponse"] = []
     total_price: Decimal = Field(default=0.0, ge=0.0)
+
+    model_config = ConfigDict(from_attributes=True)

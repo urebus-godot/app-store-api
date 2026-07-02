@@ -1,29 +1,36 @@
+import logging
 from os import environ
 from typing import Optional
-import logging
+from datetime import timedelta
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from dotenv import load_dotenv
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env")
+
     API_TITLE: str = "App Store API"
     API_DESC: str = "REST API of an online store for desktop applications and video games"
     API_DESC_FULL: str = API_DESC
+    API_VERSION: str = "1.0"
 
-    APP_HOST: str = "0.0.0.0"
-    APP_PORT: int = 8000
+    API_HOST: str = "0.0.0.0"
+    API_PORT: int = 8000
 
     DB_URL: str = environ.get("DB_URL")
     REDIS_URL: str  = environ.get("REDIS_URL")
 
-    DB_OUTPUT: bool = True
+    TEST_DB_URL: str = environ.get("TEST_DB_URL")
+
+    DB_OUTPUT: bool = False
     DEBUG: bool = True
 
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 90
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    REFRESH_TTL_DAYS: timedelta = timedelta(days=7)
 
     SECRET_KEY: str = environ.get("SECRET_KEY")
-    ALGORITHM: str = "HS256"
+    JWT_ALGORITHM: str = "HS256"
 
     MIN_TITLE_LEN: int = 3
     MAX_TITLE_LEN: int = 40
@@ -32,11 +39,6 @@ class Settings(BaseSettings):
     MAX_NAME_LEN: int = 30
 
     MAX_DESC_LEN: int = 400
-
-    DUMMY_HASH: str = "dummypassword"
-
-    REFRESH_TOKEN_KEY: str = "cache:refresh-token"
-    TOKEN_BLACKLIST_KEY: str = "cache:token_blacklist"
 
     LOGGING_LEVEL: int = logging.INFO
     LOG_FILE_PATH: Optional[str] = None#"app_store_api.log"

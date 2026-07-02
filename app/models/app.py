@@ -1,6 +1,6 @@
 from typing import Optional, Annotated
-from datetime import date, UTC, datetime
-import re
+from datetime import date, datetime
+from datetime import timezone
 
 from uuid import UUID, uuid4
 from decimal import Decimal
@@ -17,11 +17,11 @@ from app.core.config import settings
 
 class GameGenre(StrEnum):
     ADVENTURE = "adventure"
+    ACTION = "action"
     PUZZLE = "puzzle"
     RACING = "racing"
     SANDBOX = "sandbox"
     MISC = "misc"
-    NONE = "none"
 
 
 class AppCategory(StrEnum):
@@ -65,13 +65,14 @@ class AppDB(BaseApp, table=True):
         )
     
     published_at: datetime = Field(
+        default=datetime.now(timezone.utc),
         sa_column=Column(
             DateTime(timezone=True),
             server_default=func.now(),
             nullable=False
         )
     )
-    genre: Optional[GameGenre] = Field(default=GameGenre.NONE, nullable=True)
+    genre: Optional[GameGenre] = Field(default=None, nullable=True)
     category: AppCategory = AppCategory.APPLICATION
     file_id: UUID = Field(default_factory=uuid4)
 
@@ -81,13 +82,13 @@ class AppDB(BaseApp, table=True):
     publisher: "UserDB" = Relationship(back_populates="published_apps")
 
     users_purchased: list["UserDB"] = Relationship(
-        back_populates="purchased_apps", link_model=Purchase
+        back_populates="purchased_apps", 
+        link_model=Purchase
     )
-    #in_carts_of: list["UserDB"] = Relationship(
-    #    back_populates="apps_cart", link_model=CartItem
-    #)
 
-    reviews: list["ReviewDB"] = Relationship(back_populates="app")
+    reviews: list["ReviewDB"] = Relationship(
+        back_populates="app", cascade_delete=True
+        )
 
 
 class AppRequest(BaseApp):
@@ -101,11 +102,15 @@ class AppRequest(BaseApp):
 
 class AppResponse(BaseApp):
     id: UUID
-    model_config = ConfigDict(from_attributes=True)
     category: AppCategory = AppCategory.APPLICATION
     published_at: datetime
-    rating: Optional[float] = Field(default=None, gt=0.0, lt=5.0)
-    #publisher: "UserResponse"
+    rating: Optional[float] = Field(default=None, gt=0.0, le=5.0)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AppResponseWithPublisher(AppResponse):
+    publisher: "PublisherResponse"
 
 
 class AppResponseWithReviews(AppResponse):
@@ -118,7 +123,7 @@ class AppUpdate(BaseApp):
 
 
 class GameRequest(AppRequest):
-    genre: GameGenre
+    genre: GameGenre = GameGenre.MISC
 
 
 class GameResponse(AppResponse):

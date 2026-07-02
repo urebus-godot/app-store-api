@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Response
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.dependencies import (
@@ -14,6 +14,7 @@ from app.models.user import (
 from app.models.token import (
     RefreshTokenRequest, TokenResponse, LoginResponse)
 from app.core.logging import logger
+from app.dependencies import RedisDep
 
 router = APIRouter()
 
@@ -22,59 +23,49 @@ router = APIRouter()
 async def register_user(
     data: UserRequest,
     user_service: UserServiceDep
-) -> UserResponse:
-    logger.info("Start registering user!")
+) -> CurrentUserResponse:
     return await user_service.register_user(data)
 
 
-@router.post("/login")
+@router.post("/users/login")
 async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    user_service: UserServiceDep
+    user_service: UserServiceDep,
+    redis: RedisDep,
+    response: Response
 ) -> LoginResponse:
-    logger.info("Start login")
-    return await user_service.login(
-        form_data.username, form_data.password
+    login_response = await user_service.login(
+        form_data.username, form_data.password, redis
         )
 
+    return login_response
+    response.set_cookie(
+        key="refresh-token", 
+        value=login_response.refresh_token,
+        httponly=True
+        )
 
 @router.post("/users/logout")
 async def logout(
-    credentials: TokenDep,
+    refresh_token: str,
     user_service: UserServiceDep,
-    refresh_request: RefreshTokenRequest = None,
+    redis: RedisDep
 ) -> dict[str, str]:
-    return await user_service.logout(refresh_request, credentials)
+    return await user_service.logout(refresh_token, redis)
 
 
-@router.post("/users/refresh-token")
-async def refresh_token(
-    request: RefreshTokenRequest,
-    user_service: UserServiceDep
+@router.post("/users/refresh")
+async def refresh_tokens(
+    refresh_token: str,
+    redis: RedisDep,
 ) -> TokenResponse:
-    username = auth.validate_refresh_token(request.refresh_token)
-    new_access_token = auth.create_access_token(username)
+    logger.info(f"Start refreshing token: \n{refresh_token=}")
+    tokens = await auth.refresh_tokens(refresh_token, redis)
 
-    return TokenResponse(access_token=new_access_token)
-
-
-@router.patch("/users/{username}")
-async def update_current_user(
-    data: UserUpdate,
-    user: UserDep,
-    user_service: UserServiceDep
-) -> UserResponse:
-    return await user_service.update_user(
-        data=data, user=user
+    return TokenResponse(
+        access_token=tokens["access_token"],
+        refresh_token=tokens["refresh_token"]
         )
-
-
-@router.patch("/users/me/become-publisher")
-async def become_publisher(
-    user: UserDep,
-    user_service: UserServiceDep
-) -> dict[str, str]:
-    return await user_service.become_publisher(user)
 
 
 @router.post("/users/me/top-up-balance")
@@ -85,6 +76,25 @@ async def top_up_balance(
 ) -> dict[str, str]:
     return await user_service.top_up_balance(
         amount, user=user
+        )
+
+
+@router.post("/users/me/become-publisher")
+async def become_publisher(
+    user: UserDep,
+    user_service: UserServiceDep
+) -> dict[str, str]:
+    return await user_service.become_publisher(user)
+
+
+@router.patch("/users/me")
+async def update_current_user(
+    data: UserUpdate,
+    user: UserDep,
+    user_service: UserServiceDep
+) -> UserResponse:
+    return await user_service.update_user(
+        data=data, user=user
         )
 
 
