@@ -7,7 +7,7 @@ def setup_logging() -> logging.Logger:
     logger.setLevel(settings.LOGGING_LEVEL)
 
     logging.basicConfig(
-        format="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
+        format="%(asctime)s | %(name)s %(levelname)s : %(message)s",
         datefmt='%Y-%m-%d %H:%M:%S',
         level=settings.LOGGING_LEVEL,
         filename=settings.LOG_FILE_PATH,

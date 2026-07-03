@@ -56,7 +56,7 @@ invalid_access_token_exception = HTTPException(
 
 app_not_found_exception = HTTPException(
     status.HTTP_404_NOT_FOUND,
-    "The application not found"
+    "Application not found"
 )
 
 apps_not_found_exception = HTTPException(
@@ -65,8 +65,8 @@ apps_not_found_exception = HTTPException(
 )
 
 app_not_purchased_exception = HTTPException(
-    status.HTTP_402_PAYMENT_REQUIRED,
-    "The pplication must be purchased"
+    status.HTTP_400_BAD_REQUEST,
+    "Application must be purchased"
 )
 
 not_enough_funds_exception = HTTPException(
@@ -79,27 +79,27 @@ not_enough_funds_exception = HTTPException(
 
 app_purchased_exception = HTTPException(
     status.HTTP_409_CONFLICT,
-    "The application has already been purchased"
+    "Application has already been purchased"
 )
 
 app_in_cart_exception = HTTPException(
     status.HTTP_409_CONFLICT,
-    "The application has already been added to the cart"
+    "Application has already been added to the cart"
 )
 
 app_published_exception = HTTPException(
     status.HTTP_409_CONFLICT,
-    "The application is published by you"
+    "Application is published by you"
 )
 
 empty_cart_exception = HTTPException(
     status.HTTP_400_BAD_REQUEST,
-    "The cart is empty"
+    "Cart is empty"
 )
 
 app_not_in_cart_exception = HTTPException(
     status.HTTP_404_NOT_FOUND,
-    "The application not in the cart"
+    "Application not in the cart"
 )
 
 
@@ -107,5 +107,18 @@ app_not_in_cart_exception = HTTPException(
 
 review_not_found_exception = HTTPException(
     status.HTTP_404_NOT_FOUND,
-    "The review not found"
+    "Review not found"
+)
+
+
+# ----- Discussion ------
+
+message_not_found_exception = HTTPException(
+    status.HTTP_404_NOT_FOUND,
+    "Message not found"
+)
+
+discussion_not_found_exception = HTTPException(
+    status.HTTP_404_NOT_FOUND,
+    "Discussion not found"
 )

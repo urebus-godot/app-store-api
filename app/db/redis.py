@@ -17,8 +17,8 @@ class RedisClient:
         await self.redis.aclose()
 
 
-def connect_to_redis() -> RedisClient:
-    return RedisClient(settings.REDIS_URL)
+def connect_to_redis(url: str = settings.REDIS_URL) -> RedisClient:
+    return RedisClient(url)
 
 def get_redis_client() -> Redis:
     from app.main import app

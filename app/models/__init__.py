@@ -1,6 +1,6 @@
 from .user import (
     UserDB, 
-    UserResponse, CurrentUserResponse, PublisherResponse
+    UserResponse, CurrentUserResponse, PublisherResponse, UserBaseResponse
     )
 from .review import ReviewDB, ReviewResponse
 from .app import (
@@ -12,6 +12,7 @@ from .app_purchase import (
     CartItem, 
     CartResponse, CartItemResponse, PurchaseResponse
     )
+from .discussion import MessageResponse
 
 UserDB.model_rebuild()
 ReviewDB.model_rebuild()
@@ -22,6 +23,7 @@ CartItem.model_rebuild()
 UserResponse.model_rebuild()
 CurrentUserResponse.model_rebuild()
 PublisherResponse.model_rebuild()
+UserBaseResponse.model_rebuild()
 
 ReviewResponse.model_rebuild()
 
@@ -33,3 +35,5 @@ GameResponse.model_rebuild()
 PurchaseResponse.model_rebuild()
 CartResponse.model_rebuild()
 CartItemResponse.model_rebuild()
+
+MessageResponse.model_rebuild()

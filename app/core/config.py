@@ -18,9 +18,10 @@ class Settings(BaseSettings):
     API_PORT: int = 8000
 
     DB_URL: str = environ.get("DB_URL")
-    REDIS_URL: str  = environ.get("REDIS_URL")
-
     TEST_DB_URL: str = environ.get("TEST_DB_URL")
+
+    REDIS_URL: str  = environ.get("REDIS_URL")
+    TEST_REDIS_URL: str = environ.get("TEST_REDIS_URL")
 
     DB_OUTPUT: bool = False
     DEBUG: bool = True
@@ -41,7 +42,7 @@ class Settings(BaseSettings):
     MAX_DESC_LEN: int = 400
 
     LOGGING_LEVEL: int = logging.INFO
-    LOG_FILE_PATH: Optional[str] = None#"app_store_api.log"
+    LOG_FILE_PATH: Optional[str] = None#"C:/Users/user/Desktop/app_store_api.log"
     
 load_dotenv()
 

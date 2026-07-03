@@ -89,7 +89,7 @@ class UserService:
         try:
             payload = jwt.decode(
                 refresh_token, 
-                settings.JWT_KEY, 
+                settings.SECRET_KEY, 
                 algorithms=settings.JWT_ALGORITHM
                 )
             jti = payload.get("jti")
@@ -102,7 +102,8 @@ class UserService:
 
             return {"message": "Logout successful"}
 
-        except DecodeError:
+        except DecodeError as e:
+            logger.info(f"Exception = {e}")
             raise invalid_refresh_token_exception
 
     async def top_up_balance(

@@ -24,7 +24,6 @@ def get_app_with_rating(
             [review.rating for review in reviews]
             ) / len(reviews)
         app.rating = round(rating, 1)
-    logger.info(f"Returning {app = }")
     return app
 
 
@@ -35,7 +34,6 @@ async def get_apps_with_rating(
     for app in apps:
         reviews = await review_service.get_app_reviews(app.id)
         app = get_app_with_rating(app, reviews)
-    logger.info(f"Returning {apps = }")
     return apps
 
 

@@ -96,6 +96,10 @@ class UserResponseWithReviewsAndApps(UserResponse):
     published_apps: list["AppResponse"]
 
 
+class UserBaseResponse(BaseUser):
+    model_config = ConfigDict(from_attributes=True)
+
+
 class UserUpdate(SQLModel):
     username: Optional[str] = None
     email: Optional[EmailStr] = None

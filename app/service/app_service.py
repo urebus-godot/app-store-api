@@ -15,6 +15,7 @@ from app.service.user_service import UserService
 from app.models.app import AppRequest, AppUpdate, GameGenre, AppDB
 from app.models.user import UserDB
 from app.repo.app_repo import AppRepository
+from app.core.logging import logger
 
 
 class AppService:
@@ -25,6 +26,7 @@ class AppService:
         self.user_service = user_service
 
     def format_keywords(self, keywords: list[str]) -> list[str]:
+        logger.info(f"Before: {keywords = }")
         new_keywords = []
         for kw in keywords:
             kw = kw.strip()
@@ -32,6 +34,7 @@ class AppService:
             kw = kw.format_map(
                 {c: "" for c in punctuation}
                 )
+        logger.info(f"After: {keywords = }")
         return new_keywords
 
     def filter_apps(
@@ -107,9 +110,9 @@ class AppService:
         raise apps_not_found_exception
 
     async def get_purchased_apps(
-        self, user: UserDB
+        self, user_id: UUID
     ) -> list[AppDB]:
-        purchased_apps = await self.app_repo.get_purchased_apps(user)
+        purchased_apps = await self.app_repo.get_purchased_apps(user_id)
         return purchased_apps
     
     async def get_publisher_apps(

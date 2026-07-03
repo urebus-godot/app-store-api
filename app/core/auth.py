@@ -22,13 +22,9 @@ def create_access_token(
     )
     
     payload = {
-        "sub": user_id,  # Subject (user identifier)
-        "exp": int(expire.timestamp()),  # Expiration time as Unix timestamp
-        #"iat": int(
-        #    datetime.now(timezone.utc).timestamp()
-        #),  # Issued at as Unix timestamp
-        #"jti": secrets.token_urlsafe(16),  # JWT ID (unique identifier)
-        "type": "access"  # Token type
+        "sub": user_id,
+        "exp": int(expire.timestamp()),
+        "type": "access"
     }
 
     return jwt.encode(
@@ -89,7 +85,7 @@ async def create_token_pair(
 async def decode_access_token(
     token: str, redis: Redis
     ) -> dict:
-    """Decode and validate a JWT token."""
+    """Decode and validate a JWT access token."""
     try:
         logger.info(f"Token in blacklist: {await redis.exists(f"blacklist:{token}")}")
         if await redis.exists(f"blacklist:{token}"):
@@ -116,6 +112,7 @@ async def decode_access_token(
 async def revoke_all_user_tokens(
     user_id: str, redis: Redis
 ):
+    """Adds all user's refresh tokens to the blacklist in Redis"""
     jtis = await redis.smembers(f"user_tokens:{user_id}")
     for jti in jtis:
         jti_str = jti.decode() if isinstance(jti, bytes) else jti
@@ -133,6 +130,7 @@ async def revoke_all_user_tokens(
 async def refresh_tokens(
     refresh_token: str, redis: Redis
 ) -> dict[str, str]:
+    """Creates new refresh and access tokens if the refresh token is not blacklisted."""
     try:
         payload = jwt.decode(
             refresh_token, 

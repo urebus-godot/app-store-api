@@ -26,8 +26,6 @@ services:
       - redis_data:/data
     networks: 
       - app_network
-    environment:
-      - REDIS_URL=redis://redis:6379/0
   
   #redis-commander:
   #  image: rediscommander/redis-commander:latest

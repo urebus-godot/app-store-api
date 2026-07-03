@@ -149,7 +149,7 @@ class CartRepository(AbstractCartRepository):
         self, user_id: UUID, item: CartItem
     ) -> None:
         purchase = Purchase(
-            user_id=user_id, app_id=item.app_id, price=item.price
+            user_id=user_id, app_id=item.app_id, price=item.app.price
             )
         self.session.add(purchase)
 

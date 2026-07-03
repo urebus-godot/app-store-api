@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - DATABASE_URL=${TEST_DB_URL}
+      - DATABASE_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=test_db
+    container_name: test_db
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    container_name: test_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes

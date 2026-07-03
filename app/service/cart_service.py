@@ -1,6 +1,8 @@
 from uuid import UUID
 from typing import Optional
 
+from fastapi import status, HTTPException
+
 from app.core.exceptions import (
     not_enough_funds_exception,
     app_purchased_exception,
@@ -96,19 +98,25 @@ class CartService:
 
         except Exception as e:
             await self.cart_repo.session.rollback()
-            logger.error(f"An error occurred during transaction: {e}")
+            logger.error(f"\nAn error occurred during transaction:\n", exc_info=True)
+            raise HTTPException(
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                f"Error occurred during transaction: {e}. Please contact the developer"
+            )
 
         return purchased_apps
 
     async def remove_app_from_cart(
         self, app_id: UUID, user_id: UUID
     ) -> dict[str, str]:
+        app = await self.app_service.get_app(app_id)
         user_cart = await self.get_or_create_cart(user_id)
         cart_item = await self.get_cart_item(user_cart.id, app_id)
 
         if cart_item is None:
             raise app_not_in_cart_exception
 
+        user_cart.items.remove(cart_item)
         return await self.cart_repo.remove_app_from_cart(
             user_cart, cart_item
             )

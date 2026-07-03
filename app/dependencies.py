@@ -16,11 +16,13 @@ from app.repo.user_repo import UserRepository
 from app.repo.app_repo import AppRepository
 from app.repo.review_repo import ReviewRepository
 from app.repo.cart_repo import CartRepository
+from app.repo.discussion_repo import DiscussionRepository
 
 from app.service.user_service import UserService
 from app.service.app_service import AppService
 from app.service.review_service import ReviewService
 from app.service.cart_service import CartService
+from app.service.discussion_service import DiscussionService
 
 from app.core.logging import logger
 
@@ -130,6 +132,12 @@ def get_cart_service(
     return CartService(app_service, cart_repo)
 
 
+def get_discussion_service(
+    discussion_repo: DiscussionRepository
+) -> DiscussionService:
+    return DiscussionService(discussion_repo)
+
+
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 UserIdDep = Annotated[UUID, Depends(get_current_user_id)]
@@ -151,5 +159,7 @@ ReviewRepoDep = Annotated[ReviewRepository, Depends(get_review_repo)]
 
 CartServiceDep = Annotated[CartService, Depends(get_cart_service)]
 CartRepoDep = Annotated[CartRepository, Depends(get_cart_repo)]
+
+DiscussionServiceDep = Annotated[DiscussionService, Depends(get_discussion_service)]
 
 RedisDep = Annotated[Redis, Depends(get_redis_client)]

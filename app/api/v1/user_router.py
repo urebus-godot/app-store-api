@@ -24,6 +24,7 @@ async def register_user(
     data: UserRequest,
     user_service: UserServiceDep
 ) -> CurrentUserResponse:
+    """Creates new user """
     return await user_service.register_user(data)
 
 
@@ -34,6 +35,7 @@ async def login(
     redis: RedisDep,
     response: Response
 ) -> LoginResponse:
+    """Returns refresh and access tokens to the user on success."""
     login_response = await user_service.login(
         form_data.username, form_data.password, redis
         )
@@ -51,6 +53,7 @@ async def logout(
     user_service: UserServiceDep,
     redis: RedisDep
 ) -> dict[str, str]:
+    """Adds user's refresh token to the blacklist or deletes it from Redis."""
     return await user_service.logout(refresh_token, redis)
 
 
@@ -59,6 +62,7 @@ async def refresh_tokens(
     refresh_token: str,
     redis: RedisDep,
 ) -> TokenResponse:
+    """Creates refresh and access tokens on success."""
     logger.info(f"Start refreshing token: \n{refresh_token=}")
     tokens = await auth.refresh_tokens(refresh_token, redis)
 
@@ -74,6 +78,7 @@ async def top_up_balance(
     user: UserDep,
     user_service: UserServiceDep
 ) -> dict[str, str]:
+    """Increases user's balance by specified amount"""
     return await user_service.top_up_balance(
         amount, user=user
         )
@@ -84,6 +89,7 @@ async def become_publisher(
     user: UserDep,
     user_service: UserServiceDep
 ) -> dict[str, str]:
+    """Adds 'publisher' role to user roles on success."""
     return await user_service.become_publisher(user)
 
 
@@ -93,6 +99,7 @@ async def update_current_user(
     user: UserDep,
     user_service: UserServiceDep
 ) -> UserResponse:
+    """Changes attributes of user to the new one"""
     return await user_service.update_user(
         data=data, user=user
         )
@@ -102,6 +109,7 @@ async def update_current_user(
 async def get_current_user(
     user: UserDep
 ) -> CurrentUserResponse:
+    """Returns current user."""
     return user
 
 
@@ -110,6 +118,7 @@ async def get_user(
     username: str,
     user_service: UserServiceDep
 ) -> UserResponse:
+    """Returns user from the db with specified username."""
     return await user_service.get_user(username=username)
 
 
@@ -118,6 +127,7 @@ async def get_users(
     skip_limit: SkipLimitParams,
     user_service: UserServiceDep
 ) -> list[UserResponse]:
+    """Returns all users from the db."""
     skip, limit = skip_limit
     return await user_service.get_users(skip, limit)
 
@@ -127,4 +137,5 @@ async def delete_current_user(
     user: UserDep,
     user_service: UserServiceDep
 ) -> dict[str, str]:
+    """Deletes user."""
     return await user_service.delete_user(user)

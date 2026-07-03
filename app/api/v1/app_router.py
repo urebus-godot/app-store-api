@@ -43,7 +43,7 @@ async def upload_app_file(
     data: UploadFile,
     user: PublisherDep,
     app_service: AppServiceDep
-) -> dict[str, str]:
+):
     return None#app_service.upload_app_file(data, user)
 
 
@@ -110,11 +110,11 @@ async def get_games(
 
 @router.get("/users/me/purchased-apps")
 async def get_purchased_apps(
-    user: UserDep,
+    user_id: UserIdDep,
     app_service: AppServiceDep,
     review_service: ReviewServiceDep,
 ) -> list[AppResponse]:
-    apps = await app_service.get_purchased_apps(user)
+    apps = await app_service.get_purchased_apps(user_id)
     return await get_apps_with_rating(apps, review_service)
 
 
