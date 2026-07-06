@@ -148,7 +148,6 @@ async def refresh_tokens(
             status.HTTP_401_UNAUTHORIZED,
             "Token reuse detected. All sessions revoked"
         )
-    logger.info(f"Looking for family with key: 'refresh_token:{jti}' \nvalue={await redis.get(f"refresh_token:{jti}")}")
     stored_family = await redis.get(f"refresh_token:{jti}")
     logger.info(f"{stored_family = }")
     logger.info(f"{family_id = }")

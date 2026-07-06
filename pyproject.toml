@@ -43,7 +43,8 @@ extend-select = ["E501"]
 
 [tool.ruff]
 line-length  = 79
-target-version = "py3143"
+target-version = "py314"
+extend-exclude = ["migrations"]
 
 [dependency-groups]
 dev = [

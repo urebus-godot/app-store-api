@@ -97,7 +97,7 @@ class UserService:
             logger.info(f"{payload = }")
             logger.info(f"{ttl = }")
             if ttl > 0:
-                await redis.set(f"blacklisted_tokens:{jti}", "1", ex=ttl)
+                await redis.set(f"blacklist:{jti}", "1", ex=ttl)
             await redis.delete(f"refresh_token:{jti}")
 
             return {"message": "Logout successful"}

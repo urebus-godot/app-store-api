@@ -20,11 +20,12 @@ from app.dependencies import (
 from app.service.user_service import UserService
 from app.repo.user_repo import UserRepository
 from app.core.config import settings
+from app.core.security import get_password_hash
 from app.main import app
 
 test_user_data = {
     "username": "testUser", 
-    "hashed_password": "testPassword", 
+    "hashed_password": get_password_hash("testPassword"), 
     "email": "ureb588@gmail.com",
     "id": UUID('3076dfdd-fba4-4b11-a415-143ca0e8d21c')
     }
@@ -37,7 +38,7 @@ def create_access_token(
 ) -> str:
     expire = datetime.now(timezone.utc) + expires_delta
     payload = {
-        "sub": user_id,
+        "sub": str(user_id),
         "exp": int(expire.timestamp()),
         "type": "access",
         #"jti": str(uuid4),
@@ -59,11 +60,11 @@ def create_refresh_token(
 ) -> str:
     expire = datetime.now(timezone.utc) + expires_delta
     payload = {
-        "sub": user_id,
+        "sub": str(user_id),
         "exp": int(expire.timestamp()),
         "type": "refresh",
-        "jti": jti,
-        "family_id": family_id
+        "jti": str(jti),
+        "family_id": str(family_id)
     }
     token = jwt.encode(
         payload, 
@@ -93,6 +94,11 @@ async def engine():
         await conn.run_sync(SQLModel.metadata.drop_all)
 
     await engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def user_data() -> dict[str, str]:
+    return test_user_data
 
 
 @pytest_asyncio.fixture
@@ -177,6 +183,11 @@ def access_token(user_id: UUID) -> str:
     return create_access_token(user_id)
 
 
+#@pytest_asyncio.fixture
+#def refresh_token(user_id: UUID) -> str:
+#    return create_refresh_token(user_id)
+
+
 @pytest_asyncio.fixture
 async def refresh_token_data(
     test_user: UserDB,
@@ -198,42 +209,32 @@ async def refresh_token_data(
         "token": token,
         "jti": jti,
         "family_id": family_id,
-        "user_id": test_user.id
+        "user_id": str(test_user.id)
     }
-
-
-#@pytest_asyncio.fixture
-#async def user_repo(session: AsyncSession) -> UserService:
-#    return UserRepository(session)
-#@pytest_asyncio.fixture
-#async def user_service(user_repo: UserRepository) -> UserService:
-#    return UserService(user_repo)
 
 
 @pytest_asyncio.fixture
 async def test_user(
-    session: AsyncSession
+    db_session: AsyncSession
     ) -> UserDB:
     user = UserDB(**test_user_data)
-    user.id = uuid4()
 
-    session.add(user)
-    await session.commit()
-    await session.refresh(user)
+    db_session.add(user)
+    await db_session.commit()
+    #await session.refresh(user)
     
     return user
 
 
 @pytest_asyncio.fixture
 async def test_publisher(
-    session: AsyncSession
+    db_session: AsyncSession
     ) -> UserDB:
     user = UserDB(**test_user_data)
     user.roles = [UserRole.USER, UserRole.PUBLISHER]
-    user.id = uuid4()
 
-    session.add(user)
-    await session.commit()
-    await session.refresh(user)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
     
     return user
