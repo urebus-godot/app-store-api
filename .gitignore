@@ -14,4 +14,4 @@ x/
 *.sql
 *.python-version
 *.json
-.python-version
+*.python-version
