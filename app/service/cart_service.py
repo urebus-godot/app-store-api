@@ -108,7 +108,7 @@ class CartService:
 
     async def remove_app_from_cart(
         self, app_id: UUID, user_id: UUID
-    ) -> dict[str, str]:
+    ) -> None:
         app = await self.app_service.get_app(app_id)
         user_cart = await self.get_or_create_cart(user_id)
         cart_item = await self.get_cart_item(user_cart.id, app_id)
@@ -117,16 +117,16 @@ class CartService:
             raise app_not_in_cart_exception
 
         user_cart.items.remove(cart_item)
-        return await self.cart_repo.remove_app_from_cart(
+        await self.cart_repo.remove_app_from_cart(
             user_cart, cart_item
             )
 
     async def clear_cart(
         self, user_id: UUID
-    ) -> dict[str, str]:
+    ) -> None:
         cart = await self.get_or_create_cart(user_id)
 
         if not cart.items:
             raise empty_cart_exception
 
-        return await self.cart_repo.clear_cart(cart)
+        await self.cart_repo.clear_cart(cart)

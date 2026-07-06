@@ -6,6 +6,8 @@ from sqlmodel import SQLModel, Field, Relationship, Column, DateTime, func
 from pydantic import ConfigDict
 
 class Purchase(SQLModel, table=True):
+    __tablename__ = "purchases"
+
     id: UUID = Field(
         default_factory=uuid4, primary_key=True
         )
@@ -17,10 +19,10 @@ class Purchase(SQLModel, table=True):
         )
     )
 
-    user_id: UUID = Field(foreign_key="user.id", primary_key=True)
+    user_id: UUID = Field(foreign_key="users.id", primary_key=True)
     #user: "UserDB" = Relationship(back_populates="purchased_apps")
 
-    app_id: UUID = Field(foreign_key="app.id", primary_key=True)
+    app_id: UUID = Field(foreign_key="apps.id", primary_key=True)
     #app: "AppDB" = Relationship(back_populates="purchases")
 
     price: Decimal = Field(ge=0.0)
@@ -34,6 +36,8 @@ class PurchaseResponse(SQLModel):
 
 
 class CartItem(SQLModel, table=True):
+    __tablename__ = "cart_items"
+
     id: UUID = Field(
         default_factory=uuid4, primary_key=True
         )
@@ -45,8 +49,8 @@ class CartItem(SQLModel, table=True):
         )
     )
 
-    cart_id: UUID = Field(foreign_key="cart.id", ondelete="CASCADE")
-    app_id: UUID = Field(foreign_key="app.id", ondelete="CASCADE")
+    cart_id: UUID = Field(foreign_key="carts.id", ondelete="CASCADE")
+    app_id: UUID = Field(foreign_key="apps.id", ondelete="CASCADE")
 
     cart: Cart = Relationship(
         back_populates="items"
@@ -69,12 +73,14 @@ class CartItemResponse(SQLModel):
 
 
 class Cart(SQLModel, table=True):
+    __tablename__ = "carts"
+
     id: UUID = Field(
         default_factory=uuid4,
         primary_key=True
     )
     user_id: UUID = Field(
-        foreign_key="user.id", 
+        foreign_key="users.id", 
         unique=True, 
         ondelete="CASCADE"
         )

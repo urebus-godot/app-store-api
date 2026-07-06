@@ -11,6 +11,7 @@ import alembic_postgresql_enum
 from app.models.app import AppDB
 from app.models.user import UserDB
 from app.models.review import ReviewDB
+from app.models.discussion import DiscussionDB
 from app.models.app_purchase import Cart, Purchase
 
 

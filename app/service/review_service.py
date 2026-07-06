@@ -3,6 +3,7 @@ from typing import Optional
 
 from fastapi import HTTPException, status
 
+from app.core.logging import logger
 from app.core.exceptions import (
     review_not_found_exception, 
     no_rights_exception
@@ -24,23 +25,23 @@ class ReviewService:
     async def create_review(
         self, app_id: UUID,
         data: ReviewRequest,
-        user: UserDB
-    ):
+        user_id: UUID
+    ) -> ReviewDB:
         app = await self.app_service.get_app(app_id)
-
-        if app.publisher == user:
+        logger.info(f"{app.publisher_id=} \n{user_id=}")
+        if app.publisher_id == user_id:
             raise HTTPException(
                 status.HTTP_400_BAD_REQUEST,
                 "You can't create review to your own app"
             )
 
         return await self.review_repo.create_review(
-            app=app, data=data, user_id=user.id
+            app=app, data=data, user_id=user_id
             )
 
     async def get_review(
         self, id: UUID
-    ):
+    ) -> ReviewDB:
         review = await self.review_repo.get_review(id)
 
         if review is None:
@@ -63,10 +64,10 @@ class ReviewService:
     async def delete_review(
         self, id: UUID,
         user_id: UUID
-    ):
+    ) -> None:
         review = await self.get_review(id)
 
         if not review.author_id == user_id:
             raise no_rights_exception
         
-        return await self.review_repo.delete_review(id)
+        await self.review_repo.delete_review(review)

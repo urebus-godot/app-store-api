@@ -7,8 +7,10 @@ from fastapi import Depends, Query, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
 from app.db.postgres import get_session
-from app.db.redis import get_redis_client
-from app.core.exceptions import no_rights_exception
+from app.db.redis import get_redis
+from app.core.exceptions import (
+    no_rights_exception, invalid_token_payload_exception
+    )
 from app.core.auth import decode_access_token
 from app.models.user import UserDB, UserRole
 
@@ -37,7 +39,6 @@ def skip_limit_params(
 
 async def get_current_user_id(
     token: TokenDep,
-    user_service: UserServiceDep,
     redis: RedisDep
 ) -> UUID | None:
     payload = await decode_access_token(token, redis)
@@ -45,28 +46,21 @@ async def get_current_user_id(
     user_id = payload.get("sub")
 
     if user_id is None:
-        raise HTTPException(
-            status.HTTP_401_UNAUTHORIZED, 
-            "Invalid token payload"
-        )
+        raise invalid_token_payload_exception
 
-    return user_id
+    return UUID(user_id)
 
 
 async def get_current_user(
     token: TokenDep,
-    user_service: UserServiceDep,
-    redis: RedisDep
+    user_service: UserServiceDep
 ) -> UserDB | None:
-    payload = await decode_access_token(token, redis)
+    payload = await decode_access_token(token)
     logger.info(payload)
     user_id = payload.get("sub")
 
     if user_id is None:
-        raise HTTPException(
-            status.HTTP_401_UNAUTHORIZED, 
-            "Invalid token payload"
-        )
+        raise invalid_token_payload_exception
 
     user = await user_service.get_user(id=UUID(user_id))
 
@@ -80,6 +74,22 @@ def require_role(role: UserRole) -> UserDB:
             exception.detail = f"{exception.detail}. Role '{role}' required"
             raise no_rights_exception
         return user
+    return wrapper
+
+
+def _require_role(role: UserRole) -> UserDB:
+    def wrapper(token: TokenDep, redis: RedisDep) -> UserDB:
+        payload = decode_access_token(token, redis)
+        user_roles = payload.get("role")
+        user_id = payload.get("sub")
+
+        if user_roles is None or user_id is None:
+            raise invalid_token_payload_exception
+
+        if role not in user_roles:
+            raise no_rights_exception
+
+        return user_id
     return wrapper
 
 
@@ -132,10 +142,16 @@ def get_cart_service(
     return CartService(app_service, cart_repo)
 
 
+def get_discussion_repo(
+    session: SessionDep
+) -> DiscussionRepository:
+    return DiscussionRepository(session)
+
 def get_discussion_service(
-    discussion_repo: DiscussionRepository
+    discussion_repo: DiscussionRepoDep,
+    app_service: AppServiceDep
 ) -> DiscussionService:
-    return DiscussionService(discussion_repo)
+    return DiscussionService(discussion_repo, app_service)
 
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -160,6 +176,11 @@ ReviewRepoDep = Annotated[ReviewRepository, Depends(get_review_repo)]
 CartServiceDep = Annotated[CartService, Depends(get_cart_service)]
 CartRepoDep = Annotated[CartRepository, Depends(get_cart_repo)]
 
-DiscussionServiceDep = Annotated[DiscussionService, Depends(get_discussion_service)]
+DiscussionServiceDep = Annotated[
+    DiscussionService, Depends(get_discussion_service)
+    ]
+DiscussionRepoDep = Annotated[
+    DiscussionRepository, Depends(get_discussion_repo)
+    ]
 
-RedisDep = Annotated[Redis, Depends(get_redis_client)]
+RedisDep = Annotated[Redis, Depends(get_redis)]

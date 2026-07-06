@@ -10,16 +10,22 @@ from app.dependencies import (
     )
 from app.core import auth
 from app.models.user import (
-    UserRequest, UserResponse, UserUpdate, CurrentUserResponse)
+    UserRequest, UserResponse, UserUpdate, CurrentUserResponse
+    )
 from app.models.token import (
-    RefreshTokenRequest, TokenResponse, LoginResponse)
+    RefreshTokenRequest, TokenResponse, LoginResponse
+    )
 from app.core.logging import logger
 from app.dependencies import RedisDep
 
 router = APIRouter()
 
 
-@router.post("/users/register-user", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/users", 
+    status_code=status.HTTP_201_CREATED,
+    response_model=CurrentUserResponse
+    )
 async def register_user(
     data: UserRequest,
     user_service: UserServiceDep
@@ -72,7 +78,7 @@ async def refresh_tokens(
         )
 
 
-@router.post("/users/me/top-up-balance")
+@router.patch("/users/me/balance")
 async def top_up_balance(
     amount: Decimal,
     user: UserDep,
@@ -84,12 +90,12 @@ async def top_up_balance(
         )
 
 
-@router.post("/users/me/become-publisher")
+@router.patch("/users/me/publisher")
 async def become_publisher(
     user: UserDep,
     user_service: UserServiceDep
 ) -> dict[str, str]:
-    """Adds 'publisher' role to user roles on success."""
+    """Adds "publisher" role to user roles on success."""
     return await user_service.become_publisher(user)
 
 
@@ -109,11 +115,14 @@ async def update_current_user(
 async def get_current_user(
     user: UserDep
 ) -> CurrentUserResponse:
-    """Returns current user."""
+    """Returns user retrieved via dependency injection."""
     return user
 
 
-@router.get("/users/{username}")
+@router.get(
+    "/users/{username}",
+    response_model=UserResponse
+    )
 async def get_user(
     username: str,
     user_service: UserServiceDep
@@ -127,15 +136,15 @@ async def get_users(
     skip_limit: SkipLimitParams,
     user_service: UserServiceDep
 ) -> list[UserResponse]:
-    """Returns all users from the db."""
+    """Returns all users from db."""
     skip, limit = skip_limit
     return await user_service.get_users(skip, limit)
 
 
-@router.delete("/users/me")
+@router.delete("/users/me", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_current_user(
     user: UserDep,
     user_service: UserServiceDep
-) -> dict[str, str]:
+) -> None:
     """Deletes user."""
-    return await user_service.delete_user(user)
+    await user_service.delete_user(user)

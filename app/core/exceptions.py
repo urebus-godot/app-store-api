@@ -51,6 +51,11 @@ invalid_access_token_exception = HTTPException(
     detail="Invalid access token"
 )
 
+invalid_token_payload_exception = HTTPException(
+    status.HTTP_401_UNAUTHORIZED, 
+    "Invalid token payload"
+)
+
 
 # ----- App -----
 

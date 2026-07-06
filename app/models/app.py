@@ -51,13 +51,9 @@ class BaseApp(SQLModel):
         )
     version: str = Field(default="1.0")
 
-    #@field_validator("version", mode="before")
-    #def validate_version(cls, value) -> str:
-    #    re
-
 
 class AppDB(BaseApp, table=True):
-    __tablename__ = "app"
+    __tablename__ = "apps"
 
     id: UUID = Field(
         default_factory=uuid4,
@@ -65,7 +61,7 @@ class AppDB(BaseApp, table=True):
         )
     
     published_at: datetime = Field(
-        default=datetime.now(timezone.utc),
+        #default=datetime.now(timezone.utc),
         sa_column=Column(
             DateTime(timezone=True),
             server_default=func.now(),
@@ -78,7 +74,7 @@ class AppDB(BaseApp, table=True):
 
     keywords: set[str] = Field(sa_type=ARRAY(String))
 
-    publisher_id: UUID = Field(foreign_key="user.id")
+    publisher_id: UUID = Field(foreign_key="users.id", ondelete="CASCADE")
     publisher: "UserDB" = Relationship(back_populates="published_apps")
 
     users_purchased: list["UserDB"] = Relationship(
@@ -87,7 +83,8 @@ class AppDB(BaseApp, table=True):
     )
 
     reviews: list["ReviewDB"] = Relationship(
-        back_populates="app", cascade_delete=True
+        back_populates="app", cascade_delete=True, 
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
         )
 
 
@@ -118,8 +115,22 @@ class AppResponseWithReviews(AppResponse):
     reviews: list["ReviewResponse"]
 
 
-class AppUpdate(BaseApp):
-    pass
+class AppUpdate(SQLModel):
+    title: Optional[str] = Field(
+        default=None,
+        min_length=settings.MIN_TITLE_LEN,
+        max_length=settings.MAX_TITLE_LEN
+        )
+    description: Optional[str] = Field(
+        default=None,
+        max_length=settings.MAX_DESC_LEN
+        )
+    price: Optional[Decimal] = Field(default=0.0, ge=0.0)
+    public: Optional[bool] = None
+    keywords: Optional[set[str]] = Field(
+        default=None
+        )
+    version: Optional[str] = Field(default="1.0")
 
 
 class GameRequest(AppRequest):
@@ -129,6 +140,10 @@ class GameRequest(AppRequest):
 class GameResponse(AppResponse):
     genre: GameGenre
     category: AppCategory = AppCategory.GAME
+
+
+class GameResponseWithPublisher(GameResponse):
+    publisher: "PublisherResponse"
 
 
 def rebuild_models() -> None:

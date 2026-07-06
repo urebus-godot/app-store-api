@@ -26,9 +26,8 @@ class Settings(BaseSettings):
     DB_OUTPUT: bool = False
     DEBUG: bool = True
 
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 90
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
-    REFRESH_TTL_DAYS: timedelta = timedelta(days=7)
+    ACCESS_TOKEN_EXPIRE_MINUTES: timedelta = timedelta(minutes=15)
+    REFRESH_TOKEN_EXPIRE_DAYS: timedelta = timedelta(days=7)
 
     SECRET_KEY: str = environ.get("SECRET_KEY")
     JWT_ALGORITHM: str = "HS256"

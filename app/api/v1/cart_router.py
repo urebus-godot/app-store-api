@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, status
 
 from app.dependencies import CartServiceDep, UserIdDep, UserDep
 from app.models.app_purchase import CartResponse
@@ -10,16 +10,16 @@ from app.core.logging import logger
 router = APIRouter()
 
 
-@router.post("/cart/{id}/add-to-cart")
+@router.post("/carts/{user_id}/{app_id}")
 async def add_app_to_cart(
-    id: UUID,
+    app_id: UUID,
     user_id: UserIdDep,
     cart_service: CartServiceDep
 ) -> dict[str, str]:
-    return await cart_service.add_app_to_cart(id, user_id)
+    return await cart_service.add_app_to_cart(app_id, user_id)
 
 
-@router.post("/cart/purchase-apps")
+@router.get("/carts/{user_id}/apps")
 async def purchase_apps_in_cart(
     user_id: UserDep,
     cart_service: CartServiceDep
@@ -27,7 +27,7 @@ async def purchase_apps_in_cart(
     return await cart_service.purchase_apps_in_cart(user_id)
 
 
-@router.get("/cart")
+@router.get("/carts/{user_id}")
 async def get_cart(
     user_id: UserIdDep,
     cart_service: CartServiceDep
@@ -41,18 +41,24 @@ async def get_cart(
     return cart_response
 
 
-@router.delete("/cart/{id}/remove-app")
+@router.delete(
+    "/carts/{user_id}/{app_id}", 
+    status_code=status.HTTP_204_NO_CONTENT
+)
 async def remove_app_from_cart(
-    id: UUID,
+    app_id: UUID,
     user_id: UserIdDep,
     cart_service: CartServiceDep
-) -> dict[str, str]:
-    return await cart_service.remove_app_from_cart(id, user_id)
+) -> None:
+    await cart_service.remove_app_from_cart(app_id, user_id)
 
 
-@router.delete("users/{user_id}/cart/clear")
+@router.delete(
+    "carts/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT
+)
 async def clear_cart(
     user_id: UserIdDep,
     cart_service: CartServiceDep
-) -> dict[str, str]:
-    return await cart_service.clear_cart(user_id)
+) -> None:
+    await cart_service.clear_cart(user_id)

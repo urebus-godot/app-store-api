@@ -144,7 +144,7 @@ class UserService:
     ) -> Optional[UserDB]:
         if username is not None:
             user = await self.user_repo.get_user_by_username(username)
-        elif id is not None:
+        if id is not None:
             user = await self.user_repo.get_user_by_id(id)
         if user is None:
             raise user_not_found_exception
@@ -154,11 +154,12 @@ class UserService:
     async def get_users(
         self,
         skip: int, limit: int
-    ) -> UserDB:
-        return await self.user_repo.get_users(skip, limit)
+    ) -> list[UserDB]:
+        users = await self.user_repo.get_users(skip, limit)
+        return users
 
     async def delete_user(
         self, user: UserDB, 
-    ) -> dict[str, str]:
-        return await self.user_repo.delete_user(user)
+    ) -> None:
+        await self.user_repo.delete_user(user)
         

@@ -20,6 +20,10 @@ dependencies = [
     "sqlalchemy>=2.0.50",
     "alembic-postgresql-enum>=1.10.0",
     "pydantic-settings>=2.14.1",
+    "pytest-mock>=3.15.1",
+    "fakeredis>=2.36.2",
+    "aiosqlite>=0.22.1",
+    "ruff>=0.15.20",
 ]
 
 [tool.uv.workspace]
@@ -27,7 +31,22 @@ members = [
     "venv",
 ]
 
-[tool.pytest]
+[tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff.lint]
+extend-select = ["E501"]
+
+[tool.ruff]
+line-length  = 79
+target-version = "py3143"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.0",
+    "ruff>=0.15.20",
+]

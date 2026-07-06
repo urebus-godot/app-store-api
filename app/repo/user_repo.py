@@ -1,11 +1,10 @@
 from decimal import Decimal
-from abc import ABC, abstractmethod
 from typing import Optional
 from uuid import UUID
 
 from pydantic import EmailStr
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select
+from sqlmodel import select, desc
 from sqlalchemy.orm import selectinload
 
 from app.models.user import UserRequest, UserDB, UserUpdate, UserRole
@@ -13,67 +12,7 @@ from app.core.security import get_password_hash
 from app.core.logging import logger
 
 
-class AbstractUserRepository(ABC):
-    @abstractmethod
-    async def username_registered(
-        self, username: str
-    ) -> bool:
-        pass
-
-    @abstractmethod
-    async def email_registered(
-        self, email: EmailStr
-    ) -> bool:
-        pass
-
-    @abstractmethod
-    async def register_user(
-        self, data: UserRequest
-    ) -> UserDB:
-        pass
-
-    @abstractmethod
-    async def top_up_balance(
-        self, amount: Decimal, user: UserDB
-    ) -> dict[str, str]:
-        pass
-
-    @abstractmethod
-    async def become_publisher(
-        self, user: UserDB
-    ) -> dict[str, str]:
-        pass
-
-    @abstractmethod
-    async def update_user(
-        self, data: UserUpdate, user: UserDB
-    ) -> UserDB:
-        pass
-
-    @abstractmethod
-    async def get_user_by_username(
-        self, username: str
-    ) -> Optional[UserDB]:
-        pass
-
-    @abstractmethod
-    async def get_user_by_id(self, id: UUID) -> Optional[UserDB]:
-        pass
-
-    @abstractmethod
-    async def get_users(
-        self, skip: int, limit: int
-    ) -> UserDB:
-        pass
-
-    @abstractmethod
-    async def delete_user(
-        self, user: UserDB
-    ) -> dict[str, str]:
-        pass
-
-
-class UserRepository(AbstractUserRepository):
+class UserRepository:
     def __init__(self, session: AsyncSession):
         self.load_attrs = (
             selectinload(UserDB.published_apps), 
@@ -90,7 +29,8 @@ class UserRepository(AbstractUserRepository):
             select(UserDB).where(
             UserDB.username == username
             ).options(*self.load_attrs)
-                )).one_or_none()
+            )).one_or_none()
+        
         return user is not None
 
     async def email_registered(
@@ -117,14 +57,14 @@ class UserRepository(AbstractUserRepository):
 
     async def top_up_balance(
         self, amount: Decimal, user: UserDB
-    ) -> dict[str, str]:
+    ) -> dict[str, Decimal]:
         user.balance += amount
 
         self.session.add(user)
         await self.session.commit()
-        await self.session.refresh(user)
+        #await self.session.refresh(user)
         
-        return {"message": "Balance has been replenished"}
+        return {"new_balance": user.balance}
 
     async def become_publisher(
         self, user: UserDB
@@ -133,7 +73,7 @@ class UserRepository(AbstractUserRepository):
 
         self.session.add(user)
         await self.session.commit()
-        await self.session.refresh(user)
+        #await self.session.refresh(user)
 
         return {"message": "You have become a publisher"}
 
@@ -168,22 +108,23 @@ class UserRepository(AbstractUserRepository):
                 UserDB.id == id
                 ).options(*self.load_attrs)
         )).one_or_none()
+
         return user
 
     async def get_users(
         self, skip: int, limit: int
-    ) -> UserDB:
+    ) -> list[UserDB]:
         users = (await self.session.exec(
-            select(UserDB).offset(skip).limit(limit).options(
+            select(UserDB).offset(skip).limit(limit).order_by(
+                desc(UserDB.registered_at)).options(
                 *self.load_attrs)
         )).all()
+        logger.info(f"{users=}")
+
         return users
 
     async def delete_user(
         self, user: UserDB
-    ) -> dict[str, str]:
+    ) -> None:
         await self.session.delete(user)
         await self.session.commit()
-        #await session.flush(user)
-
-        return {"message": "User has been deleted"}

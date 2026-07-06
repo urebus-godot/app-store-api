@@ -78,19 +78,22 @@ class AppService:
         return await self.app_repo.download_purchased_app(app)
 
     async def update_app(
-        self, id: UUID,
+        self, id: UUID, user_id: UUID,
         data: AppUpdate
     ) -> AppDB:
-        app = await self.get_app(id)
+        app = await self.get_app(id, False)
+
+        if app.publisher_id != user_id:
+            raise no_rights_exception
 
         return await self.app_repo.update_app(data, app=app)
 
     async def get_app(
-        self, id: UUID
+        self, id: UUID, public_only: bool = True
     ) -> AppDB:
-        app = await self.app_repo.get_app(id)
+        app = await self.app_repo.get_app(id, public_only)
 
-        if not app or not app.public:
+        if not app:
             raise app_not_found_exception
 
         return app
@@ -105,9 +108,10 @@ class AppService:
         if search_query is not None:
             apps = self.filter_apps(apps, search_query)
 
-        if apps:
-            return apps
-        raise apps_not_found_exception
+        if not apps:
+            raise apps_not_found_exception
+        
+        return apps
 
     async def get_purchased_apps(
         self, user_id: UUID
@@ -124,29 +128,30 @@ class AppService:
         publisher_apps = await self.app_repo.get_publisher_apps(
             skip=skip, limit=limit, user_id=user_id
             )
+        
         return publisher_apps
 
     async def get_games(
-        self, search_query: Optional[str], 
-        genre: Optional[GameGenre],
-        skip: int, limit: int
+        self, 
+        skip: int, limit: int,
+        search_query: Optional[str] = None, 
+        genre: Optional[GameGenre] = None,
+        only_public: bool = True
     ) -> list[AppDB]:
-        games = await self.app_repo.get_games(genre, skip, limit)
+        games = await self.app_repo.get_games(genre, skip, limit, only_public)
 
         if search_query is not None:
             games = self.filter_apps(games, search_query)
-
-        if games:
-            return games
-        raise apps_not_found_exception
+        
+        return games
 
     async def delete_app(
         self, id: UUID,
-        user: UserDB
-    ) -> dict[str, str]:
+        user_id: UUID
+    ) -> None:
         app = await self.get_app(id)
 
-        if not app.publisher == user:
+        if not app.publisher_id == user_id:
             raise no_rights_exception
         
-        return await self.app_repo.delete_app(app=app)
+        await self.app_repo.delete_app(app)

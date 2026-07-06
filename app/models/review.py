@@ -6,13 +6,13 @@ from pydantic import ConfigDict
 from sqlmodel import SQLModel, Field, Relationship, Column, func, DateTime
 
 class BaseReview(SQLModel):
-    rating: int = Field(ge=1, le=5)
+    rating: int = Field(ge=0, le=5)
     subject: str | None = Field(default=None, max_length=50)
     content: str | None = Field(default=None, max_length=400)
 
 
 class ReviewDB(BaseReview, table=True):
-    __tablename__ = "review"
+    __tablename__ = "reviews"
 
     id: UUID = Field(
         default_factory=uuid4,
@@ -27,10 +27,10 @@ class ReviewDB(BaseReview, table=True):
         )
     )
 
-    author_id: UUID = Field(foreign_key="user.id", ondelete="CASCADE")
+    author_id: UUID = Field(foreign_key="users.id", ondelete="CASCADE")
     author: "UserDB" = Relationship(back_populates="reviews")
 
-    app_id: UUID = Field(foreign_key="app.id", ondelete="CASCADE")
+    app_id: UUID = Field(foreign_key="apps.id", ondelete="CASCADE")
     app: "AppDB" = Relationship(back_populates="reviews")
 
 

@@ -17,9 +17,7 @@ def create_access_token(
     user_id: str,
 ) -> str:
     """Create a JWT access token for the user."""
-    expire = datetime.now(timezone.utc) + timedelta(
-        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-    )
+    expire = datetime.now(timezone.utc) + settings.ACCESS_TOKEN_EXPIRE_MINUTES
     
     payload = {
         "sub": user_id,
@@ -40,8 +38,7 @@ async def create_refresh_token(
     """Create a refresh token for the user."""
     jti = str(uuid4())
     family_id = str(uuid4())
-    expire = (datetime.now(timezone.utc) 
-    + settings.REFRESH_TTL_DAYS)
+    expire = datetime.now(timezone.utc) + settings.REFRESH_TOKEN_EXPIRE_DAYS
 
     payload = {
         "sub": user_id,
@@ -56,8 +53,9 @@ async def create_refresh_token(
         settings.SECRET_KEY, 
         algorithm=settings.JWT_ALGORITHM
         )
-    refresh_ttl = int(settings.REFRESH_TTL_DAYS.total_seconds())
-    logger.info(f"{refresh_ttl = }")
+    
+    refresh_ttl = int(settings.REFRESH_TOKEN_EXPIRE_DAYS.total_seconds())
+
     await redis.set(
         name=f"refresh_token:{jti}",
         value=family_id, 
@@ -82,19 +80,9 @@ async def create_token_pair(
         }
 
 
-async def decode_access_token(
-    token: str, redis: Redis
-    ) -> dict:
+async def decode_access_token(token: str) -> dict:
     """Decode and validate a JWT access token."""
     try:
-        logger.info(f"Token in blacklist: {await redis.exists(f"blacklist:{token}")}")
-        if await redis.exists(f"blacklist:{token}"):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token has been revoked",
-            )
-
-        # Decode the token
         payload = jwt.decode(
             token, settings.SECRET_KEY, algorithms=["HS256"]
             )
@@ -111,7 +99,7 @@ async def decode_access_token(
 
 async def revoke_all_user_tokens(
     user_id: str, redis: Redis
-):
+) -> None:
     """Adds all user's refresh tokens to the blacklist in Redis"""
     jtis = await redis.smembers(f"user_tokens:{user_id}")
     for jti in jtis:
@@ -130,7 +118,8 @@ async def revoke_all_user_tokens(
 async def refresh_tokens(
     refresh_token: str, redis: Redis
 ) -> dict[str, str]:
-    """Creates new refresh and access tokens if the refresh token is not blacklisted."""
+    """Creates new refresh and access tokens 
+    if the refresh token is not blacklisted."""
     try:
         payload = jwt.decode(
             refresh_token, 

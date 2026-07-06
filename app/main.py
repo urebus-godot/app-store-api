@@ -5,16 +5,20 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.logging import setup_logging
 from app.api.v1 import (
-    app_router, review_router, user_router, cart_router
+    app_router, 
+    review_router, 
+    user_router, 
+    cart_router, 
+    discussion_router
     )
 from app.core.config import settings
-from app.db.redis import connect_to_redis, RedisClient
+from app.db.redis import connect_to_redis_client, RedisClient
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.redis = connect_to_redis()
+    app.state.redis_client = connect_to_redis_client()
     yield
-    await app.state.redis.close_conn()
+    await app.state.redis_client.close_conn()
 
 
 app = FastAPI(
@@ -38,11 +42,15 @@ app.include_router(
 app.include_router(
     cart_router.router, prefix="/api/v1", tags=["Cart"]
 )
+app.include_router(
+    discussion_router.router, prefix="/api/v1", tags=["Discussion"]
+)
 
 cors = CORSMiddleware(
     app=app,
     allow_origins=["*"],
-    allow_methods=["GET", "POST", "PATCH", "DELETE"]
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_credentials=True
 )
 
 @app.get("/health", tags=["Server"])

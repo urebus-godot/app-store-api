@@ -12,11 +12,11 @@ router = APIRouter()
 async def create_review(
     app_id: UUID,
     data: ReviewRequest,
-    user: UserDep,
+    user_id: UserIdDep,
     review_service: ReviewServiceDep
 ) -> ReviewResponse:
     return await review_service.create_review(
-        app_id, data, user
+        app_id, data, user_id
         )
 
 
@@ -40,7 +40,7 @@ async def get_own_reviews(
 @router.delete("/reviews/{id}")
 async def delete_review(
     id: UUID,
-    user: UserDep,
+    user_id: UserIdDep,
     review_service: ReviewServiceDep
-) -> dict[str, str]:
-    return await review_service.delete_review(id, user.id)
+) -> None:
+    await review_service.delete_review(id, user_id)

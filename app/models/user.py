@@ -29,7 +29,7 @@ class BaseUser(SQLModel):
 
 
 class UserDB(BaseUser, table=True):
-    __tablename__ = "user"
+    __tablename__ = "users"
 
     id: UUID = Field(
         default_factory=uuid4,
@@ -52,17 +52,26 @@ class UserDB(BaseUser, table=True):
     balance: Decimal = Field(default=0, ge=0)
 
     cart: Optional["Cart"] = Relationship(
-        back_populates="user", cascade_delete=True
+        back_populates="user", 
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
         )
+    
     purchased_apps: list["AppDB"] = Relationship(
         back_populates="users_purchased", link_model=Purchase
         )
     published_apps: list["AppDB"] = Relationship(
-        back_populates="publisher", cascade_delete=True
+        back_populates="publisher",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
         )
 
     reviews: list["ReviewDB"] = Relationship(
-        back_populates="author", cascade_delete=True
+        back_populates="author",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+        )
+
+    messages: list["MessageDB"] = Relationship(
+        back_populates="author",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
         )
 
 

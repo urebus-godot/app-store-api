@@ -12,14 +12,11 @@ from app.core.logging import logger
 
 def get_app_with_rating(
     app: AppDB, reviews: list[ReviewDB], 
-    class_to_validate: str = "AppResponse"
+    class_to_validate: type = AppResponseWithPublisher
 ) -> AppResponse:
+    logger.info(f"{reviews = }\n")
     if reviews:
-        match class_to_validate:
-            case "AppResponse":
-                app = AppResponse.model_validate(app)
-            case "AppResponseWithPublisher":
-                app = AppResponseWithPublisher.model_validate(app)
+        app = class_to_validate.model_validate(app)
         rating = sum(
             [review.rating for review in reviews]
             ) / len(reviews)
@@ -29,12 +26,16 @@ def get_app_with_rating(
 
 async def get_apps_with_rating(
     apps: list[AppDB],
-    review_service: ReviewService
+    review_service: ReviewService,
+    class_to_validate: type = AppResponseWithPublisher
 ) -> list[AppResponse]:
+    new_apps = []
     for app in apps:
         reviews = await review_service.get_app_reviews(app.id)
-        app = get_app_with_rating(app, reviews)
-    return apps
+        app_response = get_app_with_rating(app, reviews, class_to_validate)
+        new_apps.append(app_response)
+        logger.info(type(app_response))
+    return new_apps
 
 
 SearchQuery = Annotated[

@@ -5,14 +5,14 @@ from .user import (
 from .review import ReviewDB, ReviewResponse
 from .app import (
     AppDB, AppResponse, GameResponse, AppResponseWithReviews, 
-    AppResponseWithPublisher
+    AppResponseWithPublisher, GameResponseWithPublisher
     )
 from .app_purchase import (
     Purchase,
     CartItem, 
     CartResponse, CartItemResponse, PurchaseResponse
     )
-from .discussion import MessageResponse
+from .discussion import MessageResponse, ShortDiscussionResponse, DiscussionResponse
 
 UserDB.model_rebuild()
 ReviewDB.model_rebuild()
@@ -31,9 +31,12 @@ AppResponse.model_rebuild()
 AppResponseWithReviews.model_rebuild()
 AppResponseWithPublisher.model_rebuild()
 GameResponse.model_rebuild()
+GameResponseWithPublisher.model_rebuild()
 
 PurchaseResponse.model_rebuild()
 CartResponse.model_rebuild()
 CartItemResponse.model_rebuild()
 
 MessageResponse.model_rebuild()
+ShortDiscussionResponse.model_rebuild()
+DiscussionResponse.model_rebuild()
