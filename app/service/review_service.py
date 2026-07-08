@@ -1,5 +1,4 @@
 from uuid import UUID
-from typing import Optional
 
 from fastapi import HTTPException, status
 
@@ -9,7 +8,6 @@ from app.core.exceptions import (
     no_rights_exception
     )
 from app.models.review import ReviewRequest
-from app.models.user import UserDB
 from app.models.review import ReviewDB
 from app.repo.review_repo import ReviewRepository
 from app.service.app_service import AppService

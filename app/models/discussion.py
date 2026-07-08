@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 from uuid import UUID, uuid4
 
@@ -27,7 +27,7 @@ class DiscussionDB(BaseDiscussion, table=True):
             nullable=False
         )
     )
-    messages: list[MessageDB] = Relationship(
+    messages: list["MessageDB"] = Relationship(
         back_populates="discussion", 
         sa_relationship_kwargs={"cascade": "all, delete-orphan"}
         )
@@ -38,7 +38,7 @@ class DiscussionDB(BaseDiscussion, table=True):
 class DiscussionResponse(BaseDiscussion):
     id: UUID
     created_at: datetime
-    messages: list[MessageResponse] = []
+    messages: list["MessageResponse"] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -74,7 +74,7 @@ class MessageDB(BaseMessage, table=True):
     discussion_id: UUID = Field(
         foreign_key="discussions.id", ondelete="CASCADE"
         )
-    discussion: DiscussionDB = Relationship(back_populates="messages")
+    discussion: "DiscussionDB" = Relationship(back_populates="messages")
 
 
 class MessageRequest(BaseMessage):

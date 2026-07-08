@@ -6,7 +6,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from sqlalchemy.orm import selectinload
 
-from app.core.logging import logger
 
 from app.models.user import UserDB
 from app.models.app_purchase import Cart, Purchase, CartItem

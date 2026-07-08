@@ -1,5 +1,4 @@
 from uuid import UUID, uuid4
-from typing import Optional
 from datetime import datetime
 
 from pydantic import ConfigDict

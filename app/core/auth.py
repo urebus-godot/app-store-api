@@ -1,5 +1,5 @@
 from uuid import uuid4
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
 from jwt import PyJWTError
@@ -71,7 +71,6 @@ async def create_token_pair(
     user_id: str, redis: Redis
 ) -> dict[str, str]:
     """Create both access and refresh tokens for the user."""
-    logger.info(f"{redis.connection_pool.connection_kwargs=}")
     access_token = create_access_token(user_id)
     refresh_token = await create_refresh_token(user_id, redis)
     return {
@@ -119,7 +118,7 @@ async def refresh_tokens(
     refresh_token: str, redis: Redis
 ) -> dict[str, str]:
     """Creates new refresh and access tokens 
-    if the refresh token is not blacklisted."""
+    if the refresh token is **not** blacklisted."""
     try:
         payload = jwt.decode(
             refresh_token, 
@@ -127,7 +126,8 @@ async def refresh_tokens(
             algorithms=settings.JWT_ALGORITHM
             )
         logger.info(f"Decoded refresh token: \n {payload = }")
-    except PyJWTError:
+    except PyJWTError as e:
+        logger.error(f"\n JWT Error occurred: \n{e}\n")
         raise invalid_refresh_token_exception
 
     if payload.get("type") != "refresh":
@@ -149,6 +149,8 @@ async def refresh_tokens(
             "Token reuse detected. All sessions revoked"
         )
     stored_family = await redis.get(f"refresh_token:{jti}")
+    if isinstance(stored_family, bytes):
+        stored_family = stored_family.decode()
     logger.info(f"{stored_family = }")
     logger.info(f"{family_id = }")
     if stored_family is None or stored_family != family_id:

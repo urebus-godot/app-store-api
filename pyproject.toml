@@ -3,7 +3,7 @@ name = "app-store-api"
 version = "1.0"
 description = "REST API of the web store where you can purchase and upload apps"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.13"
 dependencies = [
     "alembic>=1.18.4",
     "asyncpg>=0.31.0",
@@ -24,6 +24,8 @@ dependencies = [
     "fakeredis>=2.36.2",
     "aiosqlite>=0.22.1",
     "ruff>=0.15.20",
+    "pydantic>=2.13.4",
+    "pytest-cov>=7.1.0",
 ]
 
 [tool.uv.workspace]
@@ -37,6 +39,7 @@ asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 pythonpath = ["."]
 testpaths = ["tests"]
+#addopts = "--cov=app_store_api --cov-report=term-missing --cov-report=html --cov-branch"
 
 [tool.ruff.lint]
 extend-select = ["E501"]
@@ -45,9 +48,3 @@ extend-select = ["E501"]
 line-length  = 79
 target-version = "py314"
 extend-exclude = ["migrations"]
-
-[dependency-groups]
-dev = [
-    "pytest>=9.1.0",
-    "ruff>=0.15.20",
-]

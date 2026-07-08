@@ -113,7 +113,7 @@ async def get_games(
         )
 
 
-@router.get("/apps/purchased-apps/me")
+@router.get("/apps/purchased_apps/me")
 async def get_purchased_apps(
     user_id: UserIdDep,
     app_service: AppServiceDep,
@@ -123,7 +123,7 @@ async def get_purchased_apps(
     return await get_apps_with_rating(apps, review_service, AppResponse)
 
 
-@router.get("/apps/published-apps/me")
+@router.get("/apps/published_apps/me")
 async def get_own_published_apps(
     user_id: UserIdDep,
     skip_limit: SkipLimitParams,
@@ -136,7 +136,7 @@ async def get_own_published_apps(
     return await get_apps_with_rating(apps, review_service, AppResponse)
 
 
-@router.get("/apps/published-apps/{user_id}")
+@router.get("/apps/published_apps/{user_id}")
 async def get_publisher_apps(
     user_id: UUID,
     skip_limit: SkipLimitParams,

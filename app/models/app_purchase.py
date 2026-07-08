@@ -52,7 +52,7 @@ class CartItem(SQLModel, table=True):
     cart_id: UUID = Field(foreign_key="carts.id", ondelete="CASCADE")
     app_id: UUID = Field(foreign_key="apps.id", ondelete="CASCADE")
 
-    cart: Cart = Relationship(
+    cart: "Cart" = Relationship(
         back_populates="items"
     )    
     app: "AppDB" = Relationship()

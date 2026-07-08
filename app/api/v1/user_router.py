@@ -1,19 +1,19 @@
 from decimal import Decimal
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status, Response
+from fastapi import APIRouter, Depends, status, Response, Body
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.dependencies import (
-    UserDep, SkipLimitParams,
-    UserServiceDep, TokenDep
+    UserDep, UserIdDep, SkipLimitParams,
+    UserServiceDep
     )
 from app.core import auth
 from app.models.user import (
     UserRequest, UserResponse, UserUpdate, CurrentUserResponse
     )
 from app.models.token import (
-    RefreshTokenRequest, TokenResponse, LoginResponse
+    TokenResponse, LoginResponse
     )
 from app.core.logging import logger
 from app.dependencies import RedisDep
@@ -30,7 +30,7 @@ async def register_user(
     data: UserRequest,
     user_service: UserServiceDep
 ) -> CurrentUserResponse:
-    """Creates new user """
+    """Creates new user."""
     return await user_service.register_user(data)
 
 
@@ -56,6 +56,7 @@ async def login(
 @router.post("/users/logout")
 async def logout(
     refresh_token: str,
+    user_id: UserIdDep,
     user_service: UserServiceDep,
     redis: RedisDep
 ) -> dict[str, str]:
@@ -65,7 +66,7 @@ async def logout(
 
 @router.post("/users/refresh")
 async def refresh_tokens(
-    refresh_token: str,
+    refresh_token: str,#Annotated[str, Body()],
     redis: RedisDep,
 ) -> TokenResponse:
     """Creates refresh and access tokens on success."""
@@ -104,8 +105,8 @@ async def update_current_user(
     data: UserUpdate,
     user: UserDep,
     user_service: UserServiceDep
-) -> UserResponse:
-    """Changes attributes of user to the new one"""
+) -> CurrentUserResponse:
+    """Changes attributes of user to the new ones"""
     return await user_service.update_user(
         data=data, user=user
         )
@@ -115,7 +116,7 @@ async def update_current_user(
 async def get_current_user(
     user: UserDep
 ) -> CurrentUserResponse:
-    """Returns user retrieved via dependency injection."""
+    """Returns user retrieved via *dependency injection*."""
     return user
 
 
@@ -144,7 +145,8 @@ async def get_users(
 @router.delete("/users/me", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_current_user(
     user: UserDep,
-    user_service: UserServiceDep
+    user_service: UserServiceDep,
+    redis: RedisDep
 ) -> None:
     """Deletes user."""
-    await user_service.delete_user(user)
+    await user_service.delete_user(user, redis)

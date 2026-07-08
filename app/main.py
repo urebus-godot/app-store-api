@@ -12,7 +12,7 @@ from app.api.v1 import (
     discussion_router
     )
 from app.core.config import settings
-from app.db.redis import connect_to_redis_client, RedisClient
+from app.db.redis import connect_to_redis_client
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

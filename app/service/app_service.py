@@ -1,5 +1,4 @@
 from uuid import UUID
-from decimal import Decimal
 from typing import Optional
 from string import punctuation
 
@@ -72,7 +71,7 @@ class AppService:
     ):
         app = await self.get_app(id)
 
-        if not app in user.purchased_apps:
+        if app not in user.purchased_apps:
             raise app_not_purchased_exception
 
         return await self.app_repo.download_purchased_app(app)

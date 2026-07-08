@@ -1,12 +1,10 @@
-from typing import Annotated, Sequence, Optional
-from string import punctuation
+from typing import Annotated
 
 from fastapi import Query
 
 from app.service.review_service import ReviewService
 from app.models.app import AppDB, AppResponse, AppResponseWithPublisher
 from app.models.review import ReviewDB
-from app.core.config import settings
 from app.core.logging import logger
 
 

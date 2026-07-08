@@ -98,7 +98,7 @@ class CartService:
 
         except Exception as e:
             await self.cart_repo.session.rollback()
-            logger.error(f"\nAn error occurred during transaction:\n", exc_info=True)
+            logger.error("\nAn error occurred during transaction:\n", exc_info=True)
             raise HTTPException(
                 status.HTTP_500_INTERNAL_SERVER_ERROR,
                 f"Error occurred during transaction: {e}. Please contact the developer"

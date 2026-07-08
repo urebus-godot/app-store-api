@@ -1,4 +1,4 @@
-from datetime import date, UTC, datetime
+from datetime import datetime
 from uuid import UUID, uuid4
 from enum import StrEnum
 from decimal import Decimal
@@ -9,7 +9,7 @@ from sqlmodel import SQLModel, Field, Relationship, Column, DateTime, func
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy import String
 
-from app.models.app_purchase import Purchase, CartItem
+from app.models.app_purchase import Purchase
 from app.core.config import settings
 
 class UserRole(StrEnum):

@@ -1,9 +1,10 @@
-from typing import Annotated, Any
+from __future__ import annotations
+from typing import Annotated
 from uuid import UUID
 
 from redis.asyncio import Redis
 from sqlmodel.ext.asyncio.session import AsyncSession
-from fastapi import Depends, Query, HTTPException, status
+from fastapi import Depends, Query
 from fastapi.security import OAuth2PasswordBearer
 
 from app.db.postgres import get_session

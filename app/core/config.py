@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     API_PORT: int = 8000
 
     DB_URL: str = environ.get("DB_URL")
-    TEST_DB_URL: str = environ.get("TEST_DB_URL")
+    TEST_DB_URL: str = "sqlite+aiosqlite:///:memory:"
 
     REDIS_URL: str  = environ.get("REDIS_URL")
     TEST_REDIS_URL: str = environ.get("TEST_REDIS_URL")
@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: timedelta = timedelta(days=7)
 
     SECRET_KEY: str = environ.get("SECRET_KEY")
+    TEST_SECRET_KEY: str = environ.get("TEST_SECRET_KEY")
     JWT_ALGORITHM: str = "HS256"
 
     MIN_TITLE_LEN: int = 3

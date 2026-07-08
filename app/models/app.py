@@ -1,6 +1,5 @@
-from typing import Optional, Annotated
-from datetime import date, datetime
-from datetime import timezone
+from typing import Optional
+from datetime import datetime
 
 from uuid import UUID, uuid4
 from decimal import Decimal
@@ -9,10 +8,10 @@ from enum import StrEnum
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy import String
 from sqlmodel import SQLModel, Field, Relationship, Column, DateTime, func
-from pydantic import model_validator, ConfigDict, field_validator
+from pydantic import ConfigDict
 from fastapi import UploadFile
 
-from app.models.app_purchase import Purchase, CartItem
+from app.models.app_purchase import Purchase
 from app.core.config import settings
 
 class GameGenre(StrEnum):
@@ -72,7 +71,7 @@ class AppDB(BaseApp, table=True):
     category: AppCategory = AppCategory.APPLICATION
     file_id: UUID = Field(default_factory=uuid4)
 
-    keywords: set[str] = Field(sa_type=ARRAY(String))
+    keywords: Optional[set[str]] = Field(default=None, sa_type=ARRAY(String))
 
     publisher_id: UUID = Field(foreign_key="users.id", ondelete="CASCADE")
     publisher: "UserDB" = Relationship(back_populates="published_apps")

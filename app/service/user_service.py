@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import Optional
+from typing import Optional, Union
 from uuid import UUID
 
 from pydantic import EmailStr
@@ -7,7 +7,7 @@ from jwt.exceptions import DecodeError
 import jwt
 
 from app.models.user import UserRequest, UserDB, UserUpdate, UserRole
-from app.models.token import LoginResponse, RefreshTokenRequest, TokenResponse
+from app.models.token import LoginResponse
 from app.repo.user_repo import UserRepository
 from app.core.exceptions import (
     user_not_found_exception, 
@@ -50,7 +50,7 @@ class UserService:
 
     async def authenticate_user(
         self, username: str, password: str, 
-    ) -> UserDB | False:
+    ) -> Union[UserDB, False]:
         user = await self.get_user(username=username)
         logger.info(f"User found: {user.username}")
 
@@ -159,7 +159,8 @@ class UserService:
         return users
 
     async def delete_user(
-        self, user: UserDB, 
+        self, user: UserDB, redis: Redis
     ) -> None:
+        await redis.delete(f"user_tokens:{user.id}")
         await self.user_repo.delete_user(user)
         

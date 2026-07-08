@@ -13,16 +13,6 @@ services:
     networks:
       - test_app_network
 
-  redis:
-    image: redis:7
-    ports:
-      - "6379:6379"
-    container_name: test_redis
-    restart: unless-stopped
-    command: redis-server --appendonly yes
-    networks:
-      - test_app_network
-
 networks:
   test_app_network:
     driver: bridge

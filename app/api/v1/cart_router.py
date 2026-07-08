@@ -5,7 +5,6 @@ from fastapi import APIRouter, status
 from app.dependencies import CartServiceDep, UserIdDep, UserDep
 from app.models.app_purchase import CartResponse
 from app.models.app import AppResponse
-from app.core.logging import logger
 
 router = APIRouter()
 

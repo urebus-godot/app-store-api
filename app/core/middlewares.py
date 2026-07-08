@@ -1,4 +1,3 @@
-from typing import Callable
 from time import perf_counter
 
 from fastapi import Request, Response

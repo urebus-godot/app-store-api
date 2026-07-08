@@ -1,11 +1,8 @@
-from typing import Any, Optional
-from collections.abc import AsyncIterator
 
 from redis.asyncio import from_url as redis_from_url
 from redis.asyncio import Redis
 
 from app.core.config import settings
-from app.core.logging import logger
 
 class RedisClient:
     def __init__(self, url: str):

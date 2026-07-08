@@ -5,7 +5,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, desc
 
 from app.models.review import ReviewRequest, ReviewDB
-from app.models.app import AppDB
 
 
 class ReviewRepository:

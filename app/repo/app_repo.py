@@ -9,7 +9,6 @@ from app.models.app import (
     AppRequest, GameRequest, AppDB, AppUpdate, 
     GameGenre, AppCategory)
 from app.models.app_purchase import Purchase
-from app.core.logging import logger
 
 
 class AppRepository:
@@ -55,7 +54,6 @@ class AppRepository:
 
         self.session.add(app)
         await self.session.commit()
-        await self.session.refresh(app)
 
         return app
 
