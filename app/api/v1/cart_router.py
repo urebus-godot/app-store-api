@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, status, BackgroundTasks
 
 from app.dependencies import CartServiceDep, UserIdDep, UserDep
 from app.models.app_purchase import CartResponse
@@ -9,7 +9,10 @@ from app.models.app import AppResponse
 router = APIRouter()
 
 
-@router.post("/carts/{user_id}/{app_id}")
+@router.post(
+    "/carts/{user_id}/{app_id}", 
+    status_code=status.HTTP_201_CREATED
+    )
 async def add_app_to_cart(
     app_id: UUID,
     user_id: UserIdDep,
@@ -18,15 +21,16 @@ async def add_app_to_cart(
     return await cart_service.add_app_to_cart(app_id, user_id)
 
 
-@router.get("/carts/{user_id}/apps")
+@router.post("/carts/{user_id}/checkout")
 async def purchase_apps_in_cart(
     user_id: UserDep,
-    cart_service: CartServiceDep
+    cart_service: CartServiceDep,
+    bg_tasks: BackgroundTasks
 ) -> list[AppResponse]:
     return await cart_service.purchase_apps_in_cart(user_id)
 
 
-@router.get("/carts/{user_id}")
+@router.post("/carts/{user_id}")
 async def get_cart(
     user_id: UserIdDep,
     cart_service: CartServiceDep

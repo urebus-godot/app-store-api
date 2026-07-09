@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status, Response, Body
+from fastapi import APIRouter, Depends, status, Response, Query
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.dependencies import (
@@ -79,19 +79,19 @@ async def refresh_tokens(
         )
 
 
-@router.patch("/users/me/balance")
+@router.post("/users/me/balance")
 async def top_up_balance(
     amount: Decimal,
     user: UserDep,
     user_service: UserServiceDep
-) -> dict[str, str]:
+) -> dict[str, Decimal]:
     """Increases user's balance by specified amount"""
     return await user_service.top_up_balance(
         amount, user=user
         )
 
 
-@router.patch("/users/me/publisher")
+@router.post("/users/me/publisher")
 async def become_publisher(
     user: UserDep,
     user_service: UserServiceDep

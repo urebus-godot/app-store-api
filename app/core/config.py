@@ -43,6 +43,17 @@ class Settings(BaseSettings):
 
     LOGGING_LEVEL: int = logging.INFO
     LOG_FILE_PATH: Optional[str] = None#"C:/Users/user/Desktop/app_store_api.log"
+
+    MAIL_USERNAME = "satalovserge"
+    MAIL_PASSWORD = environ.get("MAIL_PASSWORD")
+    MAIL_FROM = "satalovserge@gmail.com"
+    MAIL_PORT = 587
+    MAIL_SERVER = "smtp.gmail.com"
+    MAIL_FROM_NAME="satalovserge"
+    MAIL_STARTTLS = True
+    MAIL_SSL_TLS = False
+    USE_CREDENTIALS = True
+    VALIDATE_CERTS = True
     
 load_dotenv()
 

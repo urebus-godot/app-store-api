@@ -16,7 +16,8 @@ from app.core.exceptions import (
     already_has_role_exception,
     incorrect_creds_exception,
     user_data_used_exception,
-    invalid_refresh_token_exception
+    invalid_refresh_token_exception,
+    not_positive_amount_exception
     )
 from app.core.security import verify_password, get_password_hash
 from app.core.auth import create_token_pair
@@ -108,7 +109,10 @@ class UserService:
 
     async def top_up_balance(
         self, amount: Decimal, user: UserDB
-    ):
+    ) -> dict[str, Decimal]:
+        if amount <= 0:
+            raise not_positive_amount_exception
+            
         return await self.user_repo.top_up_balance(
             amount, user
             )

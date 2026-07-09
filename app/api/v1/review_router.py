@@ -37,7 +37,7 @@ async def get_own_reviews(
     return await review_service.get_user_reviews(user_id)
 
 
-@router.delete("/reviews/{id}")
+@router.delete("/reviews/{id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_review(
     id: UUID,
     user_id: UserIdDep,

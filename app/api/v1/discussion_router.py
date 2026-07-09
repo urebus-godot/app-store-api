@@ -13,7 +13,7 @@ router = APIRouter()
 # ------ Discussion routes ------
 
 @router.post(
-    "discussions/{app_id}", 
+    "/discussions/{app_id}", 
     status_code=status.HTTP_201_CREATED
     )
 async def create_discussion(
@@ -27,7 +27,7 @@ async def create_discussion(
         ) 
 
 
-@router.get("discussions/{id}")
+@router.get("/discussions/{id}")
 async def get_discussion(
     id: UUID,
     discussion_service: DiscussionServiceDep
@@ -43,7 +43,7 @@ async def get_app_discussions(
     return await discussion_service.get_app_discussions(app_id)
 
 
-@router.get("/discussions/{user_id}")
+@router.get("/discussions/user/me")
 async def get_my_discussions(
     user_id: UserIdDep,
     discussion_service: DiscussionServiceDep
@@ -52,7 +52,7 @@ async def get_my_discussions(
 
 
 @router.delete(
-    "/apps/discussions/{id}",
+    "/discussions/{id}",
     status_code=status.HTTP_204_NO_CONTENT
 )
 async def delete_discussion(
@@ -66,7 +66,7 @@ async def delete_discussion(
 # ------ Message routes ------
 
 @router.post(
-    "/apps/discussions/{discussion_id}/messages", 
+    "/discussions/{discussion_id}/messages", 
     status_code=status.HTTP_201_CREATED
     )
 async def create_message(
@@ -81,7 +81,7 @@ async def create_message(
 
 
 @router.delete(
-    "/apps/discussions/messages/{id}",
+    "/discussions/messages/{id}",
     status_code=status.HTTP_204_NO_CONTENT
 )
 async def delete_message(

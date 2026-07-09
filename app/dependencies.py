@@ -121,7 +121,7 @@ def get_review_repo(
     app_repo: AppRepoDep,
     session: SessionDep
 ) -> ReviewRepository:
-    return ReviewRepository(session, app_repo)
+    return ReviewRepository(session)
 
 def get_review_service(
     review_repo: ReviewRepoDep,
@@ -134,7 +134,7 @@ def get_cart_repo(
     session: SessionDep,
     app_repo: AppRepoDep
 ) -> CartRepository:
-    return CartRepository(session, app_repo)
+    return CartRepository(session)
 
 def get_cart_service(
     app_service: AppServiceDep,

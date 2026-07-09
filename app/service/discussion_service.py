@@ -66,6 +66,7 @@ class DiscussionService:
         self, data: MessageRequest, 
         author_id: UUID, discussion_id: UUID
     ) -> MessageDB:
+        await self.get_discussion(discussion_id)
         message = await self.discussion_repo.create_message(
             data, author_id, discussion_id
             )

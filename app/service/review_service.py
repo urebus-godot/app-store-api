@@ -34,7 +34,7 @@ class ReviewService:
             )
 
         return await self.review_repo.create_review(
-            app=app, data=data, user_id=user_id
+            data, user_id, app_id
             )
 
     async def get_review(
@@ -50,6 +50,7 @@ class ReviewService:
     async def get_app_reviews(
         self, app_id: UUID,
     ) -> list[ReviewDB]:
+        app = await self.app_service.get_app(app_id)
         app_reviews = await self.review_repo.get_app_reviews(app_id)
         return app_reviews
 

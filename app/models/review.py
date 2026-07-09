@@ -6,7 +6,7 @@ from sqlmodel import SQLModel, Field, Relationship, Column, func, DateTime
 
 class BaseReview(SQLModel):
     rating: int = Field(ge=0, le=5)
-    subject: str | None = Field(default=None, max_length=50)
+    recap: str | None = Field(default=None, max_length=50)
     content: str | None = Field(default=None, max_length=400)
 
 

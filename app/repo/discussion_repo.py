@@ -87,12 +87,12 @@ class DiscussionRepository:
         self.session.add(message)
         await self.session.commit()
 
-        id = message.id
-        message = (await self.session.exec(
-            select(MessageDB).where(
-                MessageDB.id == id
-                ).options(*self.load_message_attrs)
-            )).one()
+        #id = message.id
+        #message = (await self.session.exec(
+        #    select(MessageDB).where(
+        #        MessageDB.id == id
+        #        ).options(*self.load_message_attrs)
+        #    )).one()
 
         return message
 
@@ -108,5 +108,5 @@ class DiscussionRepository:
     async def delete_message(
         self, message: MessageDB
     ) -> None:
-        self.session.delete(message)
+        await self.session.delete(message)
         await self.session.commit()

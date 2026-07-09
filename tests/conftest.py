@@ -14,6 +14,7 @@ import jwt
 
 from app.models.user import UserDB, UserRole
 from app.models.app import AppDB
+from app.models.review import ReviewDB
 from app.db.postgres import get_session
 from app.dependencies import (
     get_current_user, get_current_user_id, get_redis

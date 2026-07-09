@@ -32,13 +32,13 @@ app = FastAPI(
 
 app.include_router(
     user_router.router, prefix="/api/v1", tags=["User"]
-    )
+)
 app.include_router(
     app_router.router, prefix="/api/v1", tags=["Application"]
-    )
+)
 app.include_router(
     review_router.router, prefix="/api/v1", tags=["Review"]
-    )
+)
 app.include_router(
     cart_router.router, prefix="/api/v1", tags=["Cart"]
 )

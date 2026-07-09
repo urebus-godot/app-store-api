@@ -51,6 +51,31 @@ class TestUsers:
         for key in expected_data.keys():
             assert data[key] == expected_data[key]
 
+    @pytest.mark.parametrize(
+        argnames=["amount", "expected_balance", "expected_status_code"],
+        argvalues=[
+            [1_000, "1000", 200],
+            [1_000_000_000, "1000000000", 200],
+            [0.00001, "0.00001", 200],
+            [0, "0", 400],
+            [-1_000, "0", 400],
+        ]
+    )
+    async def test_top_up_balance(
+        self, 
+        auth_client: AsyncClient, 
+        amount: float,
+        expected_balance: str,
+        expected_status_code: int
+    ):
+        response = await auth_client.patch(
+            "/api/v1/users/me/balance",
+            params={"amount": amount}
+            )
+        assert response.status_code == expected_status_code
+        if response.status_code == 200:
+            assert response.json()["new_balance"] == expected_balance
+
     async def test_delete_current_user(
         self, 
         auth_client: AsyncClient, 

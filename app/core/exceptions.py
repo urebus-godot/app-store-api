@@ -32,6 +32,11 @@ already_has_role_exception = HTTPException(
     "You already have the requested role"
 )
 
+not_positive_amount_exception = HTTPException(
+    status.HTTP_400_BAD_REQUEST,
+    "Amount must be positive"
+)
+
 
 # ----- Authentication -----
 
