@@ -16,6 +16,8 @@ from app.core.exceptions import (
 from app.core.auth import decode_access_token
 from app.models.user import UserDB, UserRole
 
+from app.uow.unit_of_work import UnitOfWork
+
 from app.repo.user_repo import UserRepository
 from app.repo.app_repo import AppRepository
 from app.repo.review_repo import ReviewRepository
@@ -144,6 +146,10 @@ def get_discussion_service(
     discussion_repo: DiscussionRepoDep, app_service: AppServiceDep
 ) -> DiscussionService:
     return DiscussionService(discussion_repo, app_service)
+
+
+def get_unit_of_work() -> UnitOfWork:
+    return UnitOfWork()
 
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]

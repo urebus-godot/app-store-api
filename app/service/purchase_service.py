@@ -6,7 +6,7 @@ from redis.asyncio import Redis
 
 from app.core.config import settings
 from app.core.exceptions import (
-    not_enough_funds_exception,
+    insufficient_funds_exception,
     app_purchased_exception,
     app_in_cart_exception,
     app_published_exception,
@@ -102,7 +102,7 @@ class PurchaseService:
             raise empty_cart_exception
         
         if user.balance < total_price:
-            raise not_enough_funds_exception
+            raise insufficient_funds_exception
 
         purchased_apps = []
         try:

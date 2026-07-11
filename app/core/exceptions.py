@@ -66,13 +66,13 @@ app_not_purchased_exception = HTTPException(
     status.HTTP_400_BAD_REQUEST, "Application must be purchased"
 )
 
-not_enough_funds_exception = HTTPException(
+insufficient_funds_exception = HTTPException(
     status.HTTP_400_BAD_REQUEST,
-    "You don't have sufficient funds to complete the transaction",
+    "Insufficient funds",
 )
 
 
-# ----- Cart -----
+# ----- Purchase -----
 
 app_purchased_exception = HTTPException(
     status.HTTP_409_CONFLICT, "Application has already been purchased"
@@ -95,7 +95,7 @@ app_not_in_cart_exception = HTTPException(
 )
 
 
-# ----- Comment -----
+# ----- Review -----
 
 review_not_found_exception = HTTPException(
     status.HTTP_404_NOT_FOUND, "Review not found"
