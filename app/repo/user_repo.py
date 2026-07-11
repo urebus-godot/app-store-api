@@ -15,37 +15,35 @@ from app.core.logging import logger
 class UserRepository:
     def __init__(self, session: AsyncSession):
         self.load_attrs = (
-            selectinload(UserDB.published_apps), 
-            selectinload(UserDB.purchased_apps), 
-            selectinload(UserDB.cart), 
-            selectinload(UserDB.reviews)
-            )
+            selectinload(UserDB.published_apps),
+            selectinload(UserDB.purchased_apps),
+            selectinload(UserDB.cart),
+            selectinload(UserDB.reviews),
+        )
         self.session = session
 
-    async def username_registered(
-        self, username: str
-    ) -> bool:
-        user = (await self.session.exec(
-            select(UserDB).where(
-            UserDB.username == username
-            ).options(*self.load_attrs)
-            )).one_or_none()
-        
+    async def username_registered(self, username: str) -> bool:
+        user = (
+            await self.session.exec(
+                select(UserDB)
+                .where(UserDB.username == username)
+                .options(*self.load_attrs)
+            )
+        ).one_or_none()
+
         return user is not None
 
-    async def email_registered(
-        self, email: EmailStr
-    ) -> bool:
-        user = (await self.session.exec(
-            select(UserDB).where(
-                UserDB.email == email
-                ).options(*self.load_attrs)
-        )).one_or_none()
+    async def email_registered(self, email: EmailStr) -> bool:
+        user = (
+            await self.session.exec(
+                select(UserDB)
+                .where(UserDB.email == email)
+                .options(*self.load_attrs)
+            )
+        ).one_or_none()
         return user is not None
 
-    async def register_user(
-        self, data: UserRequest
-    ) -> UserDB:
+    async def register_user(self, data: UserRequest) -> UserDB:
         user = UserDB(**data.model_dump())
         user.hashed_password = get_password_hash(data.password)
 
@@ -62,69 +60,65 @@ class UserRepository:
 
         self.session.add(user)
         await self.session.commit()
-        #await self.session.refresh(user)
-        
+        # await self.session.refresh(user)
+
         return {"new_balance": user.balance}
 
-    async def become_publisher(
-        self, user: UserDB
-    ) -> dict[str, str]:
+    async def become_publisher(self, user: UserDB) -> dict[str, str]:
         user.roles = user.roles + [UserRole.PUBLISHER]
 
         self.session.add(user)
         await self.session.commit()
-        #await self.session.refresh(user)
+        # await self.session.refresh(user)
 
         return {"message": "You have become a publisher"}
 
-    async def update_user(
-        self, data: UserUpdate, user: UserDB
-    ) -> UserDB:
+    async def update_user(self, data: UserUpdate, user: UserDB) -> UserDB:
         data = data.model_dump(exclude_unset=True, exclude_none=True)
         user.sqlmodel_update(data)
-        
+
         if "password" in data:
             user.hashed_password = get_password_hash(data["password"])
 
         self.session.add(user)
         await self.session.commit()
-        #await self.session.refresh(user)
- 
+        # await self.session.refresh(user)
+
         return user
 
-    async def get_user_by_username(
-        self, username: str
-    ) -> Optional[UserDB]:
-        user = (await self.session.exec(
-            select(UserDB).where(
-                UserDB.username == username
-                ).options(*self.load_attrs)
-        )).one_or_none()
+    async def get_user_by_username(self, username: str) -> Optional[UserDB]:
+        user = (
+            await self.session.exec(
+                select(UserDB)
+                .where(UserDB.username == username)
+                .options(*self.load_attrs)
+            )
+        ).one_or_none()
         return user
 
     async def get_user_by_id(self, id: UUID) -> Optional[UserDB]:
-        user = (await self.session.exec(
-            select(UserDB).where(
-                UserDB.id == id
-                ).options(*self.load_attrs)
-        )).one_or_none()
+        user = (
+            await self.session.exec(
+                select(UserDB).where(UserDB.id == id).options(*self.load_attrs)
+            )
+        ).one_or_none()
 
         return user
 
-    async def get_users(
-        self, skip: int, limit: int
-    ) -> list[UserDB]:
-        users = (await self.session.exec(
-            select(UserDB).offset(skip).limit(limit).order_by(
-                desc(UserDB.registered_at)).options(
-                *self.load_attrs)
-        )).all()
+    async def get_users(self, skip: int, limit: int) -> list[UserDB]:
+        users = (
+            await self.session.exec(
+                select(UserDB)
+                .offset(skip)
+                .limit(limit)
+                .order_by(desc(UserDB.registered_at))
+                .options(*self.load_attrs)
+            )
+        ).all()
         logger.info(f"{users=}")
 
         return users
 
-    async def delete_user(
-        self, user: UserDB
-    ) -> None:
+    async def delete_user(self, user: UserDB) -> None:
         await self.session.delete(user)
         await self.session.commit()

@@ -4,25 +4,21 @@ from datetime import datetime
 from pydantic import ConfigDict
 from sqlmodel import SQLModel, Field, Relationship, Column, func, DateTime
 
+
 class BaseReview(SQLModel):
     rating: int = Field(ge=0, le=5)
-    recap: str | None = Field(default=None, max_length=50)
+    subject: str | None = Field(default=None, max_length=50)
     content: str | None = Field(default=None, max_length=400)
 
 
 class ReviewDB(BaseReview, table=True):
     __tablename__ = "reviews"
 
-    id: UUID = Field(
-        default_factory=uuid4,
-        primary_key=True
-        )
-    
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+
     created_at: datetime = Field(
         sa_column=Column(
-            DateTime(timezone=True),
-            server_default=func.now(),
-            nullable=False
+            DateTime(timezone=True), server_default=func.now(), nullable=False
         )
     )
 

@@ -10,8 +10,9 @@ from fastapi.security import OAuth2PasswordBearer
 from app.db.postgres import get_session
 from app.db.redis import get_redis
 from app.core.exceptions import (
-    no_rights_exception, invalid_token_payload_exception
-    )
+    no_rights_exception,
+    invalid_token_payload_exception,
+)
 from app.core.auth import decode_access_token
 from app.models.user import UserDB, UserRole
 
@@ -31,18 +32,16 @@ from app.core.logging import logger
 
 oauth_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/login")
 
+
 def skip_limit_params(
-    skip: Annotated[int, Query(ge=0, lt=99)] = 0, 
+    skip: Annotated[int, Query(ge=0, lt=99)] = 0,
     limit: Annotated[int, Query(ge=0, lt=100)] = 10,
 ) -> tuple[int, int]:
     return skip, limit
 
 
-async def get_current_user_id(
-    token: TokenDep,
-    redis: RedisDep
-) -> UUID | None:
-    payload = await decode_access_token(token, redis)
+async def get_current_user_id(token: TokenDep, redis: RedisDep) -> UUID | None:
+    payload = await decode_access_token(token)
     logger.info(payload)
     user_id = payload.get("sub")
 
@@ -53,8 +52,7 @@ async def get_current_user_id(
 
 
 async def get_current_user(
-    token: TokenDep,
-    user_service: UserServiceDep
+    token: TokenDep, user_service: UserServiceDep
 ) -> UserDB | None:
     payload = await decode_access_token(token)
     logger.info(payload)
@@ -75,6 +73,7 @@ def require_role(role: UserRole) -> UserDB:
             exception.detail = f"{exception.detail}. Role '{role}' required"
             raise no_rights_exception
         return user
+
     return wrapper
 
 
@@ -91,66 +90,56 @@ def _require_role(role: UserRole) -> UserDB:
             raise no_rights_exception
 
         return user_id
+
     return wrapper
 
 
-def get_user_repo(
-    session: SessionDep
-) -> UserRepository:
+def get_user_repo(session: SessionDep) -> UserRepository:
     return UserRepository(session)
 
-def get_user_service(
-    user_repo: UserRepoDep
-) -> UserService:
+
+def get_user_service(user_repo: UserRepoDep) -> UserService:
     return UserService(user_repo)
 
 
-def get_app_repo(
-    session: SessionDep
-) -> AppRepository:
+def get_app_repo(session: SessionDep) -> AppRepository:
     return AppRepository(session)
 
+
 def get_app_service(
-    app_repo: AppRepoDep,
-    user_service: UserServiceDep
+    app_repo: AppRepoDep, user_service: UserServiceDep
 ) -> AppService:
     return AppService(app_repo, user_service)
 
 
 def get_review_repo(
-    app_repo: AppRepoDep,
-    session: SessionDep
+    app_repo: AppRepoDep, session: SessionDep
 ) -> ReviewRepository:
     return ReviewRepository(session)
 
+
 def get_review_service(
-    review_repo: ReviewRepoDep,
-    app_service: AppServiceDep
+    review_repo: ReviewRepoDep, app_service: AppServiceDep
 ) -> ReviewService:
     return ReviewService(review_repo, app_service)
 
 
-def get_cart_repo(
-    session: SessionDep,
-    app_repo: AppRepoDep
-) -> CartRepository:
+def get_cart_repo(session: SessionDep, app_repo: AppRepoDep) -> CartRepository:
     return CartRepository(session)
 
+
 def get_cart_service(
-    app_service: AppServiceDep,
-    cart_repo: CartRepoDep
+    app_service: AppServiceDep, cart_repo: CartRepoDep
 ) -> CartService:
     return CartService(app_service, cart_repo)
 
 
-def get_discussion_repo(
-    session: SessionDep
-) -> DiscussionRepository:
+def get_discussion_repo(session: SessionDep) -> DiscussionRepository:
     return DiscussionRepository(session)
 
+
 def get_discussion_service(
-    discussion_repo: DiscussionRepoDep,
-    app_service: AppServiceDep
+    discussion_repo: DiscussionRepoDep, app_service: AppServiceDep
 ) -> DiscussionService:
     return DiscussionService(discussion_repo, app_service)
 
@@ -179,9 +168,9 @@ CartRepoDep = Annotated[CartRepository, Depends(get_cart_repo)]
 
 DiscussionServiceDep = Annotated[
     DiscussionService, Depends(get_discussion_service)
-    ]
+]
 DiscussionRepoDep = Annotated[
     DiscussionRepository, Depends(get_discussion_repo)
-    ]
+]
 
 RedisDep = Annotated[Redis, Depends(get_redis)]

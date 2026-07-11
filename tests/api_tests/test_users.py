@@ -4,13 +4,10 @@ import pytest
 
 from app.models.user import UserDB
 
+
 class TestUsers:
-    async def test_get_current_user(
-        self, auth_client: AsyncClient
-    ):
-        response = await auth_client.get(
-            "/api/v1/users/me"
-        )
+    async def test_get_current_user(self, auth_client: AsyncClient):
+        response = await auth_client.get("/api/v1/users/me")
         data = response.json()
         assert response.status_code == 200
         assert "password" not in data
@@ -18,32 +15,28 @@ class TestUsers:
 
     async def test_create_user(self, client: AsyncClient):
         response = await client.post(
-            "/api/v1/users",
-            json={"username": "myuser", "password": "12345"}
+            "/api/v1/users", json={"username": "myuser", "password": "12345"}
         )
         assert response.status_code == 201
         assert response.json()["username"] is not None
 
     @pytest.mark.parametrize(
-        argnames=[
-            "update_data", "expected_data", "expected_status_code"
-            ], 
+        argnames=["update_data", "expected_data", "expected_status_code"],
         argvalues=[
             [{"username": "ureb"}, {"username": "ureb"}, 200],
             [{"balance": "10000"}, {"balance": "0"}, 200],
-            [{"name": "serega"}, {"username": "testUser"}, 200]
-        ]
+            [{"name": "serega"}, {"username": "testUser"}, 200],
+        ],
     )
     async def test_update_user(
-        self, 
-        auth_client: AsyncClient, 
+        self,
+        auth_client: AsyncClient,
         update_data: dict,
         expected_data: dict,
-        expected_status_code: int
+        expected_status_code: int,
     ):
         response = await auth_client.patch(
-            f"/api/v1/users/me",
-            json=update_data
+            "/api/v1/users/me", json=update_data
         )
         data = response.json()
         assert response.status_code == expected_status_code
@@ -59,36 +52,31 @@ class TestUsers:
             [0.00001, "0.00001", 200],
             [0, "0", 400],
             [-1_000, "0", 400],
-        ]
+        ],
     )
     async def test_top_up_balance(
-        self, 
-        auth_client: AsyncClient, 
+        self,
+        auth_client: AsyncClient,
         amount: float,
         expected_balance: str,
-        expected_status_code: int
+        expected_status_code: int,
     ):
-        response = await auth_client.patch(
-            "/api/v1/users/me/balance",
-            params={"amount": amount}
-            )
+        response = await auth_client.post(
+            "/api/v1/users/me/balance", params={"amount": amount}
+        )
         assert response.status_code == expected_status_code
         if response.status_code == 200:
             assert response.json()["new_balance"] == expected_balance
 
     async def test_delete_current_user(
-        self, 
-        auth_client: AsyncClient, 
+        self,
+        auth_client: AsyncClient,
         test_user: UserDB,
-        fake_redis: FakeRedis
+        fake_redis: FakeRedis,
     ):
-        delete_response = await auth_client.delete(
-            "/api/v1/users/me"
-            )
+        delete_response = await auth_client.delete("/api/v1/users/me")
         assert delete_response.status_code == 204
         assert not await fake_redis.exists(f"user_tokens:{test_user.id}")
 
-        get_response = await auth_client.get(
-            f"/api/v1/users/{test_user.id}"
-            )
+        get_response = await auth_client.get(f"/api/v1/users/{test_user.id}")
         assert get_response.status_code == 404

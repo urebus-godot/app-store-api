@@ -1,23 +1,36 @@
 from .user import (
-    UserDB, 
-    UserResponse, CurrentUserResponse, PublisherResponse, UserBaseResponse
-    )
+    UserDB,
+    UserResponse,
+    CurrentUserResponse,
+    PublisherResponse,
+    UserBaseResponse,
+)
 from .review import ReviewDB, ReviewResponse
 from .app import (
-    AppDB, AppResponse, GameResponse, AppResponseWithReviews, 
-    AppResponseWithPublisher, GameResponseWithPublisher
-    )
-from .app_purchase import (
-    Purchase,
-    CartItem, 
-    CartResponse, CartItemResponse, PurchaseResponse
-    )
-from .discussion import MessageResponse, ShortDiscussionResponse, DiscussionResponse
+    AppDB,
+    AppResponse,
+    GameResponse,
+    AppResponseWithReviews,
+    AppResponseWithPublisher,
+    GameResponseWithPublisher,
+)
+from .purchase import (
+    PurchaseDB,
+    CartItem,
+    CartResponse,
+    CartItemResponse,
+    PurchaseResponse,
+)
+from .discussion import (
+    MessageResponse,
+    ShortDiscussionResponse,
+    DiscussionResponse,
+)
 
 UserDB.model_rebuild()
 ReviewDB.model_rebuild()
 AppDB.model_rebuild()
-Purchase.model_rebuild()
+PurchaseDB.model_rebuild()
 CartItem.model_rebuild()
 
 UserResponse.model_rebuild()

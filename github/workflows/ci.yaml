@@ -1,8 +1,0 @@
-name: CI
-
-on:
-  push: [ main ]
-  pull-request: [ main ]
-
-uses:
-  

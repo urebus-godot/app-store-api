@@ -3,11 +3,11 @@ import pytest
 
 from app.models.app import AppDB
 
+
 class TestApps:
     async def test_create_app(self, publisher_client: AsyncClient):
         response = await publisher_client.post(
-            f"/api/v1/apps",
-            json={"title": "gta 6", "price": 500}
+            "/api/v1/apps", json={"title": "gta 6", "price": 500}
         )
         data = response.json()
 
@@ -16,30 +16,28 @@ class TestApps:
 
     async def test_create_app_not_publisher(self, auth_client: AsyncClient):
         response = await auth_client.post(
-            f"/api/v1/apps",
-            json={"title": "gta 6", "price": 500}
+            "/api/v1/apps", json={"title": "gta 6", "price": 500}
         )
         assert response.status_code == 403
 
     @pytest.mark.parametrize(
-        argnames=["update_data", "expected_data", "expected_status_code"], 
+        argnames=["update_data", "expected_data", "expected_status_code"],
         argvalues=[
             [{"title": "Code"}, {"title": "Code"}, 200],
             [{"price": 600}, {"price": "600"}, 200],
-            [{"price": "money"}, {}, 422]
-        ]
+            [{"price": "money"}, {}, 422],
+        ],
     )
     async def test_update_app(
-        self, 
-        auth_client: AsyncClient, 
+        self,
+        auth_client: AsyncClient,
         test_app: AppDB,
         update_data: dict,
         expected_data: dict,
-        expected_status_code: int
+        expected_status_code: int,
     ):
         response = await auth_client.patch(
-            f"/api/v1/apps/{test_app.id}",
-            json=update_data
+            f"/api/v1/apps/{test_app.id}", json=update_data
         )
         data = response.json()
 
@@ -68,12 +66,8 @@ class TestApps:
         )
         assert delete_response.status_code == 403
 
-    async def test_get_app(
-        self, client: AsyncClient, test_app_2: AppDB
-    ):
-        response = await client.get(
-            f"/api/v1/apps/{test_app_2.id}"
-        )
+    async def test_get_app(self, client: AsyncClient, test_app_2: AppDB):
+        response = await client.get(f"/api/v1/apps/{test_app_2.id}")
         data = response.json()
 
         assert response.status_code == 200
@@ -83,15 +77,10 @@ class TestApps:
     async def test_get_private_app(
         self, client: AsyncClient, test_app_private: AppDB
     ):
-        response = await client.get(
-            f"/api/v1/apps/{test_app_private.id}"
-        )
+        response = await client.get(f"/api/v1/apps/{test_app_private.id}")
         assert response.status_code == 404
 
     async def test_get_apps(self, client: AsyncClient, test_apps: list[AppDB]):
         query = {"search_query": ["APP", "Test", " free! "]}
-        response = await client.get(
-            "/api/v1/apps",
-            params=query
-        )
+        response = await client.get("/api/v1/apps", params=query)
         assert response.status_code == 200

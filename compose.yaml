@@ -38,19 +38,22 @@ services:
   #  environment:
   #    - REDIS_HOSTS=local:redis:6379
 
-  #web:
-  #  build:
-  #    context: .
-  #  ports:
-  #    - "8000:8000"
-  #  networks: 
-  #    - app-network
-  #  depends_on:
-  #    - db
-  #    - redis
-  #
-  #
-  #   
+  web:
+    container_name: web
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    networks: 
+      - app_network
+    volumes:
+      #- ./project:/app
+      - type: bind
+        source: app
+        target: /src/app
+    depends_on:
+      - db
+      - redis
 
 networks:
   app_network:
