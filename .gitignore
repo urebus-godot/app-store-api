@@ -18,3 +18,4 @@ x/
 .pytest_cache
 .ruff_cache
 .vscode/
+*.python-version
