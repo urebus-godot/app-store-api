@@ -25,6 +25,7 @@ from app.models.user import (
     UserUpdate,
     CurrentUserResponse,
 )
+from app.models.finance import TransferRequest
 from app.models.token import TokenResponse, LoginResponse
 from app.core.logging import logger
 from app.dependencies import RedisDep
@@ -56,15 +57,19 @@ async def login(
     """Returns refresh and access tokens to the user on success."""
 
     login_response = await user_service.login(
-        form_data.username, form_data.password, bg_tasks, request, redis
+        form_data.username, 
+        form_data.password, 
+        bg_tasks=bg_tasks, 
+        request=request, 
+        redis=redis
     )
 
     response.set_cookie(
         key="refresh_token",
         value=login_response.refresh_token,
         httponly=True,
-        expires=get_refresh_token_expire(),
         secure=True,
+        expires=get_refresh_token_expire(),
     )
 
     return login_response
@@ -101,10 +106,12 @@ async def refresh_tokens(
 
 @router.post("/users/me/balance")
 async def top_up_balance(
-    amount: Decimal, user: UserDep, user_service: UserServiceDep
+    data: TransferRequest, 
+    user: UserDep, 
+    user_service: UserServiceDep
 ) -> dict[str, Decimal]:
     """Increases user's balance by specified amount"""
-    return await user_service.top_up_balance(amount, user=user)
+    return await user_service.top_up_balance(data, user)
 
 
 @router.post("/users/me/publisher")

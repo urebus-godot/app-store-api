@@ -8,35 +8,35 @@ from sqlalchemy.orm import selectinload
 
 
 from app.models.user import UserDB
-from app.models.purchase import Cart, PurchaseDB, CartItem
+from app.models.purchase import CartDB, PurchaseDB, CartItem
 
 
-class CartRepository:
+class PurchaseRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
         self.load_attrs = (
-            selectinload(Cart.items).selectinload(CartItem.app),
-            selectinload(Cart.user),
+            selectinload(CartDB.items).selectinload(CartItem.app),
+            selectinload(CartDB.user),
         )
 
-    async def get_or_create_cart(self, user_id: UUID) -> Cart:
+    async def get_or_create_cart(self, user_id: UUID) -> CartDB:
         cart = (
             await self.session.exec(
-                select(Cart)
-                .where(Cart.user_id == user_id)
+                select(CartDB)
+                .where(CartDB.user_id == user_id)
                 .options(*self.load_attrs)
             )
         ).one_or_none()
 
         if cart is None:
-            cart = Cart(user_id=user_id)
+            cart = CartDB(user_id=user_id)
 
             self.session.add(cart)
 
             cart = (
                 await self.session.exec(
-                    select(Cart)
-                    .where(Cart.user_id == user_id)
+                    select(CartDB)
+                    .where(CartDB.user_id == user_id)
                     .options(*self.load_attrs)
                 )
             ).one()
@@ -87,7 +87,7 @@ class CartRepository:
 
     async def add_app_to_cart(
         self,
-        cart: Cart,
+        cart: CartDB,
         app_id: UUID,
     ) -> CartItem:
         cart_item = CartItem(cart_id=cart.id, app_id=app_id)
@@ -101,7 +101,7 @@ class CartRepository:
         self, user: UserDB, total_price: Decimal
     ) -> None:
         user.balance -= total_price
-        self.session.add(user)
+        #self.session.add(user)
         await self.session.commit()
 
     async def add_purchase(self, user_id: UUID, item: CartItem) -> None:
@@ -114,6 +114,6 @@ class CartRepository:
         await self.session.delete(item)
         await self.session.commit()
 
-    async def clear_cart(self, cart: Cart) -> None:
+    async def clear_cart(self, cart: CartDB) -> None:
         await self.session.delete(cart)
         await self.session.commit()

@@ -6,9 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.logging import setup_logging
 from app.api.v1 import (
     app_router,
+    purchase_router,
     review_router,
     user_router,
-    cart_router,
     discussion_router,
 )
 from app.core.config import settings
@@ -34,7 +34,7 @@ app = FastAPI(
 app.include_router(user_router.router, prefix="/api/v1", tags=["User"])
 app.include_router(app_router.router, prefix="/api/v1", tags=["Application"])
 app.include_router(review_router.router, prefix="/api/v1", tags=["Review"])
-app.include_router(cart_router.router, prefix="/api/v1", tags=["Cart"])
+app.include_router(purchase_router.router, prefix="/api/v1", tags=["Purchase"])
 app.include_router(
     discussion_router.router, prefix="/api/v1", tags=["Discussion"]
 )

@@ -45,7 +45,7 @@ class CartItem(SQLModel, table=True):
     cart_id: UUID = Field(foreign_key="carts.id", ondelete="CASCADE")
     app_id: UUID = Field(foreign_key="apps.id", ondelete="CASCADE")
 
-    cart: "Cart" = Relationship(back_populates="items")
+    cart: "CartDB" = Relationship(back_populates="items")
     app: "AppDB" = Relationship()
 
 
@@ -63,7 +63,7 @@ class CartItemResponse(SQLModel):
 #  items: list["CartItem"]
 
 
-class Cart(SQLModel, table=True):
+class CartDB(SQLModel, table=True):
     __tablename__ = "carts"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)

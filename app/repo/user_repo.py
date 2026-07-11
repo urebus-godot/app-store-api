@@ -8,6 +8,7 @@ from sqlmodel import select, desc
 from sqlalchemy.orm import selectinload
 
 from app.models.user import UserRequest, UserDB, UserUpdate, UserRole
+from app.models.finance import TransferRequest, TransferDB
 from app.core.security import get_password_hash
 from app.core.logging import logger
 
@@ -54,20 +55,22 @@ class UserRepository:
         return user
 
     async def top_up_balance(
-        self, amount: Decimal, user: UserDB
+        self, data: TransferRequest, user: UserDB
     ) -> dict[str, Decimal]:
-        user.balance += amount
+        """Increase user's balance and create row in the db for transfer."""
+        user.balance += data.amount
 
-        self.session.add(user)
+        transfer_db = TransferDB(amount=data.amount)
+
+        self.session.add(transfer_db)
         await self.session.commit()
-        # await self.session.refresh(user)
 
-        return {"new_balance": user.balance}
-
+        return {"balance": user.balance}
+    
     async def become_publisher(self, user: UserDB) -> dict[str, str]:
         user.roles = user.roles + [UserRole.PUBLISHER]
 
-        self.session.add(user)
+        #self.session.add(user)
         await self.session.commit()
         # await self.session.refresh(user)
 
@@ -80,7 +83,7 @@ class UserRepository:
         if "password" in data:
             user.hashed_password = get_password_hash(data["password"])
 
-        self.session.add(user)
+        #self.session.add(user)
         await self.session.commit()
         # await self.session.refresh(user)
 

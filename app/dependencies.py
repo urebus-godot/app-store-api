@@ -19,13 +19,13 @@ from app.models.user import UserDB, UserRole
 from app.repo.user_repo import UserRepository
 from app.repo.app_repo import AppRepository
 from app.repo.review_repo import ReviewRepository
-from app.repo.cart_repo import CartRepository
+from app.repo.purchase_repo import PurchaseRepository
 from app.repo.discussion_repo import DiscussionRepository
 
 from app.service.user_service import UserService
 from app.service.app_service import AppService
 from app.service.review_service import ReviewService
-from app.service.cart_service import CartService
+from app.service.purchase_service import PurchaseService
 from app.service.discussion_service import DiscussionService
 
 from app.core.logging import logger
@@ -124,14 +124,16 @@ def get_review_service(
     return ReviewService(review_repo, app_service)
 
 
-def get_cart_repo(session: SessionDep, app_repo: AppRepoDep) -> CartRepository:
-    return CartRepository(session)
+def get_purchase_repo(session: SessionDep, app_repo: AppRepoDep) -> PurchaseRepository:
+    return PurchaseRepository(session)
 
 
-def get_cart_service(
-    app_service: AppServiceDep, cart_repo: CartRepoDep
-) -> CartService:
-    return CartService(app_service, cart_repo)
+def get_purchase_service(
+    redis: RedisDep,
+    app_service: AppServiceDep, 
+    purchase_repo: PurchaseRepoDep
+) -> PurchaseService:
+    return PurchaseService(redis, app_service, purchase_repo)
 
 
 def get_discussion_repo(session: SessionDep) -> DiscussionRepository:
@@ -163,8 +165,8 @@ AppRepoDep = Annotated[AppRepository, Depends(get_app_repo)]
 ReviewServiceDep = Annotated[ReviewService, Depends(get_review_service)]
 ReviewRepoDep = Annotated[ReviewRepository, Depends(get_review_repo)]
 
-CartServiceDep = Annotated[CartService, Depends(get_cart_service)]
-CartRepoDep = Annotated[CartRepository, Depends(get_cart_repo)]
+PurchaseServiceDep = Annotated[PurchaseService, Depends(get_purchase_service)]
+PurchaseRepoDep = Annotated[PurchaseRepository, Depends(get_purchase_repo)]
 
 DiscussionServiceDep = Annotated[
     DiscussionService, Depends(get_discussion_service)

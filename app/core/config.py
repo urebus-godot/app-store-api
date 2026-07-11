@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     REDIS_URL: str = environ.get("REDIS_URL")
     TEST_REDIS_URL: str = environ.get("TEST_REDIS_URL")
 
+    CACHE_TTL_SECONDS: int = 3600
+
     DB_OUTPUT: bool = False
     DEBUG: bool = True
 
@@ -61,7 +63,14 @@ class Settings(BaseSettings):
     USE_CREDENTIALS: bool = True
     VALIDATE_CERTS: bool = True
 
-    RECEIPT_TEMPLATE: str = ""
+    RECEIPT_TEMPLATE: str = """
+    <body>
+        <h3>
+            Apps have been purchased
+        </h3>
+    </body>
+    """
+
     LOGIN_TEMPLATE: str = """
     <body>
         <h3>

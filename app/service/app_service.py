@@ -1,6 +1,7 @@
 from uuid import UUID
 from typing import Optional
 
+from redis.asyncio import Redis
 from fastapi import UploadFile
 
 from app.core.exceptions import (
@@ -44,7 +45,9 @@ class AppService:
         return app
 
     async def get_apps(
-        self, skip: int, limit: int, search_query: Optional[str] = None
+        self, 
+        skip: int, limit: int,
+        search_query: Optional[str] = None
     ) -> list[AppDB]:
         apps = await self.app_repo.get_apps(skip, limit)
 

@@ -60,7 +60,7 @@ class AppRepository:
 
         app.sqlmodel_update(data)
 
-        self.session.add(app)
+        #self.session.add(app)
         await self.session.commit()
 
         return app

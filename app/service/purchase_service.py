@@ -2,7 +2,9 @@ from uuid import UUID
 from typing import Optional
 
 from fastapi import status, HTTPException
+from redis.asyncio import Redis
 
+from app.core.config import settings
 from app.core.exceptions import (
     not_enough_funds_exception,
     app_purchased_exception,
@@ -12,20 +14,38 @@ from app.core.exceptions import (
     app_not_in_cart_exception,
 )
 from app.core.logging import logger
-from app.repo.cart_repo import CartRepository
+from app.repo.purchase_repo import PurchaseRepository
 from app.service.app_service import AppService
 from app.models.user import UserDB
 from app.models.app import AppDB
-from app.models.purchase import PurchaseDB, CartItem
+from app.models.purchase import PurchaseDB, CartItem, CartDB
 
 
-class CartService:
-    def __init__(self, app_service: AppService, cart_repo: CartRepository):
+class PurchaseService:
+    def __init__(
+        self, 
+        redis: Redis,
+        app_service: AppService, 
+        cart_repo: PurchaseRepository
+    ):
+        self.redis = redis
         self.cart_repo = cart_repo
         self.app_service = app_service
 
     async def get_or_create_cart(self, user_id: UUID):
+        cached_cart = await self.redis.get(f"cart_cache:{user_id}")
+
+        if cached_cart is not None:
+            return CartDB.model_validate_json(cached_cart)
+
         cart = await self.cart_repo.get_or_create_cart(user_id)
+
+        cached_cart = await self.redis.set(
+            name=f"cart_cache:{user_id}",
+            value=cart.model_dump_json(),
+            ex=settings.CACHE_TTL_SECONDS
+            )
+
         return cart
 
     async def get_purchase(
@@ -46,7 +66,10 @@ class CartService:
         purchases = await self.cart_repo.get_purchases(user_id, skip, limit)
         return purchases
 
-    async def add_app_to_cart(self, app_id: UUID, user_id: UUID) -> CartItem:
+    async def add_app_to_cart(
+        self, 
+        app_id: UUID, user_id: UUID,
+    ) -> CartItem:
         user_cart = await self.get_or_create_cart(user_id)
         app = await self.app_service.get_app(app_id)
 
@@ -58,20 +81,27 @@ class CartService:
 
         if purchased:
             raise app_purchased_exception
-        elif already_added:
+        
+        if already_added:
             raise app_in_cart_exception
-        elif published:
+        
+        if published:
             raise app_published_exception
+
+        await self.redis.delete(f"cart_cache:{user_id}")
 
         return await self.cart_repo.add_app_to_cart(user_cart, app_id)
 
-    async def purchase_apps_in_cart(self, user: UserDB) -> list[AppDB]:
+    async def purchase_apps_in_cart(
+        self, user: UserDB
+    ) -> list[AppDB]:
         cart = await self.get_or_create_cart(user.id)
         total_price = sum([item.app.price for item in cart.items])
 
         if not cart.items:
             raise empty_cart_exception
-        elif user.balance < total_price:
+        
+        if user.balance < total_price:
             raise not_enough_funds_exception
 
         purchased_apps = []
@@ -80,6 +110,7 @@ class CartService:
                 purchased = await self.get_purchase(item.app_id, user.id)
                 if purchased:
                     continue
+                
                 await self.cart_repo.add_purchase(user.id, item)
                 purchased_apps.append(item.app)
 
@@ -98,23 +129,37 @@ class CartService:
                 f"Error occurred during transaction: {e}."
                 "Please contact the developer",
             )
+        
+        await self.redis.delete(f"cart_cache:{user.id}")
+        
         return purchased_apps
 
-    async def remove_app_from_cart(self, app_id: UUID, user_id: UUID) -> None:
-        app = await self.app_service.get_app(app_id)
+    async def remove_app_from_cart(
+        self, 
+        app_id: UUID, user_id: UUID
+    ) -> None:
+        await self.app_service.get_app(app_id)
+
         user_cart = await self.get_or_create_cart(user_id)
         cart_item = await self.get_cart_item(user_cart.id, app_id)
 
         if cart_item is None:
             raise app_not_in_cart_exception
 
+        await self.redis.delete(f"cart_cache:{user_id}")
+
         user_cart.items.remove(cart_item)
+        
         await self.cart_repo.remove_app_from_cart(cart_item)
 
-    async def clear_cart(self, user_id: UUID) -> None:
+    async def clear_cart(
+        self, user_id: UUID
+    ) -> None:
         cart = await self.get_or_create_cart(user_id)
 
         if not cart.items:
             raise empty_cart_exception
+
+        await self.redis.delete(f"cart_cache:{user_id}")
 
         await self.cart_repo.clear_cart(cart)

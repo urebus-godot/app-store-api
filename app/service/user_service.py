@@ -9,6 +9,7 @@ import jwt
 
 from app.core.tasks import send_email
 from app.models.user import UserRequest, UserDB, UserUpdate, UserRole
+from app.models.finance import TransferRequest
 from app.models.token import LoginResponse
 from app.repo.user_repo import UserRepository
 from app.core.exceptions import (
@@ -117,12 +118,12 @@ class UserService:
             raise invalid_refresh_token_exception
 
     async def top_up_balance(
-        self, amount: Decimal, user: UserDB
+        self, data: TransferRequest, user: UserDB
     ) -> dict[str, Decimal]:
-        if amount <= 0:
+        if data.amount <= 0:
             raise not_positive_amount_exception
 
-        return await self.user_repo.top_up_balance(amount, user)
+        return await self.user_repo.top_up_balance(data.amount, user)
 
     async def become_publisher(
         self,
