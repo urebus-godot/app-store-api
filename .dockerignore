@@ -3,10 +3,11 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 x/
+.vscode/
+.github/
 
 .git
 .gitignore
 .coverage
 .uv
 README.md
-.vscode/

@@ -30,7 +30,7 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
+      DB_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
       SECRET_KEY: 5b54e1cae0f5d7215d776d66ba32b2288d8570451e62632d1c1a5f7af0142a79
       #ENVIRONMENT: test
 
@@ -45,13 +45,12 @@ jobs:
           enable-cache: true
 
       - name: Install Python
-        run: uv python install 3.13
-#{{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
       - name: Install dependencies
         run: uv sync --locked
 
       - name: Check code with Ruff
-        run: python -m ruff check .
+        run: uv run python -m ruff check .
 
       - name: Run tests
         run: uv run pytest -v --cov=app --cov-report=term-missing
