@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from uuid import UUID, uuid4
 from enum import StrEnum
 from decimal import Decimal
@@ -39,9 +39,7 @@ class UserDB(BaseUser, table=True):
         sa_type=ARRAY(String), default={UserRole.USER}
     )
 
-    registered_at: datetime = Field(
-        default_factory=lambda: datetime.now()
-    )
+    registered_at: datetime = Field(default_factory=lambda: datetime.now())
     balance: Decimal = Field(default=0, ge=0)
 
     cart: Optional["CartDB"] = Relationship(

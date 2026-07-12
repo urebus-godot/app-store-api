@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: timedelta = timedelta(minutes=15)
     REFRESH_TOKEN_EXPIRE_DAYS: timedelta = timedelta(days=7)
 
-    SECRET_KEY: str# = environ.get("ACCESS_SECRET_KEY")
+    SECRET_KEY: str  # = environ.get("ACCESS_SECRET_KEY")
     REFRESH_SECRET_KEY: str = environ.get("REFRESH_SECRET_KEY")
     # TEST_SECRET_KEY: str = environ.get("TEST_ACCESS_SECRET_KEY")
     JWT_ALGORITHM: str = "HS256"

@@ -18,4 +18,5 @@ x/
 .pytest_cache
 .ruff_cache
 .vscode/
+htmlcov/
 *.python-version

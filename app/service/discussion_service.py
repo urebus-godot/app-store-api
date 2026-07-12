@@ -19,18 +19,17 @@ from app.models.discussion import (
 
 class DiscussionService:
     def __init__(
-        self, 
-        discussion_repo: DiscussionRepository, 
-        app_service: AppService
+        self, discussion_repo: DiscussionRepository, app_service: AppService
     ):
         self.discussion_repo = discussion_repo
         self.app_service = app_service
 
     async def create_discussion(
-        self, 
-        data: DiscussionRequest, 
-        user_id: UUID, app_id: UUID,
-        uow: UnitOfWork
+        self,
+        data: DiscussionRequest,
+        user_id: UUID,
+        app_id: UUID,
+        uow: UnitOfWork,
     ) -> DiscussionDB:
         async with uow:
             app = await self.app_service.get_app(app_id)
@@ -39,7 +38,7 @@ class DiscussionService:
                 data, user_id, app_id
             )
             await uow.commit()
-            
+
             return discussion
 
     async def get_discussion(self, id: UUID) -> DiscussionDB:
@@ -52,15 +51,12 @@ class DiscussionService:
         discussions = await self.discussion_repo.get_app_discussions(app_id)
         return discussions
 
-    async def get_user_discussions(
-        self, user_id: UUID
-    ) -> list[DiscussionDB]:
+    async def get_user_discussions(self, user_id: UUID) -> list[DiscussionDB]:
         discussions = await self.discussion_repo.get_user_discussions(user_id)
         return discussions
 
     async def delete_discussion(
-        self, id: UUID, user_id: UUID,
-        uow: UnitOfWork
+        self, id: UUID, user_id: UUID, uow: UnitOfWork
     ) -> None:
         async with uow:
             discussion = await self.discussion_repo.get_discussion(id)
@@ -73,12 +69,12 @@ class DiscussionService:
             await self.discussion_repo.delete_discussion(discussion)
             await uow.commit()
 
-
     async def create_message(
-        self, 
-        data: MessageRequest, 
-        author_id: UUID, discussion_id: UUID,
-        uow: UnitOfWork
+        self,
+        data: MessageRequest,
+        author_id: UUID,
+        discussion_id: UUID,
+        uow: UnitOfWork,
     ) -> MessageDB:
         async with uow:
             await self.get_discussion(discussion_id)
@@ -86,15 +82,11 @@ class DiscussionService:
                 data, author_id, discussion_id
             )
             await uow.commit()
-            message = await self.discussion_repo.get_message(
-                message.id
-            )
+            message = await self.discussion_repo.get_message(message.id)
             return message
 
     async def delete_message(
-        self, 
-        id: UUID, user_id: UUID,
-        uow: UnitOfWork
+        self, id: UUID, user_id: UUID, uow: UnitOfWork
     ) -> None:
         async with uow:
             message = await self.discussion_repo.get_message(id)

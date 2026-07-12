@@ -83,7 +83,6 @@ class DiscussionRepository:
         message.discussion_id = discussion_id
 
         self.session.add(message)
-        
 
         return message
 

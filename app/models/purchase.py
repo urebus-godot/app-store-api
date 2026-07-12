@@ -1,8 +1,8 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from uuid import UUID, uuid4
 from decimal import Decimal
 
-from sqlmodel import SQLModel, Field, Relationship, Column, DateTime, func
+from sqlmodel import SQLModel, Field, Relationship
 from pydantic import ConfigDict
 
 
@@ -10,9 +10,7 @@ class PurchaseDB(SQLModel, table=True):
     __tablename__ = "purchases"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    purchased_at: datetime = Field(
-        default_factory=lambda: datetime.now()
-    )
+    purchased_at: datetime = Field(default_factory=lambda: datetime.now())
 
     user_id: UUID = Field(foreign_key="users.id", primary_key=True)
     # user: "UserDB" = Relationship(back_populates="purchased_apps")
@@ -37,9 +35,7 @@ class CartItem(SQLModel, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
-    added_at: datetime = Field(
-        default_factory=lambda: datetime.now()
-    )
+    added_at: datetime = Field(default_factory=lambda: datetime.now())
 
     cart_id: UUID = Field(foreign_key="carts.id", ondelete="CASCADE")
     app_id: UUID = Field(foreign_key="apps.id", ondelete="CASCADE")

@@ -5,6 +5,7 @@ __pycache__/
 x/
 .vscode/
 .github/
+htmlcov/
 
 .git
 .gitignore

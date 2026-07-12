@@ -1,8 +1,8 @@
 from uuid import UUID, uuid4
-from datetime import datetime, timezone
+from datetime import datetime
 
 from pydantic import ConfigDict
-from sqlmodel import SQLModel, Field, Relationship, Column, func, DateTime
+from sqlmodel import SQLModel, Field, Relationship
 
 
 class BaseReview(SQLModel):
@@ -16,9 +16,7 @@ class ReviewDB(BaseReview, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now()
-    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now())
 
     author_id: UUID = Field(foreign_key="users.id", ondelete="CASCADE")
     author: "UserDB" = Relationship(back_populates="reviews")

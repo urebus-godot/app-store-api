@@ -16,7 +16,7 @@ from app.dependencies import (
     UserIdDep,
     SkipLimitParams,
     UserServiceDep,
-    UnitOfWorkDep
+    UnitOfWorkDep,
 )
 from app.core import auth
 from app.utils.time import get_refresh_token_expire
@@ -40,9 +40,7 @@ router = APIRouter()
     response_model=CurrentUserResponse,
 )
 async def register_user(
-    data: UserRequest, 
-    user_service: UserServiceDep,
-    uow: UnitOfWorkDep
+    data: UserRequest, user_service: UserServiceDep, uow: UnitOfWorkDep
 ) -> CurrentUserResponse:
     """Creates new user."""
     return await user_service.register_user(data, uow)
@@ -60,11 +58,11 @@ async def login(
     """Returns refresh and access tokens to the user on success."""
 
     login_response = await user_service.login(
-        form_data.username, 
-        form_data.password, 
-        bg_tasks=bg_tasks, 
-        request=request, 
-        redis=redis
+        form_data.username,
+        form_data.password,
+        bg_tasks=bg_tasks,
+        request=request,
+        redis=redis,
     )
 
     response.set_cookie(
@@ -109,10 +107,10 @@ async def refresh_tokens(
 
 @router.post("/users/me/balance")
 async def top_up_balance(
-    data: TransferRequest, 
-    user: UserDep, 
+    data: TransferRequest,
+    user: UserDep,
     user_service: UserServiceDep,
-    uow: UnitOfWorkDep
+    uow: UnitOfWorkDep,
 ) -> dict[str, Decimal]:
     """Increases user's balance by specified amount"""
     return await user_service.top_up_balance(data, user, uow)
@@ -120,9 +118,7 @@ async def top_up_balance(
 
 @router.post("/users/me/publisher")
 async def become_publisher(
-    user: UserDep, 
-    user_service: UserServiceDep, 
-    uow: UnitOfWorkDep
+    user: UserDep, user_service: UserServiceDep, uow: UnitOfWorkDep
 ) -> dict[str, str]:
     """Adds "publisher" role to user roles on success."""
     return await user_service.become_publisher(user, uow)
@@ -130,15 +126,13 @@ async def become_publisher(
 
 @router.patch("/users/me")
 async def update_current_user(
-    data: UserUpdate, 
-    user: UserDep, 
+    data: UserUpdate,
+    user: UserDep,
     user_service: UserServiceDep,
-    uow: UnitOfWorkDep
+    uow: UnitOfWorkDep,
 ) -> CurrentUserResponse:
     """Changes attributes of user to the new ones"""
-    return await user_service.update_user(
-        user=user, data=data, uow=uow
-        )
+    return await user_service.update_user(user=user, data=data, uow=uow)
 
 
 @router.get("/users/me")
@@ -166,10 +160,10 @@ async def get_users(
 
 @router.delete("/users/me", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_current_user(
-    user: UserDep, 
+    user: UserDep,
     redis: RedisDep,
-    user_service: UserServiceDep, 
-    uow: UnitOfWorkDep
+    user_service: UserServiceDep,
+    uow: UnitOfWorkDep,
 ) -> None:
     """Deletes user."""
     await user_service.delete_user(user, redis, uow)

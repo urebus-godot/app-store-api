@@ -1,5 +1,5 @@
 from typing import Optional
-from datetime import datetime, timezone
+from datetime import datetime
 
 from uuid import UUID, uuid4
 from decimal import Decimal
@@ -7,7 +7,7 @@ from enum import StrEnum
 
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy import String
-from sqlmodel import SQLModel, Field, Relationship, Column, DateTime, func
+from sqlmodel import SQLModel, Field, Relationship
 from pydantic import ConfigDict
 from fastapi import UploadFile
 
@@ -53,16 +53,12 @@ class AppDB(BaseApp, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
-    published_at: datetime = Field(
-        default_factory=lambda: datetime.now()
-    )
+    published_at: datetime = Field(default_factory=lambda: datetime.now())
     genre: Optional[GameGenre] = Field(default=None, nullable=True)
     category: AppCategory = AppCategory.APPLICATION
     file_id: UUID = Field(default_factory=uuid4)
 
-    keywords: Optional[set[str]] = Field(
-        default=None, sa_type=ARRAY(String)
-        )
+    keywords: Optional[set[str]] = Field(default=None, sa_type=ARRAY(String))
 
     publisher_id: UUID = Field(foreign_key="users.id", ondelete="CASCADE")
     publisher: "UserDB" = Relationship(back_populates="published_apps")

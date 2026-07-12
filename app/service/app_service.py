@@ -1,8 +1,6 @@
 from uuid import UUID
 from typing import Optional
 
-from redis.asyncio import Redis
-from fastapi import UploadFile
 
 from app.uow.unit_of_work import UnitOfWork
 from app.core.exceptions import (
@@ -22,8 +20,7 @@ class AppService:
         self.user_service = user_service
 
     async def upload_app(
-        self, data: AppRequest, user: UserDB, 
-        uow: UnitOfWork
+        self, data: AppRequest, user: UserDB, uow: UnitOfWork
     ) -> AppDB:
         async with uow:
             app = await self.app_repo.upload_app(data, user.id)
@@ -54,9 +51,7 @@ class AppService:
         return app
 
     async def get_apps(
-        self, 
-        skip: int, limit: int,
-        search_query: Optional[str] = None
+        self, skip: int, limit: int, search_query: Optional[str] = None
     ) -> list[AppDB]:
         apps = await self.app_repo.get_apps(skip, limit)
 
@@ -72,7 +67,7 @@ class AppService:
     async def get_publisher_apps(
         self, skip: int, limit: int, user_id: UUID
     ) -> list[AppDB]:
-        user = await self.user_service.get_user(id=user_id)
+        await self.user_service.get_user(id=user_id)
 
         publisher_apps = await self.app_repo.get_publisher_apps(
             skip=skip, limit=limit, user_id=user_id
@@ -96,8 +91,7 @@ class AppService:
         return games
 
     async def delete_app(
-        self, id: UUID, user_id: UUID, 
-        uow: UnitOfWork
+        self, id: UUID, user_id: UUID, uow: UnitOfWork
     ) -> None:
         async with uow:
             app = await self.get_app(id)

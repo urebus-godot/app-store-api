@@ -1,4 +1,3 @@
-from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 
@@ -7,7 +6,6 @@ from sqlmodel import select, desc
 from sqlalchemy.orm import selectinload
 
 
-from app.models.user import UserDB
 from app.models.purchase import CartDB, PurchaseDB, CartItem
 
 
@@ -50,10 +48,8 @@ class PurchaseRepository:
     ) -> Optional[PurchaseDB]:
         purchase = (
             await self.session.exec(
-                select(PurchaseDB)
-                .where(
-                    PurchaseDB.app_id == app_id, 
-                    PurchaseDB.user_id == user_id
+                select(PurchaseDB).where(
+                    PurchaseDB.app_id == app_id, PurchaseDB.user_id == user_id
                 )
             )
         ).first()
@@ -82,7 +78,8 @@ class PurchaseRepository:
                 select(PurchaseDB)
                 .where(PurchaseDB.user_id == user_id)
                 .order_by(desc(PurchaseDB.purchased_at))
-                .offset(skip).limit(limit)
+                .offset(skip)
+                .limit(limit)
             )
         ).all()
 

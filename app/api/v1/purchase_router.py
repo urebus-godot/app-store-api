@@ -9,7 +9,7 @@ from app.dependencies import (
     UserIdDep,
     UserDep,
     SkipLimitParams,
-    UnitOfWorkDep
+    UnitOfWorkDep,
 )
 from app.models.purchase import (
     CartResponse,
@@ -23,22 +23,20 @@ router = APIRouter()
 
 @router.post("/carts/{user_id}/{app_id}", status_code=status.HTTP_201_CREATED)
 async def add_app_to_cart(
-    app_id: UUID, 
-    user_id: UserIdDep, 
+    app_id: UUID,
+    user_id: UserIdDep,
     purchase_service: PurchaseServiceDep,
-    uow: UnitOfWorkDep
+    uow: UnitOfWorkDep,
 ) -> CartItemResponse:
-    return await purchase_service.add_app_to_cart(
-        app_id, user_id, uow
-        )
+    return await purchase_service.add_app_to_cart(app_id, user_id, uow)
 
 
 @router.post("/carts/checkout")
 async def purchase_apps_in_cart(
-    user: UserDep, 
+    user: UserDep,
     bg_tasks: BackgroundTasks,
     purchase_service: PurchaseServiceDep,
-    uow: UnitOfWorkDep
+    uow: UnitOfWorkDep,
 ) -> list[AppResponse]:
     if user.email is not None:
         bg_tasks.add_task(
@@ -52,9 +50,9 @@ async def purchase_apps_in_cart(
 
 @router.post("/carts/{user_id}")
 async def get_cart(
-    user_id: UserIdDep, 
+    user_id: UserIdDep,
     purchase_service: PurchaseServiceDep,
-    uow: UnitOfWorkDep
+    uow: UnitOfWorkDep,
 ) -> CartResponse:
     cart = await purchase_service.get_or_create_cart(user_id, uow)
     total_price = sum([item.app.price for item in cart.items])
@@ -66,13 +64,13 @@ async def get_cart(
 
 @router.get("/purchases/history")
 async def get_purchase_history(
-    user_id: UserIdDep, 
+    user_id: UserIdDep,
     skip_limit: SkipLimitParams,
-    purchase_service: PurchaseServiceDep
+    purchase_service: PurchaseServiceDep,
 ) -> list[PurchaseResponse]:
     purchases = await purchase_service.get_purchase_history(
         user_id, *skip_limit
-        )
+    )
     return purchases
 
 
@@ -80,18 +78,18 @@ async def get_purchase_history(
     "/carts/{user_id}/{app_id}", status_code=status.HTTP_204_NO_CONTENT
 )
 async def remove_app_from_cart(
-    app_id: UUID, 
-    user_id: UserIdDep, 
+    app_id: UUID,
+    user_id: UserIdDep,
     purchase_service: PurchaseServiceDep,
-    uow: UnitOfWorkDep
+    uow: UnitOfWorkDep,
 ) -> None:
     await purchase_service.remove_app_from_cart(app_id, user_id, uow)
 
 
 @router.delete("carts/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def clear_cart(
-    user_id: UserIdDep, 
+    user_id: UserIdDep,
     purchase_service: PurchaseServiceDep,
-    uow: UnitOfWorkDep
+    uow: UnitOfWorkDep,
 ) -> None:
     await purchase_service.clear_cart(user_id, uow)

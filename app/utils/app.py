@@ -1,5 +1,3 @@
-
-
 from app.service.review_service import ReviewService
 from app.models.app import AppDB, AppResponse, AppResponseWithPublisher
 from app.models.review import ReviewDB

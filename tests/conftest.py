@@ -144,7 +144,7 @@ async def auth_client(
     fake_redis: FakeRedis,
     test_user: UserDB,
     access_token: str,
-    refresh_token_data: dict[str, str]
+    refresh_token_data: dict[str, str],
 ):
     app.dependency_overrides[get_session] = lambda: db_session
     app.dependency_overrides[get_redis] = lambda: fake_redis
@@ -156,7 +156,7 @@ async def auth_client(
         transport=transport,
         base_url="http://tests",
         headers={"Authorization": f"Bearer {access_token}"},
-        cookies={"refresh_token": refresh_token_data["token"]}
+        cookies={"refresh_token": refresh_token_data["token"]},
     ) as ac:
         yield ac
 
@@ -165,10 +165,10 @@ async def auth_client(
 
 @pytest_asyncio.fixture
 async def real_auth_client(
-    db_session: AsyncSession, 
-    fake_redis: FakeRedis, 
+    db_session: AsyncSession,
+    fake_redis: FakeRedis,
     access_token: str,
-    refresh_token_data: dict[str, str]
+    refresh_token_data: dict[str, str],
 ):
     app.dependency_overrides[get_session] = lambda: db_session
     app.dependency_overrides[get_redis] = lambda: fake_redis
@@ -178,7 +178,7 @@ async def real_auth_client(
         transport=transport,
         base_url="http://tests",
         headers={"Authorization": f"Bearer {access_token}"},
-        cookies={"refresh_token": refresh_token_data["token"]}
+        cookies={"refresh_token": refresh_token_data["token"]},
     ) as ac:
         yield ac
 

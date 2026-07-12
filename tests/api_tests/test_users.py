@@ -34,11 +34,9 @@ class TestUsers:
         update_data: dict,
         expected_data: dict,
         expected_status_code: int,
-        logger
+        logger,
     ):
-        r = await auth_client.get(
-            "/api/v1/users"
-        )
+        r = await auth_client.get("/api/v1/users")
         print(f"\n\n\n\n\n\n\nAll users = {r.json()}\n\n\n\n\n\n\n\n")
         response = await auth_client.patch(
             "/api/v1/users/me", json=update_data
@@ -68,8 +66,7 @@ class TestUsers:
         expected_status_code: int,
     ):
         response = await auth_client.post(
-            "/api/v1/users/me/balance", 
-            json={"amount": amount}
+            "/api/v1/users/me/balance", json={"amount": amount}
         )
         assert response.status_code == expected_status_code
         if response.status_code == 200:

@@ -21,7 +21,6 @@ from app.core.exceptions import (
     incorrect_creds_exception,
     user_data_used_exception,
     invalid_refresh_token_exception,
-    not_positive_amount_exception,
 )
 from app.core.security import verify_password, get_password_hash
 from app.core.auth import create_token_pair
@@ -126,22 +125,17 @@ class UserService:
             raise invalid_refresh_token_exception
 
     async def top_up_balance(
-        self, 
-        data: TransferRequest, 
-        user: UserDB, 
-        uow: UnitOfWork
+        self, data: TransferRequest, user: UserDB, uow: UnitOfWork
     ) -> dict[str, Decimal]:
         async with uow:
             result = await self.user_repo.top_up_balance(data, user)
 
             await uow.commit()
-        
+
             return result
 
     async def become_publisher(
-        self,
-        user: UserDB,
-        uow: UnitOfWork
+        self, user: UserDB, uow: UnitOfWork
     ) -> dict[str, str]:
         async with uow:
             if UserRole.PUBLISHER in user.roles:
@@ -150,14 +144,11 @@ class UserService:
             result = await self.user_repo.become_publisher(user)
 
             await uow.commit()
-            
+
             return result
 
     async def update_user(
-        self,
-        user: UserDB,
-        data: UserUpdate,
-        uow: UnitOfWork
+        self, user: UserDB, data: UserUpdate, uow: UnitOfWork
     ):
         async with uow:
             if user.username == data.username or user.email == data.email:

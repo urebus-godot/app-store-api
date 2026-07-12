@@ -17,11 +17,7 @@ class ReviewService:
         self.app_service = app_service
 
     async def create_review(
-        self, 
-        app_id: UUID, 
-        data: ReviewRequest, 
-        user_id: UUID,
-        uow: UnitOfWork
+        self, app_id: UUID, data: ReviewRequest, user_id: UUID, uow: UnitOfWork
     ) -> ReviewDB:
         async with uow:
             app = await self.app_service.get_app(app_id)
@@ -32,7 +28,9 @@ class ReviewService:
                     "You can't create review to your own app",
                 )
 
-            review = await self.review_repo.create_review(data, user_id, app_id)
+            review = await self.review_repo.create_review(
+                data, user_id, app_id
+            )
 
             await uow.commit()
 
@@ -50,7 +48,7 @@ class ReviewService:
         self,
         app_id: UUID,
     ) -> list[ReviewDB]:
-        app = await self.app_service.get_app(app_id)
+        await self.app_service.get_app(app_id)
         app_reviews = await self.review_repo.get_app_reviews(app_id)
         return app_reviews
 
@@ -59,9 +57,7 @@ class ReviewService:
         return user_reviews
 
     async def delete_review(
-        self, 
-        id: UUID, user_id: UUID,
-        uow: UnitOfWork
+        self, id: UUID, user_id: UUID, uow: UnitOfWork
     ) -> None:
         async with uow:
             review = await self.get_review(id)

@@ -1,7 +1,5 @@
 from abc import ABC
-from collections.abc import AsyncGenerator
 
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.logging import logger
 from app.repo.purchase_repo import PurchaseRepository
@@ -32,9 +30,8 @@ class UnitOfWork(IUnitOfWork):
     async def __aexit__(self, exc_type, exc_value, traceback):
         if exc_type is not None:
             logger.error(
-        "Error occurred during session transaction! "
-        f"\nType: {exc_type} \nError: {exc_value} \nTraceback: {traceback}"
-                )
+                f"\nType: {exc_type} \nError: {exc_value}"
+            )
             await self.rollback()
         await self.session.close()
 

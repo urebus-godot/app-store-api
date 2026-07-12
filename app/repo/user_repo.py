@@ -49,7 +49,7 @@ class UserRepository:
         user.hashed_password = get_password_hash(data.password)
 
         self.session.add(user)
-  
+
         return user
 
     async def top_up_balance(
@@ -61,9 +61,9 @@ class UserRepository:
         transfer_db = TransferDB(amount=data.amount)
 
         self.session.add(transfer_db)
-        
+
         return {"new_balance": user.balance}
-    
+
     async def become_publisher(self, user: UserDB) -> dict[str, str]:
         user.roles = user.roles + [UserRole.PUBLISHER]
         return {"message": "You have become a publisher"}

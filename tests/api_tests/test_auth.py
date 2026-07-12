@@ -35,11 +35,9 @@ class TestLogin:
         test_user: UserDB,
         fake_redis: FakeRedis,
     ):
-        token = refresh_token_data["token"]
+        refresh_token_data["token"]
         jti = refresh_token_data["jti"]
-        response = await real_auth_client.post(
-            f"/api/v1/users/logout"
-        )
+        response = await real_auth_client.post("/api/v1/users/logout")
         data = response.json()
 
         assert response.status_code == 200
@@ -55,12 +53,10 @@ class TestRefresh:
         refresh_token_data: dict[str, str],
         fake_redis: FakeRedis,
     ):
-        token = refresh_token_data["token"]
+        refresh_token_data["token"]
         jti = refresh_token_data["jti"]
 
-        response = await real_auth_client.post(
-            f"/api/v1/users/refresh"
-        )
+        response = await real_auth_client.post("/api/v1/users/refresh")
         assert response.status_code == 200
         assert "refresh_token" in response.json()
         assert await fake_redis.exists(f"blacklist:{jti}")
@@ -72,16 +68,12 @@ class TestRefresh:
         test_user: UserDB,
         fake_redis: FakeRedis,
     ):
-        token = refresh_token_data["token"]
+        refresh_token_data["token"]
         jti = refresh_token_data["jti"]
 
-        response = await real_auth_client.post(
-            "/api/v1/users/refresh"
-        )
+        response = await real_auth_client.post("/api/v1/users/refresh")
 
-        repeat_response = await real_auth_client.post(
-            "/api/v1/users/refresh"
-        )
+        repeat_response = await real_auth_client.post("/api/v1/users/refresh")
         repeat_data = repeat_response.json()
 
         assert response.status_code == 200

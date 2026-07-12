@@ -126,14 +126,14 @@ def get_review_service(
     return ReviewService(review_repo, app_service)
 
 
-def get_purchase_repo(session: SessionDep, app_repo: AppRepoDep) -> PurchaseRepository:
+def get_purchase_repo(
+    session: SessionDep, app_repo: AppRepoDep
+) -> PurchaseRepository:
     return PurchaseRepository(session)
 
 
 def get_purchase_service(
-    redis: RedisDep,
-    app_service: AppServiceDep, 
-    purchase_repo: PurchaseRepoDep
+    redis: RedisDep, app_service: AppServiceDep, purchase_repo: PurchaseRepoDep
 ) -> PurchaseService:
     return PurchaseService(redis, app_service, purchase_repo)
 

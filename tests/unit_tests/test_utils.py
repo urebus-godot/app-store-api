@@ -3,7 +3,6 @@ from collections.abc import Callable
 import pytest
 
 
-
 class TestSearch:
     @pytest.mark.parametrize(
         argnames=["keywords", "expected_keywords"],

@@ -1,8 +1,8 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 from uuid import UUID, uuid4
 
-from sqlmodel import SQLModel, Field, Relationship, Column, DateTime, func
+from sqlmodel import SQLModel, Field, Relationship
 from pydantic import ConfigDict
 
 
@@ -21,9 +21,7 @@ class DiscussionDB(BaseDiscussion, table=True):
     __tablename__ = "discussions"
 
     id: UUID = Field(primary_key=True, default_factory=uuid4)
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now()
-    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now())
     messages: list["MessageDB"] = Relationship(
         back_populates="discussion",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
@@ -58,9 +56,7 @@ class MessageDB(BaseMessage, table=True):
     __tablename__ = "messages"
 
     id: UUID = Field(primary_key=True, default_factory=uuid4)
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now()
-    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now())
 
     author_id: UUID = Field(foreign_key="users.id", ondelete="CASCADE")
     author: "UserDB" = Relationship(back_populates="messages")

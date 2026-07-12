@@ -9,7 +9,7 @@ from app.dependencies import (
     PublisherDep,
     AppServiceDep,
     ReviewServiceDep,
-    UnitOfWorkDep
+    UnitOfWorkDep,
 )
 from app.utils.app import get_apps_with_rating, get_app_with_rating
 from app.utils.search import SearchQuery
@@ -30,10 +30,10 @@ router = APIRouter()
 
 @router.post("/apps", status_code=status.HTTP_201_CREATED)
 async def upload_app(
-    data: AppRequest, 
-    user: PublisherDep, 
+    data: AppRequest,
+    user: PublisherDep,
     app_service: AppServiceDep,
-    uow: UnitOfWorkDep
+    uow: UnitOfWorkDep,
 ) -> AppResponse:
     app = await app_service.upload_app(data, user, uow)
     return app
@@ -41,10 +41,10 @@ async def upload_app(
 
 @router.post("/games", status_code=status.HTTP_201_CREATED)
 async def upload_game(
-    data: GameRequest, 
-    user: PublisherDep, 
+    data: GameRequest,
+    user: PublisherDep,
     app_service: AppServiceDep,
-    uow: UnitOfWorkDep
+    uow: UnitOfWorkDep,
 ) -> GameResponse:
     game = await app_service.upload_app(data, user, uow)
     return game
@@ -52,15 +52,15 @@ async def upload_game(
 
 @router.patch("/apps/{id}")
 async def update_app(
-    id: UUID, 
-    data: AppUpdate, 
-    user_id: UserIdDep, 
+    id: UUID,
+    data: AppUpdate,
+    user_id: UserIdDep,
     app_service: AppServiceDep,
-    uow: UnitOfWorkDep
+    uow: UnitOfWorkDep,
 ) -> Optional[AppResponse]:
     app = await app_service.update_app(
         data=data, id=id, user_id=user_id, uow=uow
-        )
+    )
     return get_app_with_rating(app, app.reviews, AppResponse)
 
 
@@ -142,9 +142,6 @@ async def get_publisher_apps(
 
 @router.delete("/apps/{id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_app(
-    id: UUID, 
-    user: UserIdDep, 
-    app_service: AppServiceDep,
-    uow: UnitOfWorkDep
+    id: UUID, user: UserIdDep, app_service: AppServiceDep, uow: UnitOfWorkDep
 ) -> None:
     return await app_service.delete_app(id, user, uow)
