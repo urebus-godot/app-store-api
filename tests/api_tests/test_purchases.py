@@ -4,7 +4,7 @@ import pytest_asyncio
 
 from app.models.user import UserDB
 from app.models.app import AppDB
-from app.models.purchase import Cart, CartItem
+from app.models.purchase import CartDB, CartItem, PurchaseDB
 
 
 @pytest_asyncio.fixture
@@ -14,7 +14,7 @@ async def test_cart(
     test_app_2: AppDB,
     test_app_2_paid: AppDB,
 ):
-    cart = Cart(user_id=test_user.id)
+    cart = CartDB(user_id=test_user.id)
     item_1 = CartItem(cart_id=cart.id, app_id=test_app_2.id)
     item_2 = CartItem(cart_id=cart.id, app_id=test_app_2_paid.id)
 
@@ -24,8 +24,28 @@ async def test_cart(
 
     return cart
 
+@pytest_asyncio.fixture
+async def test_purchases(
+    test_user: UserDB,
+    db_session: AsyncSession,
+    test_app_2: AppDB,
+    test_app_2_paid: AppDB
+):
+    purchase_1 = PurchaseDB(
+        user_id=test_user.id,
+        app_id=test_app_2.id,
+        price=0
+        )
+    purchase_2 = PurchaseDB(
+        user_id=test_user.id,
+        app_id=test_app_2_paid.id,
+        price=1000
+        )
+    db_session.add_all([purchase_1, purchase_2])
+    await db_session.commit()
 
-class TestCart:
+
+class TestPurchases:
     async def test_add_app_to_cart(
         self,
         auth_client: AsyncClient,
@@ -60,7 +80,10 @@ class TestCart:
         assert response.status_code == 404
 
     async def test_add_own_app_to_cart(
-        self, auth_client: AsyncClient, test_app: AppDB, test_user: UserDB
+        self, 
+        auth_client: AsyncClient, 
+        test_app: AppDB, 
+        test_user: UserDB
     ):
         response = await auth_client.post(
             f"/api/v1/carts/{test_user.id}/{test_app.id}"
@@ -73,7 +96,7 @@ class TestCart:
         auth_client: AsyncClient,
         test_app_2_paid: AppDB,
         test_user: UserDB,
-        test_cart: Cart,
+        test_cart: CartDB,
     ):
         remove_response = await auth_client.delete(
             f"/api/v1/carts/{test_user.id}/{test_app_2_paid.id}"
@@ -100,8 +123,29 @@ class TestCart:
         assert response.status_code == 200
         assert data["total_price"] == "0"
 
+    async def test_get_purchase_history(
+        self,
+        auth_client: AsyncClient, 
+        test_user: UserDB,
+        test_purchases: list[PurchaseDB],
+        logger
+    ):
+        response = await auth_client.get(
+            "/api/v1/purchases/history"
+        )
+        data = response.json()
+
+        logger.critical(f"\n\n{data = }\n\n")
+
+        assert response.status_code == 200
+        assert len(data) == 2
+        assert data[0]["price"] == "1000" and data[1]["price"] == "0"
+
     async def test_purchase_apps_in_cart(
-        self, auth_client: AsyncClient, test_user: UserDB, test_cart: Cart
+        self, 
+        auth_client: AsyncClient, 
+        test_user: UserDB, 
+        test_cart: CartDB
     ):
         test_user.balance = 10000
 
@@ -121,7 +165,7 @@ class TestCart:
         self,
         auth_client: AsyncClient,
         test_user: UserDB,
-        test_cart: Cart,
+        test_cart: CartDB,
         db_session: AsyncSession,
     ):
         checkout_response = await auth_client.post("/api/v1/carts/checkout")

@@ -1,6 +1,7 @@
 from uuid import UUID, uuid4
+from typing import Optional
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlmodel import SQLModel, Field, DateTime, Column, func
 
@@ -13,15 +14,13 @@ class TransferRequest(BaseTransfer):
     pass
 
 
-class TransferDB(BaseTransfer):
+class TransferDB(BaseTransfer, table=True):
     id: UUID = Field(
         primary_key=True, 
         default_factory=uuid4
         )
     made_at: datetime = Field(
-        sa_column=Column(
-            DateTime(timezone=True), server_default=func.now(), nullable=False
-        )
+        default_factory=lambda: datetime.now()
     )
 
 

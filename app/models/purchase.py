@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 from decimal import Decimal
 
@@ -11,9 +11,7 @@ class PurchaseDB(SQLModel, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     purchased_at: datetime = Field(
-        sa_column=Column(
-            DateTime(timezone=True), server_default=func.now(), nullable=False
-        )
+        default_factory=lambda: datetime.now()
     )
 
     user_id: UUID = Field(foreign_key="users.id", primary_key=True)
@@ -22,13 +20,14 @@ class PurchaseDB(SQLModel, table=True):
     app_id: UUID = Field(foreign_key="apps.id", primary_key=True)
     # app: "AppDB" = Relationship(back_populates="purchases")
 
-    price: Decimal = Field(ge=0.0)
+    price: Decimal
 
 
 class PurchaseResponse(SQLModel):
     id: UUID
     app_id: UUID
     purchased_at: datetime
+    price: Decimal
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -39,7 +38,7 @@ class CartItem(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
     added_at: datetime = Field(
-        sa_column=Column(DateTime(timezone=True), server_default=func.now())
+        default_factory=lambda: datetime.now()
     )
 
     cart_id: UUID = Field(foreign_key="carts.id", ondelete="CASCADE")

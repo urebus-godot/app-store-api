@@ -36,8 +36,8 @@ oauth_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/login")
 
 
 def skip_limit_params(
-    skip: Annotated[int, Query(ge=0, lt=99)] = 0,
-    limit: Annotated[int, Query(ge=0, lt=100)] = 10,
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=0, le=1000)] = 10,
 ) -> tuple[int, int]:
     return skip, limit
 
@@ -173,6 +173,8 @@ ReviewRepoDep = Annotated[ReviewRepository, Depends(get_review_repo)]
 
 PurchaseServiceDep = Annotated[PurchaseService, Depends(get_purchase_service)]
 PurchaseRepoDep = Annotated[PurchaseRepository, Depends(get_purchase_repo)]
+
+UnitOfWorkDep = Annotated[UnitOfWork, Depends(get_unit_of_work)]
 
 DiscussionServiceDep = Annotated[
     DiscussionService, Depends(get_discussion_service)

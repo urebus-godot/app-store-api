@@ -71,25 +71,26 @@ async def test_message(
 
 
 class TestDiscussion:
-    async def test_create_discussion_and_message(
-        self, auth_client: AsyncClient, test_app: AppDB
+    async def test_create_discussion(
+        self, auth_client: AsyncClient, test_app: AppDB, logger
     ):
         diss_response = await auth_client.post(
             f"/api/v1/discussions/{test_app.id}",
             json={"topic": "This app is questionable"},
         )
         data = diss_response.json()
-
+        logger.critical(f"\nJSON = {diss_response.json()}")
         assert diss_response.status_code == 201
         assert "messages" in data
 
     async def test_create_discussion_app_not_exists(
-        self, auth_client: AsyncClient
+        self, auth_client: AsyncClient, logger
     ):
         response = await auth_client.post(
             "/api/v1/discussions/097c51bc-3c31-4cdf-b726-a4b1df084d8e",
             json={"topic": "test topic"},
         )
+        logger.critical(f"\nJSON = {response.json()}\n")
         assert response.status_code == 404
 
     async def test_get_discussions(

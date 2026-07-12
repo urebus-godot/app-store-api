@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID, uuid4
 
@@ -22,9 +22,7 @@ class DiscussionDB(BaseDiscussion, table=True):
 
     id: UUID = Field(primary_key=True, default_factory=uuid4)
     created_at: datetime = Field(
-        sa_column=Column(
-            DateTime(timezone=True), server_default=func.now(), nullable=False
-        )
+        default_factory=lambda: datetime.now()
     )
     messages: list["MessageDB"] = Relationship(
         back_populates="discussion",
@@ -61,9 +59,7 @@ class MessageDB(BaseMessage, table=True):
 
     id: UUID = Field(primary_key=True, default_factory=uuid4)
     created_at: datetime = Field(
-        sa_column=Column(
-            DateTime(timezone=True), server_default=func.now(), nullable=False
-        )
+        default_factory=lambda: datetime.now()
     )
 
     author_id: UUID = Field(foreign_key="users.id", ondelete="CASCADE")

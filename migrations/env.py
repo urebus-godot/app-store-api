@@ -11,8 +11,9 @@ import alembic_postgresql_enum
 from app.models.app import AppDB
 from app.models.user import UserDB
 from app.models.review import ReviewDB
-from app.models.discussion import DiscussionDB
-from app.models.purchase import Cart, Purchase
+from app.models.discussion import DiscussionDB, MessageDB
+from app.models.purchase import CartDB, PurchaseDB, CartItem
+from app.models.finance import TransferDB
 
 
 # this is the Alembic Config object, which provides
@@ -36,7 +37,7 @@ target_metadata = SQLModel.metadata
 # ... etc.
 
 def get_url() -> str:
-    return os.getenv("DB_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/db")
+    return os.getenv("DB_URL")
 
 
 def run_migrations_offline() -> None:
@@ -51,7 +52,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = get_url()#config.get_main_option("sqlalchemy.url")
+    url = get_url()
     context.configure(
         url=url,
         target_metadata=target_metadata,

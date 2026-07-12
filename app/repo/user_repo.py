@@ -49,9 +49,7 @@ class UserRepository:
         user.hashed_password = get_password_hash(data.password)
 
         self.session.add(user)
-        await self.session.commit()
-        await self.session.refresh(user)
-
+  
         return user
 
     async def top_up_balance(
@@ -63,17 +61,11 @@ class UserRepository:
         transfer_db = TransferDB(amount=data.amount)
 
         self.session.add(transfer_db)
-        await self.session.commit()
-
-        return {"balance": user.balance}
+        
+        return {"new_balance": user.balance}
     
     async def become_publisher(self, user: UserDB) -> dict[str, str]:
         user.roles = user.roles + [UserRole.PUBLISHER]
-
-        #self.session.add(user)
-        await self.session.commit()
-        # await self.session.refresh(user)
-
         return {"message": "You have become a publisher"}
 
     async def update_user(self, data: UserUpdate, user: UserDB) -> UserDB:
@@ -82,10 +74,6 @@ class UserRepository:
 
         if "password" in data:
             user.hashed_password = get_password_hash(data["password"])
-
-        #self.session.add(user)
-        await self.session.commit()
-        # await self.session.refresh(user)
 
         return user
 
@@ -124,4 +112,3 @@ class UserRepository:
 
     async def delete_user(self, user: UserDB) -> None:
         await self.session.delete(user)
-        await self.session.commit()

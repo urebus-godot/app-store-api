@@ -23,7 +23,7 @@ class TestUsers:
     @pytest.mark.parametrize(
         argnames=["update_data", "expected_data", "expected_status_code"],
         argvalues=[
-            [{"username": "ureb"}, {"username": "ureb"}, 200],
+            [{"username": "test1"}, {"username": "test1"}, 200],
             [{"balance": "10000"}, {"balance": "0"}, 200],
             [{"name": "serega"}, {"username": "testUser"}, 200],
         ],
@@ -34,11 +34,17 @@ class TestUsers:
         update_data: dict,
         expected_data: dict,
         expected_status_code: int,
+        logger
     ):
+        r = await auth_client.get(
+            "/api/v1/users"
+        )
+        print(f"\n\n\n\n\n\n\nAll users = {r.json()}\n\n\n\n\n\n\n\n")
         response = await auth_client.patch(
             "/api/v1/users/me", json=update_data
         )
         data = response.json()
+        logger.critical(f"\n\nUpdate Data = {data}\n\n")
         assert response.status_code == expected_status_code
 
         for key in expected_data.keys():
@@ -50,8 +56,8 @@ class TestUsers:
             [1_000, "1000", 200],
             [1_000_000_000, "1000000000", 200],
             [0.00001, "0.00001", 200],
-            [0, "0", 400],
-            [-1_000, "0", 400],
+            [0, "0", 422],
+            [-1_000, "0", 422],
         ],
     )
     async def test_top_up_balance(
@@ -62,7 +68,8 @@ class TestUsers:
         expected_status_code: int,
     ):
         response = await auth_client.post(
-            "/api/v1/users/me/balance", params={"amount": amount}
+            "/api/v1/users/me/balance", 
+            json={"amount": amount}
         )
         assert response.status_code == expected_status_code
         if response.status_code == 200:

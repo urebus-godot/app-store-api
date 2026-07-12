@@ -3,13 +3,14 @@ from collections.abc import AsyncGenerator
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core.logging import logger
 from app.repo.purchase_repo import PurchaseRepository
 from app.repo.app_repo import AppRepository
 from app.repo.review_repo import ReviewRepository
 from app.repo.discussion_repo import DiscussionRepository
 from app.repo.user_repo import UserRepository
 
-from app.db.postgres import get_session
+from app.db.postgres import get_uow_session
 
 
 class IUnitOfWork(ABC):
@@ -18,7 +19,7 @@ class IUnitOfWork(ABC):
 
 class UnitOfWork(IUnitOfWork):
     async def __aenter__(self):
-        self.session = await get_session()
+        self.session = get_uow_session()
 
         self.user_repo = UserRepository(self.session)
         self.app_repo = AppRepository(self.session)
@@ -30,6 +31,10 @@ class UnitOfWork(IUnitOfWork):
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         if exc_type is not None:
+            logger.error(
+        "Error occurred during session transaction! "
+        f"\nType: {exc_type} \nError: {exc_value} \nTraceback: {traceback}"
+                )
             await self.rollback()
         await self.session.close()
 

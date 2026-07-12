@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, status
 
-from app.dependencies import UserIdDep, ReviewServiceDep
+from app.dependencies import UserIdDep, ReviewServiceDep, UnitOfWorkDep
 from app.models.review import ReviewRequest, ReviewResponse
 
 router = APIRouter()
@@ -14,13 +14,17 @@ async def create_review(
     data: ReviewRequest,
     user_id: UserIdDep,
     review_service: ReviewServiceDep,
+    uow: UnitOfWorkDep
 ) -> ReviewResponse:
-    return await review_service.create_review(app_id, data, user_id)
+    return await review_service.create_review(
+        app_id, data, user_id, uow
+        )
 
 
 @router.get("/reviews/{app_id}")
 async def get_app_reviews(
-    app_id: UUID, review_service: ReviewServiceDep
+    app_id: UUID, 
+    review_service: ReviewServiceDep
 ) -> list[ReviewResponse]:
     reviews = await review_service.get_app_reviews(app_id)
     return reviews
@@ -28,13 +32,20 @@ async def get_app_reviews(
 
 @router.get("/users/me/reviews")
 async def get_own_reviews(
-    user_id: UserIdDep, review_service: ReviewServiceDep
+    user_id: UserIdDep, 
+    review_service: ReviewServiceDep
 ) -> list[ReviewResponse]:
     return await review_service.get_user_reviews(user_id)
 
 
-@router.delete("/reviews/{id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/reviews/{id}", 
+    status_code=status.HTTP_204_NO_CONTENT
+    )
 async def delete_review(
-    id: UUID, user_id: UserIdDep, review_service: ReviewServiceDep
+    id: UUID, 
+    user_id: UserIdDep, 
+    review_service: ReviewServiceDep,
+    uow: UnitOfWorkDep
 ) -> None:
-    await review_service.delete_review(id, user_id)
+    await review_service.delete_review(id, user_id, uow)

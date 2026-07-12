@@ -1,11 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 from enum import StrEnum
 from decimal import Decimal
 from typing import Optional
 
 from pydantic import EmailStr, ConfigDict
-from sqlmodel import SQLModel, Field, Relationship, Column, DateTime, func
+from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy import String
 
@@ -40,13 +40,11 @@ class UserDB(BaseUser, table=True):
     )
 
     registered_at: datetime = Field(
-        sa_column=Column(
-            DateTime(timezone=True), server_default=func.now(), nullable=False
-        )
+        default_factory=lambda: datetime.now()
     )
     balance: Decimal = Field(default=0, ge=0)
 
-    cart: Optional["Cart"] = Relationship(
+    cart: Optional["CartDB"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )

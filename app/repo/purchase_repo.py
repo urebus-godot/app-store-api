@@ -19,7 +19,22 @@ class PurchaseRepository:
             selectinload(CartDB.user),
         )
 
-    async def get_or_create_cart(self, user_id: UUID) -> CartDB:
+    async def create_cart(self, user_id: UUID) -> CartDB:
+        cart = CartDB(user_id=user_id)
+
+        self.session.add(cart)
+
+        cart = (
+            await self.session.exec(
+                select(CartDB)
+                .where(CartDB.user_id == user_id)
+                .options(*self.load_attrs)
+            )
+        ).one()
+
+        return cart
+
+    async def get_cart(self, user_id: UUID) -> Optional[CartDB]:
         cart = (
             await self.session.exec(
                 select(CartDB)
@@ -28,19 +43,6 @@ class PurchaseRepository:
             )
         ).one_or_none()
 
-        if cart is None:
-            cart = CartDB(user_id=user_id)
-
-            self.session.add(cart)
-
-            cart = (
-                await self.session.exec(
-                    select(CartDB)
-                    .where(CartDB.user_id == user_id)
-                    .options(*self.load_attrs)
-                )
-            ).one()
-
         return cart
 
     async def get_purchase(
@@ -48,8 +50,10 @@ class PurchaseRepository:
     ) -> Optional[PurchaseDB]:
         purchase = (
             await self.session.exec(
-                select(PurchaseDB).where(
-                    PurchaseDB.app_id == app_id, PurchaseDB.user_id == user_id
+                select(PurchaseDB)
+                .where(
+                    PurchaseDB.app_id == app_id, 
+                    PurchaseDB.user_id == user_id
                 )
             )
         ).first()
@@ -78,8 +82,7 @@ class PurchaseRepository:
                 select(PurchaseDB)
                 .where(PurchaseDB.user_id == user_id)
                 .order_by(desc(PurchaseDB.purchased_at))
-                .offset(skip)
-                .limit(limit)
+                .offset(skip).limit(limit)
             )
         ).all()
 
@@ -93,16 +96,8 @@ class PurchaseRepository:
         cart_item = CartItem(cart_id=cart.id, app_id=app_id)
 
         self.session.add(cart_item)
-        await self.session.commit()
 
         return cart_item
-
-    async def write_off_funds_and_commit(
-        self, user: UserDB, total_price: Decimal
-    ) -> None:
-        user.balance -= total_price
-        #self.session.add(user)
-        await self.session.commit()
 
     async def add_purchase(self, user_id: UUID, item: CartItem) -> None:
         purchase = PurchaseDB(
@@ -112,8 +107,6 @@ class PurchaseRepository:
 
     async def remove_app_from_cart(self, item: CartItem) -> None:
         await self.session.delete(item)
-        await self.session.commit()
 
-    async def clear_cart(self, cart: CartDB) -> None:
+    async def delete_cart(self, cart: CartDB) -> None:
         await self.session.delete(cart)
-        await self.session.commit()

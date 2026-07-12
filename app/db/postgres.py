@@ -9,3 +9,7 @@ engine = create_async_engine(url=settings.DB_URL, echo=settings.DB_OUTPUT)
 async def get_session():
     async with AsyncSession(bind=engine, expire_on_commit=False) as session:
         yield session
+
+
+def get_uow_session():
+    return AsyncSession(bind=engine, expire_on_commit=False)

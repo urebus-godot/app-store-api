@@ -1,5 +1,5 @@
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from uuid import UUID, uuid4
 from decimal import Decimal
@@ -54,16 +54,15 @@ class AppDB(BaseApp, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
     published_at: datetime = Field(
-        # default=datetime.now(timezone.utc),
-        sa_column=Column(
-            DateTime(timezone=True), server_default=func.now(), nullable=False
-        )
+        default_factory=lambda: datetime.now()
     )
     genre: Optional[GameGenre] = Field(default=None, nullable=True)
     category: AppCategory = AppCategory.APPLICATION
     file_id: UUID = Field(default_factory=uuid4)
 
-    keywords: Optional[set[str]] = Field(default=None, sa_type=ARRAY(String))
+    keywords: Optional[set[str]] = Field(
+        default=None, sa_type=ARRAY(String)
+        )
 
     publisher_id: UUID = Field(foreign_key="users.id", ondelete="CASCADE")
     publisher: "UserDB" = Relationship(back_populates="published_apps")

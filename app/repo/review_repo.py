@@ -55,4 +55,3 @@ class ReviewRepository:
 
     async def delete_review(self, review: ReviewDB) -> None:
         await self.session.delete(review)
-        await self.session.commit()
