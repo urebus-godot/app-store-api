@@ -50,7 +50,7 @@ jobs:
         run: uv sync --locked
 
       - name: Check code with Ruff
-        run: uv run python -m ruff check .
+        run: uv run ruff check .
 
       - name: Run tests
         run: uv run pytest -v --cov=app --cov-report=term-missing
