@@ -15,7 +15,9 @@ from app.utils.search import format_keywords
 from app.models.user import UserDB, UserRole
 from app.models.app import AppDB
 from app.db.postgres import get_session
-from app.dependencies import get_current_user, get_current_user_id, get_redis
+from app.dependencies import (
+    get_current_user, get_current_user_id, get_redis, can_send_email
+    )
 from app.core.config import settings
 from app.core.security import get_password_hash
 from app.core.logging import logger
@@ -30,7 +32,6 @@ test_user_data = {
 
 
 # ----- Tokens -----
-
 
 def create_access_token(
     user_id: UUID,
@@ -85,7 +86,6 @@ def get_logger():
 
 # ----- Database fixtures -----
 
-
 @pytest_asyncio.fixture(scope="session")
 async def engine():
     engine = create_async_engine(settings.TEST_DB_URL)
@@ -125,11 +125,21 @@ async def fake_redis() -> AsyncGenerator[FakeRedis, None]:
 
 # ----- Client fixtures -----
 
-
-@pytest_asyncio.fixture
-async def client(db_session: AsyncSession, fake_redis: FakeRedis):
+def override_general_deps(
+    db_session: AsyncSession, 
+    fake_redis: FakeRedis
+    ) -> None:
     app.dependency_overrides[get_session] = lambda: db_session
     app.dependency_overrides[get_redis] = lambda: fake_redis
+    app.dependency_overrides[can_send_email] = lambda: False
+
+
+@pytest_asyncio.fixture
+async def client(
+    db_session: AsyncSession, 
+    fake_redis: FakeRedis
+):
+    override_general_deps(db_session, fake_redis)
 
     transport = ASGITransport(app)
     async with AsyncClient(transport=transport, base_url="http://tests") as ac:
@@ -146,8 +156,7 @@ async def auth_client(
     access_token: str,
     refresh_token_data: dict[str, str],
 ):
-    app.dependency_overrides[get_session] = lambda: db_session
-    app.dependency_overrides[get_redis] = lambda: fake_redis
+    override_general_deps(db_session, fake_redis)
     app.dependency_overrides[get_current_user] = lambda: test_user
     app.dependency_overrides[get_current_user_id] = lambda: test_user.id
 
@@ -170,8 +179,7 @@ async def real_auth_client(
     access_token: str,
     refresh_token_data: dict[str, str],
 ):
-    app.dependency_overrides[get_session] = lambda: db_session
-    app.dependency_overrides[get_redis] = lambda: fake_redis
+    override_general_deps(db_session, fake_redis)
 
     transport = ASGITransport(app)
     async with AsyncClient(

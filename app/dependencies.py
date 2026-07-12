@@ -96,6 +96,10 @@ def _require_role(role: UserRole) -> UserDB:
     return wrapper
 
 
+def can_send_email() -> bool:
+    return True
+
+
 def get_user_repo(session: SessionDep) -> UserRepository:
     return UserRepository(session)
 
@@ -184,3 +188,7 @@ DiscussionRepoDep = Annotated[
 ]
 
 RedisDep = Annotated[Redis, Depends(get_redis)]
+
+SendEmailDep = Annotated[
+    bool, Depends(can_send_email)
+]

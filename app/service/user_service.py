@@ -81,13 +81,14 @@ class UserService:
         bg_tasks: BackgroundTasks,
         request: Request,
         redis: Redis,
+        sends_email: bool
     ) -> LoginResponse:
         user = await self.authenticate_user(username, password)
 
         if not user:
             raise incorrect_creds_exception
 
-        if user.email is not None:
+        if user.email is not None and sends_email:
             bg_tasks.add_task(
                 send_email,
                 [str(user.email)],

@@ -54,6 +54,17 @@ services:
     depends_on:
       - db
       - redis
+    restart: unless-stopped
+
+  proxy:
+    container_name: proxy
+    image: nginx:alpine
+    ports:
+      "80:80"
+    depends_on:
+      - web
+    restart: unless-stopped
+    
 
 networks:
   app_network:

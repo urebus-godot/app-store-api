@@ -10,6 +10,7 @@ from app.dependencies import (
     UserDep,
     SkipLimitParams,
     UnitOfWorkDep,
+    SendEmailDep
 )
 from app.models.purchase import (
     CartResponse,
@@ -37,8 +38,9 @@ async def purchase_apps_in_cart(
     bg_tasks: BackgroundTasks,
     purchase_service: PurchaseServiceDep,
     uow: UnitOfWorkDep,
+    sends_email: SendEmailDep
 ) -> list[AppResponse]:
-    if user.email is not None:
+    if user.email is not None and sends_email:
         bg_tasks.add_task(
             send_email,
             [str(user.email)],

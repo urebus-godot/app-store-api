@@ -17,6 +17,7 @@ from app.dependencies import (
     SkipLimitParams,
     UserServiceDep,
     UnitOfWorkDep,
+    SendEmailDep
 )
 from app.core import auth
 from app.utils.time import get_refresh_token_expire
@@ -54,6 +55,7 @@ async def login(
     request: Request,
     response: Response,
     bg_tasks: BackgroundTasks,
+    sends_email: SendEmailDep
 ) -> LoginResponse:
     """Returns refresh and access tokens to the user on success."""
 
@@ -63,6 +65,7 @@ async def login(
         bg_tasks=bg_tasks,
         request=request,
         redis=redis,
+        sends_email=sends_email
     )
 
     response.set_cookie(

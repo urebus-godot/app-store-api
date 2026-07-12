@@ -63,4 +63,5 @@ if __name__ == "__main__":
         port=settings.API_PORT,
         reload=True,
         access_log=True,
+        proxy_headers=True
     )
