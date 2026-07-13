@@ -1,4 +1,3 @@
-from decimal import Decimal
 from typing import Optional, Union
 from uuid import UUID
 
@@ -9,7 +8,6 @@ import jwt
 
 from app.core.tasks import send_email
 from app.models.user import UserRequest, UserDB, UserUpdate, UserRole
-from app.models.finance import TransferRequest
 from app.models.token import LoginResponse
 from app.repo.user_repo import UserRepository
 from app.core.exceptions import (

@@ -1,4 +1,3 @@
-from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 
@@ -8,7 +7,6 @@ from sqlmodel import select, desc
 from sqlalchemy.orm import selectinload
 
 from app.models.user import UserRequest, UserDB, UserUpdate, UserRole
-from app.models.finance import TransferRequest, TransferDB
 from app.core.security import get_password_hash
 from app.core.logging import logger
 
