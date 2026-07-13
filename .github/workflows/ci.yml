@@ -35,6 +35,7 @@ jobs:
       REFRESH_SECRET_KEY: empty
       TEST_REDIS_URL: empty
       REDIS_URL: empty
+      DB_URL: empty
       #ENVIRONMENT: test
 
     steps:
