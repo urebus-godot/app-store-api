@@ -35,7 +35,7 @@ jobs:
       REFRESH_SECRET_KEY: empty
       TEST_REDIS_URL: empty
       REDIS_URL: empty
-      DB_URL: empty
+      DB_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
       #ENVIRONMENT: test
 
     steps:
