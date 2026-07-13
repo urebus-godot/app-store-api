@@ -19,11 +19,13 @@ from app.models.user import UserDB, UserRole
 from app.uow.unit_of_work import UnitOfWork
 
 from app.repo.user_repo import UserRepository
+from app.repo.finance_repo import FinanceRepository
 from app.repo.app_repo import AppRepository
 from app.repo.review_repo import ReviewRepository
 from app.repo.purchase_repo import PurchaseRepository
 from app.repo.discussion_repo import DiscussionRepository
 
+from app.service.finance_service import FinanceService
 from app.service.user_service import UserService
 from app.service.app_service import AppService
 from app.service.review_service import ReviewService
@@ -103,14 +105,21 @@ def can_send_email() -> bool:
 def get_user_repo(session: SessionDep) -> UserRepository:
     return UserRepository(session)
 
-
 def get_user_service(user_repo: UserRepoDep) -> UserService:
     return UserService(user_repo)
 
 
+def get_finance_repo(session: SessionDep) -> FinanceRepository:
+    return FinanceRepository(session)
+
+def get_finance_service(
+    finance_repo: FinanceRepoDep
+) -> FinanceService:
+    return FinanceService(finance_repo)
+
+
 def get_app_repo(session: SessionDep) -> AppRepository:
     return AppRepository(session)
-
 
 def get_app_service(
     app_repo: AppRepoDep, user_service: UserServiceDep
@@ -119,10 +128,9 @@ def get_app_service(
 
 
 def get_review_repo(
-    app_repo: AppRepoDep, session: SessionDep
+    session: SessionDep
 ) -> ReviewRepository:
     return ReviewRepository(session)
-
 
 def get_review_service(
     review_repo: ReviewRepoDep, app_service: AppServiceDep
@@ -131,10 +139,9 @@ def get_review_service(
 
 
 def get_purchase_repo(
-    session: SessionDep, app_repo: AppRepoDep
+    session: SessionDep
 ) -> PurchaseRepository:
     return PurchaseRepository(session)
-
 
 def get_purchase_service(
     redis: RedisDep, app_service: AppServiceDep, purchase_repo: PurchaseRepoDep
@@ -144,7 +151,6 @@ def get_purchase_service(
 
 def get_discussion_repo(session: SessionDep) -> DiscussionRepository:
     return DiscussionRepository(session)
-
 
 def get_discussion_service(
     discussion_repo: DiscussionRepoDep, app_service: AppServiceDep
@@ -168,6 +174,9 @@ SkipLimitParams = Annotated[tuple[int, int], Depends(skip_limit_params)]
 
 UserServiceDep = Annotated[UserService, Depends(get_user_service)]
 UserRepoDep = Annotated[UserRepository, Depends(get_user_repo)]
+
+FinanceServiceDep = Annotated[FinanceService, Depends(get_finance_service)]
+FinanceRepoDep = Annotated[FinanceRepository, Depends(get_finance_repo)]
 
 AppServiceDep = Annotated[AppService, Depends(get_app_service)]
 AppRepoDep = Annotated[AppRepository, Depends(get_app_repo)]

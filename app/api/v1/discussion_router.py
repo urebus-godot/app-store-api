@@ -9,7 +9,7 @@ from app.models.discussion import (
     MessageRequest,
     MessageResponse,
 )
-from app.dependencies import DiscussionServiceDep, UserIdDep, UnitOfWorkDep
+from app.dependencies import DiscussionServiceDep, UserIdDep
 
 router = APIRouter()
 
@@ -22,11 +22,10 @@ async def create_discussion(
     data: DiscussionRequest,
     app_id: UUID,
     user_id: UserIdDep,
-    discussion_service: DiscussionServiceDep,
-    uow: UnitOfWorkDep,
-) -> DiscussionResponse:
+    discussion_service: DiscussionServiceDep
+) -> ShortDiscussionResponse:
     return await discussion_service.create_discussion(
-        data, user_id, app_id, uow
+        data, user_id, app_id
     )
 
 
@@ -55,10 +54,9 @@ async def get_my_discussions(
 async def delete_discussion(
     id: UUID,
     user_id: UserIdDep,
-    discussion_service: DiscussionServiceDep,
-    uow: UnitOfWorkDep,
+    discussion_service: DiscussionServiceDep
 ) -> None:
-    await discussion_service.delete_discussion(id, user_id, uow)
+    await discussion_service.delete_discussion(id, user_id)
 
 
 # ------ Message routes ------
@@ -73,10 +71,9 @@ async def create_message(
     discussion_id: UUID,
     user_id: UserIdDep,
     discussion_service: DiscussionServiceDep,
-    uow: UnitOfWorkDep,
 ) -> MessageResponse:
     return await discussion_service.create_message(
-        data, user_id, discussion_id, uow
+        data, user_id, discussion_id
     )
 
 
@@ -86,7 +83,6 @@ async def create_message(
 async def delete_message(
     id: UUID,
     user_id: UserIdDep,
-    discussion_service: DiscussionServiceDep,
-    uow: UnitOfWorkDep,
+    discussion_service: DiscussionServiceDep
 ) -> None:
-    await discussion_service.delete_message(id, user_id, uow)
+    await discussion_service.delete_message(id, user_id)

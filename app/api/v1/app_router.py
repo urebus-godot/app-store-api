@@ -8,8 +8,7 @@ from app.dependencies import (
     SkipLimitParams,
     PublisherDep,
     AppServiceDep,
-    ReviewServiceDep,
-    UnitOfWorkDep,
+    ReviewServiceDep
 )
 from app.utils.app import get_apps_with_rating, get_app_with_rating
 from app.utils.search import SearchQuery
@@ -28,14 +27,16 @@ from app.core.logging import logger
 router = APIRouter()
 
 
-@router.post("/apps", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/apps", 
+    status_code=status.HTTP_201_CREATED
+    )
 async def upload_app(
     data: AppRequest,
     user: PublisherDep,
-    app_service: AppServiceDep,
-    uow: UnitOfWorkDep,
+    app_service: AppServiceDep
 ) -> AppResponse:
-    app = await app_service.upload_app(data, user, uow)
+    app = await app_service.upload_app(data, user)
     return app
 
 
@@ -43,10 +44,9 @@ async def upload_app(
 async def upload_game(
     data: GameRequest,
     user: PublisherDep,
-    app_service: AppServiceDep,
-    uow: UnitOfWorkDep,
+    app_service: AppServiceDep
 ) -> GameResponse:
-    game = await app_service.upload_app(data, user, uow)
+    game = await app_service.upload_app(data, user)
     return game
 
 
@@ -55,11 +55,10 @@ async def update_app(
     id: UUID,
     data: AppUpdate,
     user_id: UserIdDep,
-    app_service: AppServiceDep,
-    uow: UnitOfWorkDep,
+    app_service: AppServiceDep
 ) -> Optional[AppResponse]:
     app = await app_service.update_app(
-        data=data, id=id, user_id=user_id, uow=uow
+        data=data, id=id, user_id=user_id
     )
     return get_app_with_rating(app, app.reviews, AppResponse)
 
@@ -140,8 +139,13 @@ async def get_publisher_apps(
     return await get_apps_with_rating(apps, review_service, AppResponse)
 
 
-@router.delete("/apps/{id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/apps/{id}",
+    status_code=status.HTTP_204_NO_CONTENT
+    )
 async def delete_app(
-    id: UUID, user: UserIdDep, app_service: AppServiceDep, uow: UnitOfWorkDep
+    id: UUID, 
+    user_id: UserIdDep, 
+    app_service: AppServiceDep
 ) -> None:
-    return await app_service.delete_app(id, user, uow)
+    return await app_service.delete_app(id, user_id)

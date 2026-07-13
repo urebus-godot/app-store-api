@@ -7,7 +7,6 @@ from pydantic import EmailStr
 from jwt.exceptions import DecodeError
 import jwt
 
-from app.uow.unit_of_work import UnitOfWork
 from app.core.tasks import send_email
 from app.models.user import UserRequest, UserDB, UserUpdate, UserRole
 from app.models.finance import TransferRequest
@@ -40,22 +39,26 @@ class UserService:
         return await self.user_repo.email_registered(email)
 
     async def register_user(
-        self, data: UserRequest, uow: UnitOfWork
+        self, data: UserRequest
     ) -> UserDB:
-        async with uow:
-            if await self.username_registered(data.username):
-                raise username_used_exception
+        logger.info("Enter register_user func")
+        username_used = await self.username_registered(data.username)
+        logger.info(f"Username is being used: {username_used}")
+        if username_used:
+            raise username_used_exception
 
-            if data.email is not None:
-                email_used = await self.user_repo.email_registered(data.email)
-                if email_used:
-                    raise email_used_exception
+        if data.email is not None:
+            email_used = await self.user_repo.email_registered(data.email)
+            logger.info(f"Email is being used: {email_used}")
+            if email_used:
+                raise email_used_exception
 
-            user = await self.user_repo.register_user(data)
+        logger.info("Start registering user in the database")
+        user = await self.user_repo.register_user(data)
 
-            await uow.commit()
+        logger.info("Registered user")
 
-            return user
+        return user
 
     async def authenticate_user(
         self,
@@ -126,47 +129,37 @@ class UserService:
             raise invalid_refresh_token_exception
 
     async def top_up_balance(
-        self, data: TransferRequest, user: UserDB, uow: UnitOfWork
+        self, data: TransferRequest, user: UserDB
     ) -> dict[str, Decimal]:
-        async with uow:
-            result = await self.user_repo.top_up_balance(data, user)
-
-            await uow.commit()
-
-            return result
+        result = await self.user_repo.top_up_balance(data, user)
+        return result
 
     async def become_publisher(
-        self, user: UserDB, uow: UnitOfWork
+        self, user: UserDB
     ) -> dict[str, str]:
-        async with uow:
-            if UserRole.PUBLISHER in user.roles:
-                raise already_has_role_exception
+        if UserRole.PUBLISHER in user.roles:
+            raise already_has_role_exception
 
-            result = await self.user_repo.become_publisher(user)
+        result = await self.user_repo.become_publisher(user)
 
-            await uow.commit()
-
-            return result
+        return result
 
     async def update_user(
-        self, user: UserDB, data: UserUpdate, uow: UnitOfWork
+        self, user: UserDB, data: UserUpdate
     ):
-        async with uow:
-            if user.username == data.username or user.email == data.email:
-                raise user_data_used_exception
+        if user.username == data.username or user.email == data.email:
+            raise user_data_used_exception
 
-            if await self.username_registered(data.username):
-                raise username_used_exception
+        if await self.username_registered(data.username):
+            raise username_used_exception
 
-            if data.email is not None:
-                if await self.email_registered(data.email):
-                    raise email_used_exception
+        if data.email is not None:
+            if await self.email_registered(data.email):
+                raise email_used_exception
 
-            user = await self.user_repo.update_user(data, user)
+        user = await self.user_repo.update_user(data, user)
 
-            await uow.commit()
-
-            return user
+        return user
 
     async def get_user(
         self, username: Optional[str] = None, id: Optional[UUID] = None
@@ -185,9 +178,7 @@ class UserService:
         return users
 
     async def delete_user(
-        self, user: UserDB, redis: Redis, uow: UnitOfWork
+        self, user: UserDB, redis: Redis
     ) -> None:
-        async with uow:
-            await redis.delete(f"user_tokens:{user.id}")
-            await self.user_repo.delete_user(user)
-            await uow.commit()
+        await redis.delete(f"user_tokens:{user.id}")
+        await self.user_repo.delete_user(user)

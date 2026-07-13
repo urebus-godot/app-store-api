@@ -90,6 +90,10 @@ empty_cart_exception = HTTPException(
     status.HTTP_400_BAD_REQUEST, "Cart is empty"
 )
 
+cart_not_found_exception = HTTPException(
+    status.HTTP_404_NOT_FOUND, "Cart not found"
+)
+
 app_not_in_cart_exception = HTTPException(
     status.HTTP_404_NOT_FOUND, "Application not in the cart"
 )

@@ -21,6 +21,7 @@ class PurchaseRepository:
         cart = CartDB(user_id=user_id)
 
         self.session.add(cart)
+        await self.session.commit()
 
         cart = (
             await self.session.exec(
@@ -93,6 +94,7 @@ class PurchaseRepository:
         cart_item = CartItem(cart_id=cart.id, app_id=app_id)
 
         self.session.add(cart_item)
+        await self.session.commit()
 
         return cart_item
 
@@ -102,8 +104,10 @@ class PurchaseRepository:
         )
         self.session.add(purchase)
 
-    async def remove_app_from_cart(self, item: CartItem) -> None:
+    async def remove_item_from_cart(self, item: CartItem) -> None:
         await self.session.delete(item)
+        await self.session.commit()
 
     async def delete_cart(self, cart: CartDB) -> None:
         await self.session.delete(cart)
+        await self.session.commit()

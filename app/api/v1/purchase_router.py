@@ -22,14 +22,16 @@ from app.models.app import AppResponse
 router = APIRouter()
 
 
-@router.post("/carts/{user_id}/{app_id}", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/carts/{user_id}/{app_id}", 
+    status_code=status.HTTP_201_CREATED
+    )
 async def add_app_to_cart(
     app_id: UUID,
     user_id: UserIdDep,
-    purchase_service: PurchaseServiceDep,
-    uow: UnitOfWorkDep,
+    purchase_service: PurchaseServiceDep
 ) -> CartItemResponse:
-    return await purchase_service.add_app_to_cart(app_id, user_id, uow)
+    return await purchase_service.add_app_to_cart(app_id, user_id)
 
 
 @router.post("/carts/checkout")
@@ -50,13 +52,12 @@ async def purchase_apps_in_cart(
     return await purchase_service.purchase_apps_in_cart(user, uow)
 
 
-@router.post("/carts/{user_id}")
+@router.post("/carts/me")
 async def get_cart(
     user_id: UserIdDep,
-    purchase_service: PurchaseServiceDep,
-    uow: UnitOfWorkDep,
+    purchase_service: PurchaseServiceDep
 ) -> CartResponse:
-    cart = await purchase_service.get_or_create_cart(user_id, uow)
+    cart = await purchase_service.get_or_create_cart(user_id)
     total_price = sum([item.app.price for item in cart.items])
     cart_response = CartResponse(
         id=cart.id, items=cart.items, total_price=total_price
@@ -77,21 +78,23 @@ async def get_purchase_history(
 
 
 @router.delete(
-    "/carts/{user_id}/{app_id}", status_code=status.HTTP_204_NO_CONTENT
+    "/carts/{user_id}/{app_id}", 
+    status_code=status.HTTP_204_NO_CONTENT
 )
 async def remove_app_from_cart(
     app_id: UUID,
     user_id: UserIdDep,
-    purchase_service: PurchaseServiceDep,
-    uow: UnitOfWorkDep,
+    purchase_service: PurchaseServiceDep
 ) -> None:
-    await purchase_service.remove_app_from_cart(app_id, user_id, uow)
+    await purchase_service.remove_item_from_cart(app_id, user_id)
 
 
-@router.delete("carts/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "carts/{user_id}", 
+    status_code=status.HTTP_204_NO_CONTENT
+    )
 async def clear_cart(
     user_id: UserIdDep,
-    purchase_service: PurchaseServiceDep,
-    uow: UnitOfWorkDep,
+    purchase_service: PurchaseServiceDep
 ) -> None:
-    await purchase_service.clear_cart(user_id, uow)
+    await purchase_service.clear_cart(user_id)

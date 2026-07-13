@@ -35,14 +35,15 @@ class AppRepository:
             app.genre = None
 
         self.session.add(app)
+        await self.session.commit()
 
-        app = (
-            await self.session.exec(
-                select(AppDB)
-                .where(AppDB.id == app.id)
-                .options(*self.load_attrs)
-            )
-        ).one()
+        #app = (
+        #    await self.session.exec(
+        #        select(AppDB)
+        #        .where(AppDB.id == app.id)
+        #        .options(*self.load_attrs)
+        #    )
+        #).one()
 
         return app
 
@@ -59,7 +60,6 @@ class AppRepository:
 
         app.sqlmodel_update(data)
 
-        # self.session.add(app)
         await self.session.commit()
 
         return app
@@ -176,3 +176,4 @@ class AppRepository:
 
     async def delete_app(self, app: AppDB) -> None:
         await self.session.delete(app)
+        await self.session.commit()

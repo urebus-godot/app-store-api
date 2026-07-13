@@ -35,7 +35,9 @@ class CartItem(SQLModel, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
-    added_at: datetime = Field(default_factory=lambda: datetime.now())
+    added_at: datetime = Field(
+        default_factory=lambda: datetime.now()
+        )
 
     cart_id: UUID = Field(foreign_key="carts.id", ondelete="CASCADE")
     app_id: UUID = Field(foreign_key="apps.id", ondelete="CASCADE")

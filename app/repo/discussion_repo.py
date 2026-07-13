@@ -32,6 +32,7 @@ class DiscussionRepository:
         discussion.app_id = app_id
 
         self.session.add(discussion)
+        await self.session.commit()
 
         return discussion
 
@@ -74,6 +75,7 @@ class DiscussionRepository:
 
     async def delete_discussion(self, discussion: DiscussionDB) -> None:
         await self.session.delete(discussion)
+        await self.session.commit()
 
     async def create_message(
         self, data: MessageRequest, author_id: UUID, discussion_id: UUID
@@ -83,6 +85,7 @@ class DiscussionRepository:
         message.discussion_id = discussion_id
 
         self.session.add(message)
+        await self.session.commit()
 
         return message
 
@@ -99,3 +102,4 @@ class DiscussionRepository:
 
     async def delete_message(self, message: MessageDB) -> None:
         await self.session.delete(message)
+        await self.session.commit()

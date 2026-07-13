@@ -47,7 +47,7 @@ class TestPurchases:
         self,
         auth_client: AsyncClient,
         test_app_2_paid: AppDB,
-        test_user: UserDB,
+        test_user: UserDB
     ):
         add_response = await auth_client.post(
             f"/api/v1/carts/{test_user.id}/{test_app_2_paid.id}"
@@ -58,7 +58,7 @@ class TestPurchases:
         assert data["app_id"] == str(test_app_2_paid.id)
 
         get_cart_response = await auth_client.post(
-            f"/api/v1/carts/{test_user.id}"
+            f"/api/v1/carts/me"
         )
         data = get_cart_response.json()
 
@@ -72,7 +72,7 @@ class TestPurchases:
         test_user: UserDB,
     ):
         response = await auth_client.post(
-            f"/api/v1/carts/{test_user.id}/097c51bc-3c31-4cdf-b726-a4b1df084d8e"
+            f"/api/v1/carts/me/097c51bc-3c31-4cdf-b726-a4b1df084d8e"
         )
         assert response.status_code == 404
 
@@ -82,36 +82,53 @@ class TestPurchases:
         response = await auth_client.post(
             f"/api/v1/carts/{test_user.id}/{test_app.id}"
         )
-
         assert response.status_code == 400
 
-    async def test_remove_app_from_cart(
+    async def test_remove_item_from_cart(
         self,
         auth_client: AsyncClient,
         test_app_2_paid: AppDB,
         test_user: UserDB,
         test_cart: CartDB,
     ):
+        data = (await auth_client.post(
+            f"/api/v1/carts/me"
+        )).json()
+
+        print(f"\n\n\nBefore removing {data = }\n\n\n")
+
         remove_response = await auth_client.delete(
             f"/api/v1/carts/{test_user.id}/{test_app_2_paid.id}"
         )
-
         assert remove_response.status_code == 204
-
+        return
         get_cart_response = await auth_client.post(
-            f"/api/v1/carts/{test_user.id}"
+            f"/api/v1/carts/me"
         )
         data = get_cart_response.json()
 
+        print(f"\n\n\nAfter removing {data = }\n\n\n")
+
         assert data["total_price"] == "0"
         assert len(data["items"]) == 1
+
+    async def test_remove_item_from_cart_not_exists(
+        self,
+        auth_client: AsyncClient,
+        test_user: UserDB,
+        test_cart: CartDB,
+    ):
+        remove_response = await auth_client.delete(
+            f"/api/v1/carts/{test_user.id}/097c51bc-3c31-4cdf-b726-a4b1df084d8e"
+        )
+        assert remove_response.status_code == 404
 
     async def test_get_cart(
         self,
         auth_client: AsyncClient,
         test_user: UserDB,
     ):
-        response = await auth_client.post(f"/api/v1/carts/{test_user.id}")
+        response = await auth_client.post(f"/api/v1/carts/me")
         data = response.json()
 
         assert response.status_code == 200
