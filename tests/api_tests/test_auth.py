@@ -39,7 +39,7 @@ class TestLogin:
         jti = refresh_token_data["jti"]
         response = await real_auth_client.post("/api/v1/users/logout")
         data = response.json()
-
+        print(f"\n\n{data=}\n\n")
         assert response.status_code == 200
         assert "message" in data
         assert await fake_redis.exists(f"blacklist:{jti}")

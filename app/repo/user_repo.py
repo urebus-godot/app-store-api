@@ -53,19 +53,6 @@ class UserRepository:
 
         return user
 
-    async def top_up_balance(
-        self, data: TransferRequest, user: UserDB
-    ) -> dict[str, Decimal]:
-        """Increase user's balance and create row in the db for transfer."""
-        user.balance += data.amount
-
-        transfer_db = TransferDB(amount=data.amount, user_id=user.id)
-
-        self.session.add(transfer_db)
-        await self.session.commit()
-
-        return {"new_balance": user.balance}
-
     async def become_publisher(self, user: UserDB) -> dict[str, str]:
         user.roles = user.roles + [UserRole.PUBLISHER]
         await self.session.commit()

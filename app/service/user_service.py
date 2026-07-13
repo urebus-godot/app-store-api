@@ -107,11 +107,13 @@ class UserService:
             user_id=user.id,
         )
 
-    async def logout(self, refresh_token: str, redis: Redis) -> dict[str, str]:
+    async def logout(
+        self, refresh_token: str, redis: Redis, secret_key: str
+    ) -> dict[str, str]:
         try:
             payload = jwt.decode(
                 refresh_token,
-                settings.SECRET_KEY,
+                secret_key,
                 algorithms=settings.JWT_ALGORITHM,
             )
             jti = payload.get("jti")
@@ -127,12 +129,6 @@ class UserService:
         except DecodeError as e:
             logger.info(f"Exception = {e}")
             raise invalid_refresh_token_exception
-
-    async def top_up_balance(
-        self, data: TransferRequest, user: UserDB
-    ) -> dict[str, Decimal]:
-        result = await self.user_repo.top_up_balance(data, user)
-        return result
 
     async def become_publisher(
         self, user: UserDB

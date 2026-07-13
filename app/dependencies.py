@@ -14,6 +14,7 @@ from app.core.exceptions import (
     invalid_token_payload_exception,
 )
 from app.core.auth import decode_access_token
+from app.core.config import settings
 from app.models.user import UserDB, UserRole
 
 from app.uow.unit_of_work import UnitOfWork
@@ -44,8 +45,18 @@ def skip_limit_params(
     return skip, limit
 
 
-async def get_current_user_id(token: TokenDep, redis: RedisDep) -> UUID | None:
-    payload = await decode_access_token(token)
+def get_refresh_secret_key() -> str:
+    return settings.SECRET_KEY
+
+
+def get_access_secret_key() -> str:
+    return settings.SECRET_KEY
+
+
+async def get_current_user_id(
+    token: TokenDep, secret_key: AccessSecretKeyDep
+) -> UUID | None:
+    payload = await decode_access_token(token, secret_key)
     logger.info(payload)
     user_id = payload.get("sub")
 
@@ -56,9 +67,11 @@ async def get_current_user_id(token: TokenDep, redis: RedisDep) -> UUID | None:
 
 
 async def get_current_user(
-    token: TokenDep, user_service: UserServiceDep
+    token: TokenDep, 
+    user_service: UserServiceDep,
+    secret_key: AccessSecretKeyDep
 ) -> UserDB | None:
-    payload = await decode_access_token(token)
+    payload = await decode_access_token(token, secret_key)
     logger.info(payload)
     user_id = payload.get("sub")
 
@@ -82,8 +95,10 @@ def require_role(role: UserRole) -> UserDB:
 
 
 def _require_role(role: UserRole) -> UserDB:
-    def wrapper(token: TokenDep, redis: RedisDep) -> UserDB:
-        payload = decode_access_token(token, redis)
+    def wrapper(
+        token: TokenDep, redis: RedisDep, secret_key: AccessSecretKeyDep
+        ) -> UserDB:
+        payload = decode_access_token(token, secret_key)
         user_roles = payload.get("role")
         user_id = payload.get("sub")
 
@@ -200,4 +215,11 @@ RedisDep = Annotated[Redis, Depends(get_redis)]
 
 SendEmailDep = Annotated[
     bool, Depends(can_send_email)
+]
+
+RefreshSecretKeyDep = Annotated[
+    str, Depends(get_refresh_secret_key)
+]
+AccessSecretKeyDep = Annotated[
+    str, Depends(get_access_secret_key)
 ]

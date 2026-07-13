@@ -1,4 +1,3 @@
-from decimal import Decimal
 from typing import Annotated
 
 from fastapi import (
@@ -16,8 +15,8 @@ from app.dependencies import (
     UserIdDep,
     SkipLimitParams,
     UserServiceDep,
-    UnitOfWorkDep,
-    SendEmailDep
+    SendEmailDep,
+    RefreshSecretKeyDep
 )
 from app.core import auth
 from app.utils.time import get_refresh_token_expire
@@ -27,7 +26,6 @@ from app.models.user import (
     UserUpdate,
     CurrentUserResponse,
 )
-from app.models.finance import TransferRequest
 from app.models.token import TokenResponse, LoginResponse
 from app.core.logging import logger
 from app.dependencies import RedisDep
@@ -84,24 +82,25 @@ async def logout(
     # refresh_token: str,
     request: Request,
     user_id: UserIdDep,
+    secret_key: RefreshSecretKeyDep,
     user_service: UserServiceDep,
     redis: RedisDep,
 ) -> dict[str, str]:
     """Adds user's refresh token to the blacklist or deletes it from Redis."""
     refresh_token = request.cookies.get("refresh_token")
-    return await user_service.logout(refresh_token, redis)
+    return await user_service.logout(refresh_token, redis, secret_key)
 
 
 @router.post("/users/refresh")
 async def refresh_tokens(
     request: Request,
-    # refresh_token: str,#Annotated[str, Body()],
+    secret_key: RefreshSecretKeyDep,
     redis: RedisDep,
 ) -> TokenResponse:
     """Creates refresh and access tokens on success."""
     refresh_token = request.cookies.get("refresh_token")
     logger.info(f"Start refreshing token: \n{refresh_token=}")
-    tokens = await auth.refresh_tokens(refresh_token, redis)
+    tokens = await auth.refresh_tokens(refresh_token, redis, secret_key)
     return TokenResponse(
         access_token=tokens["access_token"],
         refresh_token=tokens["refresh_token"],

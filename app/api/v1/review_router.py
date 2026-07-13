@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, status
 
-from app.dependencies import UserIdDep, ReviewServiceDep, UnitOfWorkDep
+from app.dependencies import UserIdDep, ReviewServiceDep
 from app.models.review import ReviewRequest, ReviewResponse
 
 router = APIRouter()

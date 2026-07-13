@@ -20,11 +20,14 @@ class Settings(BaseSettings):
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8000
 
-    DB_URL: Optional[str]# = environ.get("DB_URL")
-    TEST_DB_URL: Optional[str]# = environ.get("TEST_DB_URL")
+    DB_URL: Optional[str] = None # = environ.get("DB_URL")
+    TEST_DB_URL: Optional[str] = None # = environ.get("TEST_DB_URL")
 
-    REDIS_URL: Optional[str]# = environ.get("REDIS_URL")
-    TEST_REDIS_URL: Optional[str]# = environ.get("TEST_REDIS_URL")
+    REDIS_URL: Optional[str] = None # = environ.get("REDIS_URL")
+    TEST_REDIS_URL: Optional[str] = None # = environ.get("TEST_REDIS_URL")
+
+    WINDOW: int = 30
+    REQUESTS_LIMIT: int = 15
 
     CACHE_TTL_SECONDS: int = 3600
 
@@ -34,9 +37,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: timedelta = timedelta(minutes=15)
     REFRESH_TOKEN_EXPIRE_DAYS: timedelta = timedelta(days=7)
 
-    SECRET_KEY: Optional[str]  # = environ.get("ACCESS_SECRET_KEY")
-    REFRESH_SECRET_KEY: Optional[str]# = environ.get("REFRESH_SECRET_KEY")
-    # TEST_SECRET_KEY: str = environ.get("TEST_ACCESS_SECRET_KEY")
+    SECRET_KEY: Optional[str] = None # = environ.get("ACCESS_SECRET_KEY")
+    REFRESH_SECRET_KEY: Optional[str] = None#environ.get("REFRESH_SECRET_KEY")
+    TEST_SECRET_KEY: str = environ.get("REFRESH_SECRET_KEY")
     JWT_ALGORITHM: str = "HS256"
 
     MIN_TITLE_LEN: int = 3
@@ -53,7 +56,7 @@ class Settings(BaseSettings):
     )
 
     MAIL_USERNAME: str = "satalovserge"
-    MAIL_PASSWORD: Optional[str] = environ.get("MAIL_PASSWORD")
+    MAIL_PASSWORD: Optional[str] = None#environ.get("MAIL_PASSWORD")
     MAIL_FROM: str = "satalovserge@gmail.com"
     MAIL_PORT: int = 587
     MAIL_SERVER: str = "smtp.gmail.com"

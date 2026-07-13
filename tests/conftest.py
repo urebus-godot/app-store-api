@@ -16,7 +16,12 @@ from app.models.user import UserDB, UserRole
 from app.models.app import AppDB
 from app.db.postgres import get_session
 from app.dependencies import (
-    get_current_user, get_current_user_id, get_redis, can_send_email
+    get_current_user, 
+    get_current_user_id, 
+    get_redis, 
+    can_send_email, 
+    get_refresh_secret_key,
+    get_access_secret_key
     )
 from app.core.config import settings
 from app.core.security import get_password_hash
@@ -48,7 +53,7 @@ def create_access_token(
     }
 
     return jwt.encode(
-        payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM
+        payload, settings.TEST_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
     )
 
 
@@ -67,7 +72,7 @@ def create_refresh_token(
         "family_id": str(family_id),
     }
     token = jwt.encode(
-        payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM
+        payload, settings.TEST_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
     )
     return str(token), str(jti), str(family_id)
 
@@ -132,6 +137,12 @@ def override_general_deps(
     app.dependency_overrides[get_session] = lambda: db_session
     app.dependency_overrides[get_redis] = lambda: fake_redis
     app.dependency_overrides[can_send_email] = lambda: False
+    app.dependency_overrides[get_refresh_secret_key] = (
+        lambda: settings.TEST_SECRET_KEY
+        )
+    app.dependency_overrides[get_access_secret_key] = (
+        lambda: settings.TEST_SECRET_KEY
+    )
 
 
 @pytest_asyncio.fixture

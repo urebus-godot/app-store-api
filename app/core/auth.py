@@ -68,10 +68,12 @@ async def create_token_pair(user_id: str, redis: Redis) -> dict[str, str]:
     return {"access_token": access_token, "refresh_token": refresh_token}
 
 
-async def decode_access_token(token: str) -> dict:
+async def decode_access_token(
+    token: str, secret_key: str
+) -> dict:
     """Decode and validate a JWT access token."""
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        payload = jwt.decode(token, secret_key, algorithms=["HS256"])
         return payload
 
     except jwt.ExpiredSignatureError:
@@ -97,13 +99,17 @@ async def revoke_all_user_tokens(user_id: str, redis: Redis) -> None:
     await redis.delete(f"user_tokens:{user_id}")
 
 
-async def refresh_tokens(refresh_token: str, redis: Redis) -> dict[str, str]:
+async def refresh_tokens(
+    refresh_token: str, 
+    redis: Redis,
+    secret_key: str
+) -> dict[str, str]:
     """Creates new refresh and access tokens
     if the refresh token is **not** blacklisted."""
     try:
         payload = jwt.decode(
             refresh_token,
-            settings.SECRET_KEY,
+            secret_key,
             algorithms=settings.JWT_ALGORITHM,
         )
         logger.info(f"Decoded refresh token: \n {payload = }")
