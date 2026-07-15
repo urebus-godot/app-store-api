@@ -43,8 +43,9 @@ class ReviewService:
     async def get_app_reviews(
         self,
         app_id: UUID,
+        public_only: bool = True
     ) -> list[ReviewDB]:
-        await self.app_service.get_app(app_id)
+        await self.app_service.get_app(app_id, public_only)
         app_reviews = await self.review_repo.get_app_reviews(app_id)
         return app_reviews
 

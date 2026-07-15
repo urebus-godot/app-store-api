@@ -1,5 +1,14 @@
 from fastapi import HTTPException, status
 
+
+# ----- General -----
+
+too_many_requests_exception = HTTPException(
+    status.HTTP_429_TOO_MANY_REQUESTS,
+    "Request limit exceeded. Try again later"
+)
+
+
 # ----- User -----
 
 user_not_found_exception = HTTPException(

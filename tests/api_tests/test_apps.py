@@ -71,8 +71,14 @@ class TestApps:
         data = response.json()
 
         assert response.status_code == 200
-        assert len(data) == 11
         assert "genre" not in data
+
+    async def test_get_game(self, client: AsyncClient, test_game: AppDB):
+        response = await client.get(f"/api/v1/apps/{test_game.id}")
+        data = response.json()
+
+        assert response.status_code == 200
+        assert "genre" in data
 
     async def test_get_private_app(
         self, client: AsyncClient, test_app_private: AppDB

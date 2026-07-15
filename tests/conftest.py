@@ -13,7 +13,7 @@ import jwt
 
 from app.utils.search import format_keywords
 from app.models.user import UserDB, UserRole
-from app.models.app import AppDB
+from app.models.app import AppDB, GameGenre
 from app.db.postgres import get_session
 from app.dependencies import (
     get_current_user, 
@@ -21,7 +21,8 @@ from app.dependencies import (
     get_redis, 
     can_send_email, 
     get_refresh_secret_key,
-    get_access_secret_key
+    get_access_secret_key,
+    rate_limit
     )
 from app.core.config import settings
 from app.core.security import get_password_hash
@@ -31,8 +32,7 @@ from app.main import app
 test_user_data = {
     "username": "testUser",
     "hashed_password": get_password_hash("testPassword"),
-    "email": "ureb588@gmail.com",
-    # "id": uuid4()#UUID('3076dfdd-fba4-4b11-a415-143ca0e8d21c')
+    "email": "ureb588@gmail.com"
 }
 
 
@@ -132,7 +132,8 @@ async def fake_redis() -> AsyncGenerator[FakeRedis, None]:
 
 def override_general_deps(
     db_session: AsyncSession, 
-    fake_redis: FakeRedis
+    fake_redis: FakeRedis,
+    ignore_rate_limit: bool = True
     ) -> None:
     app.dependency_overrides[get_session] = lambda: db_session
     app.dependency_overrides[get_redis] = lambda: fake_redis
@@ -142,7 +143,9 @@ def override_general_deps(
         )
     app.dependency_overrides[get_access_secret_key] = (
         lambda: settings.TEST_SECRET_KEY
-    )
+        )
+    if ignore_rate_limit:
+        app.dependency_overrides[rate_limit] = lambda: True
 
 
 @pytest_asyncio.fixture
@@ -153,7 +156,10 @@ async def client(
     override_general_deps(db_session, fake_redis)
 
     transport = ASGITransport(app)
-    async with AsyncClient(transport=transport, base_url="http://tests") as ac:
+    async with AsyncClient(
+        transport=transport, 
+        base_url="http://tests"
+        ) as ac:
         yield ac
 
     app.dependency_overrides.clear()
@@ -222,6 +228,45 @@ async def publisher_client(
         base_url="http://tests",
         headers={"Authorization": f"Bearer {access_token}"},
     ) as ac:
+        yield ac
+
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def rate_limited_client(
+    db_session: AsyncSession, 
+    fake_redis: FakeRedis
+):
+    override_general_deps(db_session, fake_redis, False)
+
+    transport = ASGITransport(app)
+    async with AsyncClient(
+        transport=transport, 
+        base_url="http://tests"
+        ) as ac:
+        yield ac
+
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def rate_limited_auth_client(
+    db_session: AsyncSession, 
+    fake_redis: FakeRedis,
+    test_user: UserDB,
+    access_token: str
+):
+    override_general_deps(db_session, fake_redis, False)
+    app.dependency_overrides[get_current_user] = lambda: test_user
+    app.dependency_overrides[get_current_user_id] = lambda: test_user.id
+
+    transport = ASGITransport(app)
+    async with AsyncClient(
+        transport=transport, 
+        base_url="http://tests",
+        headers={"Authorization": f"Bearer {access_token}"}
+        ) as ac:
         yield ac
 
     app.dependency_overrides.clear()
@@ -369,6 +414,23 @@ async def test_app_private(
     # await db_session.refresh(app)
 
     return app
+
+
+@pytest_asyncio.fixture
+async def test_game(db_session: AsyncSession, test_user_2: UserDB):
+    game = AppDB(
+        title="gta7",
+        description="This is test of gta7",
+        price=1000,
+        publisher_id=test_user_2.id,
+        keywords=["paid", "game", "test", "gta"],
+        category="game",
+        genre=GameGenre.ADVENTURE
+    )
+    db_session.add(game)
+    await db_session.commit()
+
+    return game
 
 
 @pytest_asyncio.fixture

@@ -174,6 +174,29 @@ class AppRepository:
 
         return games
 
+    async def get_top_games_genre(self, genre: GameGenre) -> list[AppDB]:
+        games = (await self.session.exec(
+            select(AppDB)
+            .where(
+                AppDB.category == "game",
+                AppDB.genre == genre
+                ).order_by(
+                    desc(AppDB.times_purchased)
+                    ).limit(5).options(*self.load_attrs)
+        )).all()
+
+        return games
+
+    async def get_top_games(self) -> list[AppDB]:
+        games = (await self.session.exec(
+            select(AppDB)
+            .where(AppDB.category == "game",).order_by(
+                desc(AppDB.times_purchased)
+                ).limit(5).options(*self.load_attrs)
+        )).all()
+
+        return games
+
     async def delete_app(self, app: AppDB) -> None:
         await self.session.delete(app)
         await self.session.commit()

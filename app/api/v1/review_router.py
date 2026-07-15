@@ -1,11 +1,13 @@
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, status, Depends
 
-from app.dependencies import UserIdDep, ReviewServiceDep
+from app.dependencies import UserIdDep, ReviewServiceDep, rate_limit
 from app.models.review import ReviewRequest, ReviewResponse
 
-router = APIRouter()
+router = APIRouter(
+    dependencies=[Depends(rate_limit)]
+)
 
 
 @router.post("/reviews/{app_id}", status_code=status.HTTP_201_CREATED)

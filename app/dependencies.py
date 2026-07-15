@@ -1,10 +1,10 @@
 from __future__ import annotations
-from typing import Annotated
+from typing import Annotated, Optional
 from uuid import UUID
 
 from redis.asyncio import Redis
 from sqlmodel.ext.asyncio.session import AsyncSession
-from fastapi import Depends, Query
+from fastapi import Depends, Query, Request, Response
 from fastapi.security import OAuth2PasswordBearer
 
 from app.db.postgres import get_session
@@ -12,7 +12,9 @@ from app.db.redis import get_redis
 from app.core.exceptions import (
     no_rights_exception,
     invalid_token_payload_exception,
+    too_many_requests_exception
 )
+from app.core.rate_limiter import RateLimiter
 from app.core.auth import decode_access_token
 from app.core.config import settings
 from app.models.user import UserDB, UserRole
@@ -36,6 +38,9 @@ from app.service.discussion_service import DiscussionService
 from app.core.logging import logger
 
 oauth_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/login")
+oauth_scheme_2 = OAuth2PasswordBearer(
+    tokenUrl="/api/v1/users/login", auto_error=False
+    )
 
 
 def skip_limit_params(
@@ -46,17 +51,34 @@ def skip_limit_params(
 
 
 def get_refresh_secret_key() -> str:
-    return settings.SECRET_KEY
+    return settings.REFREH_SECRET_KEY
 
 
 def get_access_secret_key() -> str:
-    return settings.SECRET_KEY
+    return settings.ACCESS_SECRET_KEY
 
 
-async def get_current_user_id(
+def get_current_user_id_optionally(
+    token: Annotated[Optional[str], Depends(oauth_scheme_2)], 
+    secret_key: AccessSecretKeyDep
+) -> Optional[UUID]:
+    try:
+        payload = decode_access_token(token, secret_key)
+        user_id = payload.get("sub")
+
+        if user_id is None:
+            raise invalid_token_payload_exception
+
+        return UUID(user_id)
+
+    except Exception:
+        return None
+
+
+def get_current_user_id(
     token: TokenDep, secret_key: AccessSecretKeyDep
-) -> UUID | None:
-    payload = await decode_access_token(token, secret_key)
+) -> UUID:
+    payload = decode_access_token(token, secret_key)
     logger.info(payload)
     user_id = payload.get("sub")
 
@@ -71,16 +93,43 @@ async def get_current_user(
     user_service: UserServiceDep,
     secret_key: AccessSecretKeyDep
 ) -> UserDB | None:
-    payload = await decode_access_token(token, secret_key)
+    payload = decode_access_token(token, secret_key)
     logger.info(payload)
     user_id = payload.get("sub")
 
     if user_id is None:
         raise invalid_token_payload_exception
 
-    user = await user_service.get_user(id=UUID(user_id))
+    user = await user_service.get_user_by_id(UUID(user_id))
 
     return user
+
+
+def get_rate_limiter(redis: RedisDep) -> RateLimiter:
+    return RateLimiter(redis)
+
+
+async def rate_limit(
+    rate_limiter: Annotated[RateLimiter, Depends(get_rate_limiter)],
+    user_id: Annotated[
+        Optional[UUID], Depends(get_current_user_id_optionally)
+        ],
+    request: Request,
+    response: Response
+):
+    logger.info("Start checking for limit")
+    if user_id is not None:
+        result = await rate_limiter.check(user_id)
+        logger.info("Checked for authenticated user")
+    else:
+        result = await rate_limiter.check(request.client.host)
+        logger.info("Checked for guest")
+
+    response.headers["X-RateLimit-Remaining"] = str(result.remaining_requests)
+
+    if not result.allowed:
+        logger.info("Request limit exceeded")
+        raise too_many_requests_exception
 
 
 def require_role(role: UserRole) -> UserDB:
@@ -159,9 +208,12 @@ def get_purchase_repo(
     return PurchaseRepository(session)
 
 def get_purchase_service(
-    redis: RedisDep, app_service: AppServiceDep, purchase_repo: PurchaseRepoDep
+    redis: RedisDep, 
+    app_service: AppServiceDep, 
+    user_service: UserServiceDep,
+    purchase_repo: PurchaseRepoDep
 ) -> PurchaseService:
-    return PurchaseService(redis, app_service, purchase_repo)
+    return PurchaseService(redis, app_service, user_service, purchase_repo)
 
 
 def get_discussion_repo(session: SessionDep) -> DiscussionRepository:

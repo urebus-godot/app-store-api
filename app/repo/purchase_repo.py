@@ -5,7 +5,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, desc
 from sqlalchemy.orm import selectinload
 
-
+from app.core.logging import logger
 from app.models.purchase import CartDB, PurchaseDB, CartItem
 
 
@@ -18,6 +18,7 @@ class PurchaseRepository:
         )
 
     async def create_cart(self, user_id: UUID) -> CartDB:
+        logger.info("Start creating cart")
         cart = CartDB(user_id=user_id)
 
         self.session.add(cart)
@@ -104,10 +105,15 @@ class PurchaseRepository:
         )
         self.session.add(purchase)
 
-    async def remove_item_from_cart(self, item: CartItem) -> None:
+    async def remove_item_from_cart(
+        self, item: CartItem, commit: bool = True
+    ) -> None:
         await self.session.delete(item)
-        await self.session.commit()
+        if commit:
+            await self.session.commit()
 
     async def delete_cart(self, cart: CartDB) -> None:
         await self.session.delete(cart)
         await self.session.commit()
+
+

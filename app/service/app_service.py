@@ -58,12 +58,15 @@ class AppService:
         return purchased_apps
 
     async def get_publisher_apps(
-        self, skip: int, limit: int, user_id: UUID
+        self, 
+        skip: int, limit: int, 
+        user_id: UUID, 
+        public_only: bool = True
     ) -> list[AppDB]:
-        await self.user_service.get_user(id=user_id)
+        await self.user_service.get_user_by_id(user_id)
 
         publisher_apps = await self.app_repo.get_publisher_apps(
-            skip=skip, limit=limit, user_id=user_id
+            skip=skip, limit=limit, user_id=user_id, public_only=public_only
         )
 
         return publisher_apps
@@ -81,6 +84,13 @@ class AppService:
         if search_query is not None:
             games = filter_apps(games, search_query)
 
+        return games
+
+    async def get_top_games(self, genre: Optional[GameGenre]) -> list[AppDB]:
+        if genre:
+            games = await self.app_repo.get_top_games_genre(genre)
+        else:
+            games = await self.app_repo.get_top_games()
         return games
 
     async def delete_app(

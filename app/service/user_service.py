@@ -63,7 +63,7 @@ class UserService:
         username: str,
         password: str,
     ) -> Union[UserDB, False]:
-        user = await self.get_user(username=username)
+        user = await self.get_user_by_username(username)
         logger.info(f"User found: {user.username}")
 
         if not user:
@@ -155,13 +155,21 @@ class UserService:
 
         return user
 
-    async def get_user(
-        self, username: Optional[str] = None, id: Optional[UUID] = None
+    async def get_user_by_username(
+        self, username: str
     ) -> Optional[UserDB]:
-        if username is not None:
-            user = await self.user_repo.get_user_by_username(username)
-        if id is not None:
-            user = await self.user_repo.get_user_by_id(id)
+        user = await self.user_repo.get_user_by_username(username)
+
+        if user is None:
+            raise user_not_found_exception
+
+        return user
+
+    async def get_user_by_id(
+        self, id: UUID
+    ) -> Optional[UserDB]:
+        user = await self.user_repo.get_user_by_id(id)
+
         if user is None:
             raise user_not_found_exception
 

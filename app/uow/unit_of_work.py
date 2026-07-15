@@ -25,7 +25,7 @@ class UnitOfWork(IUnitOfWork):
         self.discussion_repo = DiscussionRepository(self.session)
         self.purchase_repo = PurchaseRepository(self.session)
 
-        return self
+        return self.session
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         if exc_type is not None:

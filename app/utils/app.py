@@ -21,10 +21,14 @@ async def get_apps_with_rating(
     apps: list[AppDB],
     review_service: ReviewService,
     class_to_validate: type = AppResponseWithPublisher,
+    public_only: bool = True
 ) -> list[AppResponse]:
+    logger.info("get_apps_with_rating")
     new_apps = []
     for app in apps:
-        reviews = await review_service.get_app_reviews(app.id)
+        logger.info("Start finding app's reviews")
+        reviews = await review_service.get_app_reviews(app.id, public_only)
+        logger.info("Found reviews")
         app_response = get_app_with_rating(app, reviews, class_to_validate)
         new_apps.append(app_response)
         logger.info(type(app_response))

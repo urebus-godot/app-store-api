@@ -1,10 +1,9 @@
 from contextlib import asynccontextmanager
-from time import perf_counter
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core.logging import setup_logging, logger
+from app.core.logging import setup_logging
 from app.api.v1 import (
     app_router,
     purchase_router,
@@ -28,10 +27,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.API_TITLE,
     summary=settings.API_DESC,
-    description=settings.API_DESC_FULL,
     debug=settings.DEBUG,
     version=settings.API_VERSION,
-    lifespan=lifespan,
+    lifespan=lifespan
 )
 
 app.include_router(
@@ -57,7 +55,9 @@ cors = CORSMiddleware(
     app=app,
     allow_origins=["*"],
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_headers=["*"],
     allow_credentials=True,
+    expose_headers=["X-RateLimit-Remaining"]
 )
 
 
@@ -66,23 +66,9 @@ async def health_check() -> dict[str, str]:
     return {"status": "Healthy"}
 
 
-@app.middleware("http")
-async def log_request(request: Request, call_next) -> Response:
-    start_time = perf_counter()
-
-    logger.info(f"Handle request: {request.method} {request.url}")
-
-    response = await call_next(request)
-    process_time = perf_counter() - start_time
-
-    logger.info(
-        f"Status Code: {response.status_code}\nTime: {process_time:.5f}s"
-        )
-    return response
-
-
 if __name__ == "__main__":
     import uvicorn
+    from app.core.middlewares import log_request
 
     uvicorn.run(
         "app.main:app",
@@ -92,3 +78,4 @@ if __name__ == "__main__":
         access_log=True,
         proxy_headers=True
     )
+    app.add_middleware(log_request)

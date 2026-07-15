@@ -16,7 +16,8 @@ from app.dependencies import (
     SkipLimitParams,
     UserServiceDep,
     SendEmailDep,
-    RefreshSecretKeyDep
+    RefreshSecretKeyDep,
+    rate_limit
 )
 from app.core import auth
 from app.utils.time import get_refresh_token_expire
@@ -24,19 +25,21 @@ from app.models.user import (
     UserRequest,
     UserResponse,
     UserUpdate,
-    CurrentUserResponse,
+    CurrentUserResponse
 )
 from app.models.token import TokenResponse, LoginResponse
 from app.core.logging import logger
 from app.dependencies import RedisDep
 
-router = APIRouter()
+router = APIRouter(
+    dependencies=[Depends(rate_limit)]
+)
 
 
 @router.post(
     "/users",
     status_code=status.HTTP_201_CREATED,
-    response_model=CurrentUserResponse,
+    response_model=CurrentUserResponse
 )
 async def register_user(
     data: UserRequest, user_service: UserServiceDep
@@ -71,7 +74,7 @@ async def login(
         value=login_response.refresh_token,
         httponly=True,
         secure=True,
-        expires=get_refresh_token_expire(),
+        expires=get_refresh_token_expire()
     )
 
     return login_response
@@ -131,12 +134,15 @@ async def get_current_user(user: UserDep) -> CurrentUserResponse:
     return user
 
 
-@router.get("/users/{username}", response_model=UserResponse)
+@router.get(
+    "/users/{username}", 
+    response_model=UserResponse
+    )
 async def get_user(
     username: str, user_service: UserServiceDep
 ) -> UserResponse:
     """Returns user from the db with specified username."""
-    return await user_service.get_user(username=username)
+    return await user_service.get_user_by_username(username)
 
 
 @router.get("/users")
@@ -148,7 +154,10 @@ async def get_users(
     return await user_service.get_users(skip, limit)
 
 
-@router.delete("/users/me", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/users/me", 
+    status_code=status.HTTP_204_NO_CONTENT,
+    )
 async def delete_current_user(
     user: UserDep,
     redis: RedisDep,

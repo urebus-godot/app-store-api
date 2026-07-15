@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, status, BackgroundTasks
+from fastapi import APIRouter, status, BackgroundTasks, Depends
 
 from app.core.tasks import send_email
 from app.core.config import settings
@@ -10,7 +10,8 @@ from app.dependencies import (
     UserDep,
     SkipLimitParams,
     UnitOfWorkDep,
-    SendEmailDep
+    SendEmailDep,
+    rate_limit
 )
 from app.models.purchase import (
     CartResponse,
@@ -19,7 +20,9 @@ from app.models.purchase import (
 )
 from app.models.app import AppResponse
 
-router = APIRouter()
+router = APIRouter(
+    dependencies=[Depends(rate_limit)]
+    )
 
 
 @router.post(
@@ -49,7 +52,7 @@ async def purchase_apps_in_cart(
             "Purchase receipt",
             settings.RECEIPT_TEMPLATE,
         )
-    return await purchase_service.purchase_apps_in_cart(user, uow)
+    return await purchase_service.purchase_apps_in_cart(user.id, uow)
 
 
 @router.post("/carts/me")
@@ -86,7 +89,7 @@ async def remove_app_from_cart(
     user_id: UserIdDep,
     purchase_service: PurchaseServiceDep
 ) -> None:
-    await purchase_service.remove_item_from_cart(app_id, user_id)
+    await purchase_service.remove_item_from_cart(app_id, user_id, True)
 
 
 @router.delete(
@@ -97,4 +100,4 @@ async def clear_cart(
     user_id: UserIdDep,
     purchase_service: PurchaseServiceDep
 ) -> None:
-    await purchase_service.clear_cart(user_id)
+    await purchase_service.delete_cart(user_id)

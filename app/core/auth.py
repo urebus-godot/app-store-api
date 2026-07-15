@@ -16,7 +16,7 @@ from app.db.redis import Redis
 
 
 def create_access_token(
-    user_id: str,
+    user_id: str
 ) -> str:
     """Create a JWT access token for the user."""
     expire = datetime.now(timezone.utc) + settings.ACCESS_TOKEN_EXPIRE_MINUTES
@@ -28,7 +28,7 @@ def create_access_token(
     }
 
     return jwt.encode(
-        payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM
+        payload, settings.ACCESS_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
     )
 
 
@@ -47,7 +47,7 @@ async def create_refresh_token(user_id: str, redis: Redis) -> str:
     }
 
     refresh_token = jwt.encode(
-        payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM
+        payload, settings.REFRESH_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
     )
 
     refresh_ttl = int(settings.REFRESH_TOKEN_EXPIRE_DAYS.total_seconds())
@@ -68,7 +68,7 @@ async def create_token_pair(user_id: str, redis: Redis) -> dict[str, str]:
     return {"access_token": access_token, "refresh_token": refresh_token}
 
 
-async def decode_access_token(
+def decode_access_token(
     token: str, secret_key: str
 ) -> dict:
     """Decode and validate a JWT access token."""

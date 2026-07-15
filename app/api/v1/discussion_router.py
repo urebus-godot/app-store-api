@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, status, Depends
 
 from app.models.discussion import (
     DiscussionRequest,
@@ -9,13 +9,16 @@ from app.models.discussion import (
     MessageRequest,
     MessageResponse,
 )
-from app.dependencies import DiscussionServiceDep, UserIdDep
+from app.dependencies import (
+    DiscussionServiceDep, UserIdDep, rate_limit
+    )
 
-router = APIRouter()
+router = APIRouter(
+    dependencies=[Depends(rate_limit)]
+    )
 
 
 # ------ Discussion routes ------
-
 
 @router.post("/discussions/{app_id}", status_code=status.HTTP_201_CREATED)
 async def create_discussion(
@@ -60,7 +63,6 @@ async def delete_discussion(
 
 
 # ------ Message routes ------
-
 
 @router.post(
     "/discussions/{discussion_id}/messages",

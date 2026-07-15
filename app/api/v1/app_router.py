@@ -1,14 +1,15 @@
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, status, Depends, Query
 
 from app.dependencies import (
     UserIdDep,
     SkipLimitParams,
     PublisherDep,
     AppServiceDep,
-    ReviewServiceDep
+    ReviewServiceDep,
+    rate_limit
 )
 from app.utils.app import get_apps_with_rating, get_app_with_rating
 from app.utils.search import SearchQuery
@@ -24,7 +25,9 @@ from app.models.app import (
 )
 from app.core.logging import logger
 
-router = APIRouter()
+router = APIRouter(
+    dependencies=[Depends(rate_limit)]
+    )
 
 
 @router.post(
@@ -40,7 +43,10 @@ async def upload_app(
     return app
 
 
-@router.post("/games", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/games", 
+    status_code=status.HTTP_201_CREATED
+    )
 async def upload_game(
     data: GameRequest,
     user: PublisherDep,
@@ -50,28 +56,35 @@ async def upload_game(
     return game
 
 
-@router.patch("/apps/{id}")
+@router.patch(
+    "/apps/{id}"
+    )
 async def update_app(
     id: UUID,
     data: AppUpdate,
     user_id: UserIdDep,
     app_service: AppServiceDep
-) -> Optional[AppResponse]:
+) -> AppResponse | GameResponse:
     app = await app_service.update_app(
         data=data, id=id, user_id=user_id
     )
     return get_app_with_rating(app, app.reviews, AppResponse)
 
 
-@router.get("/apps/{id}")
+@router.get(
+    "/apps/{id}"
+    )
 async def get_app(
     id: UUID, app_service: AppServiceDep
-) -> AppResponseWithPublisher:
+) -> AppResponseWithPublisher | GameResponseWithPublisher:
+    logger.info("get_app")
     app = await app_service.get_app(id)
     return get_app_with_rating(app, app.reviews, AppResponseWithPublisher)
 
 
-@router.get("/apps")
+@router.get(
+    "/apps"
+    )
 async def get_apps(
     skip_limit: SkipLimitParams,
     app_service: AppServiceDep,
@@ -87,7 +100,9 @@ async def get_apps(
     )
 
 
-@router.get("/games")
+@router.get(
+    "/games"
+    )
 async def get_games(
     skip_limit: SkipLimitParams,
     app_service: AppServiceDep,
@@ -104,36 +119,58 @@ async def get_games(
     )
 
 
-@router.get("/apps/purchased/me")
+@router.get(
+    "/games/top"
+    )
+async def get_top_games(
+    app_service: AppServiceDep,
+    genre: Optional[GameGenre] = Query()
+    ) -> list[GameResponseWithPublisher]:
+    games = await app_service.get_top_games(genre)
+    return games
+
+
+@router.get(
+    "/apps/purchased/me"
+    )
 async def get_purchased_apps(
     user_id: UserIdDep,
     app_service: AppServiceDep,
     review_service: ReviewServiceDep,
-) -> list[AppResponse]:
+) -> list[AppResponse | GameResponse]:
     apps = await app_service.get_purchased_apps(user_id)
     return await get_apps_with_rating(apps, review_service, AppResponse)
 
 
-@router.get("/apps/published/me")
+@router.get(
+    "/apps/published/me"
+    )
 async def get_own_published_apps(
     user_id: UserIdDep,
     skip_limit: SkipLimitParams,
     review_service: ReviewServiceDep,
     app_service: AppServiceDep,
-) -> list[AppResponse]:
+) -> list[AppResponse | GameResponse]:
+    logger.info("get_own_published_apps")
     skip, limit = skip_limit
-    apps = await app_service.get_publisher_apps(skip, limit, user_id)
+    apps = await app_service.get_publisher_apps(skip, limit, user_id, False)
     logger.info(f"publshed apps are \n {apps}")
-    return await get_apps_with_rating(apps, review_service, AppResponse)
+    apps_with_rating = await get_apps_with_rating(
+        apps, review_service, AppResponse, False
+        )
+    logger.info(f"Apps with rating are \n {apps}")
+    return apps_with_rating
 
 
-@router.get("/apps/published/{user_id}")
+@router.get(
+    "/apps/published/{user_id}"
+    )
 async def get_publisher_apps(
     user_id: UUID,
     skip_limit: SkipLimitParams,
     app_service: AppServiceDep,
     review_service: ReviewServiceDep,
-) -> list[AppResponse]:
+) -> list[AppResponse | GameResponse]:
     skip, limit = skip_limit
     apps = await app_service.get_publisher_apps(skip, limit, user_id)
     return await get_apps_with_rating(apps, review_service, AppResponse)

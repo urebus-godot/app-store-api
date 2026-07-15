@@ -56,13 +56,14 @@ class AppDB(BaseApp, table=True):
     published_at: datetime = Field(default_factory=lambda: datetime.now())
     genre: Optional[GameGenre] = Field(default=None, nullable=True)
     category: AppCategory = AppCategory.APPLICATION
-    file_id: UUID = Field(default_factory=uuid4)
-
+    
     keywords: Optional[set[str]] = Field(default=None, sa_type=ARRAY(String))
+
+    times_purchased: int = Field(default=0, ge=0)
 
     publisher_id: UUID = Field(foreign_key="users.id", ondelete="CASCADE")
     publisher: "UserDB" = Relationship(back_populates="published_apps")
-
+    
     users_purchased: list["UserDB"] = Relationship(
         back_populates="purchased_apps", link_model=PurchaseDB
     )
@@ -88,6 +89,7 @@ class AppResponse(BaseApp):
     category: AppCategory = AppCategory.APPLICATION
     published_at: datetime
     rating: Optional[float] = Field(default=None, gt=0.0, le=5.0)
+    times_purchased: int = Field(ge=0)
 
     model_config = ConfigDict(from_attributes=True)
 
