@@ -31,8 +31,7 @@ jobs:
 
     env:
       TEST_DB_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
-      SECRET_KEY: 5b54e1cae0f5d7215d776d66ba32b2288d8570451e62632d1c1a5f7af0142a79
-      TEST_SECRET_KEY: 2018336055981ae7440637b22dd0bd0183d20caf930fc64185d57cd34da3dba4
+      ACCESS_SECRET_KEY: empty
       REFRESH_SECRET_KEY: empty
       TEST_REDIS_URL: empty
       REDIS_URL: empty

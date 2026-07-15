@@ -53,7 +53,9 @@ def create_access_token(
     }
 
     return jwt.encode(
-        payload, settings.TEST_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
+        payload, 
+        settings.TEST_ACCESS_SECRET_KEY, 
+        algorithm=settings.JWT_ALGORITHM
     )
 
 
@@ -72,7 +74,9 @@ def create_refresh_token(
         "family_id": str(family_id),
     }
     token = jwt.encode(
-        payload, settings.TEST_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
+        payload, 
+        settings.TEST_REFRESH_SECRET_KEY, 
+        algorithm=settings.JWT_ALGORITHM
     )
     return str(token), str(jti), str(family_id)
 
@@ -139,10 +143,10 @@ def override_general_deps(
     app.dependency_overrides[get_redis] = lambda: fake_redis
     app.dependency_overrides[can_send_email] = lambda: False
     app.dependency_overrides[get_refresh_secret_key] = (
-        lambda: settings.TEST_SECRET_KEY
+        lambda: settings.TEST_ACCESS_SECRET_KEY
         )
     app.dependency_overrides[get_access_secret_key] = (
-        lambda: settings.TEST_SECRET_KEY
+        lambda: settings.TEST_REFRESH_SECRET_KEY
         )
     if ignore_rate_limit:
         app.dependency_overrides[rate_limit] = lambda: True
