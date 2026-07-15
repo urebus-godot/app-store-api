@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8000
 
-    DB_URL: str
+    DB_URL: Optional[str] = None
     TEST_DB_URL: str
 
     REDIS_URL: str
@@ -39,8 +39,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: timedelta = timedelta(minutes=120)
     REFRESH_TOKEN_EXPIRE_DAYS: timedelta = timedelta(days=7)
 
-    ACCESS_SECRET_KEY: str
-    REFRESH_SECRET_KEY: str
+    ACCESS_SECRET_KEY: Optional[str] = None
+    REFRESH_SECRET_KEY: Optional[str] = None
     TEST_ACCESS_SECRET_KEY: str = (
         "4a834639b4bee7011b42f243748c17f13c7aa211a86a06843b5683376e8f35d8"
         )
