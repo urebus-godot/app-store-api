@@ -11,6 +11,13 @@ class OperationType(StrEnum):
     WITHDRAWAL_TO_CARD: str = "withdrawal to card"
 
 
+class CurrencyType(StrEnum):
+    RUB: str = "RUB"
+    EUR: str = "EUR"
+    USD: str = "USD"
+    GBP: str = "GBP"
+
+
 class BaseTransfer(SQLModel):
     amount: Decimal = Field(gt=0)
 

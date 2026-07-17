@@ -1,10 +1,19 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 from typing import Optional
+import pathlib
+import os
 
+from fastapi import UploadFile, HTTPException, status
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+from app.core.logging import logger
 from app.core.exceptions import (
     app_not_found_exception,
     no_rights_exception,
+    app_not_purchased_exception,
+    invalid_file_exception
 )
+from app.core.config import settings
 from app.service.user_service import UserService
 from app.models.app import AppRequest, AppUpdate, GameGenre, AppDB
 from app.models.user import UserDB
@@ -35,6 +44,107 @@ class AppService:
 
         return app
 
+    async def upload_app_archive(
+        self, 
+        session: AsyncSession, 
+        file: UploadFile, 
+        app_id: UUID, user_id: UUID
+    ):
+        app = await self.get_app(app_id, False)
+        logger.info(f"Start uploading archive for app: {app_id}")
+
+        if not app.public and app.publisher_id != user_id:
+            raise app_not_found_exception
+
+        if app.publisher_id != user_id:
+            raise no_rights_exception
+
+        extension = os.path.splitext(file.filename)[1]
+        logger.info(f"File extension: {extension}")
+        
+        if extension not in settings.ARCHIVE_EXTENSIONS:
+            raise invalid_file_exception
+
+        filename = f"{app_id}{extension}"
+
+        os.makedirs(settings.ARCHIVE_PATH, exist_ok=True)
+        file_path = os.path.join(settings.ARCHIVE_PATH, filename)
+
+        logger.info(f"Path for file: {file_path}")
+
+        with open(file_path, "wb") as buffer:
+            logger.info("Start writing to disk")
+            while chunk := file.file.read(1024 * 1024):
+                buffer.write(chunk)
+                logger.info(
+                    f"Wrote chunk to buffer: {chunk[:30]}..."
+                    f"Length: {len(chunk)}"
+                    )
+
+        app.archive_path = file_path
+        await session.commit()
+        logger.info(f"Committed. App archive path is now: {app.archive_path}")
+
+    async def upload_app_cover(
+        self,
+        session: AsyncSession, 
+        file: UploadFile, 
+        app_id: UUID, user_id: UUID
+    ):
+        app = await self.get_app(app_id, False)
+        logger.info(f"Start uploading archive for app: {app_id}")
+
+        if not app.public and app.publisher_id != user_id:
+            raise app_not_found_exception
+
+        if app.publisher_id != user_id:
+            raise no_rights_exception
+
+        extension = os.path.splitext(file.filename)[1]
+        logger.info(f"File extension: {extension}")
+        
+        if extension not in settings.IMAGE_EXTENSIONS:
+            raise invalid_file_exception
+
+        filename = f"{app_id}{extension}"
+        path = f"{settings.STATIC_BASE_PATH}/covers"
+
+        os.makedirs(path, exist_ok=True)
+        file_path = os.path.join(path, filename)
+
+        logger.info(f"Path for file: {file_path}")
+
+        with open(file_path, "wb") as buffer:
+            logger.info("Start writing to disk")
+            while chunk := file.file.read(1024 * 1024):
+                buffer.write(chunk)
+                logger.info(
+                    f"Wrote chunk to buffer: {chunk[:30]}..."
+                    f"Length: {len(chunk)}"
+                    )
+
+        app.archive_path = file_path
+        await session.commit()
+        logger.info(f"Committed. App archive path is now: {app.archive_path}")
+
+    async def get_app_archive_path(
+        self, app_id: UUID, user: UserDB
+    ):
+        app = await self.get_app(app_id)
+
+        if not (app in user.purchased_apps or app.publisher_id == user.id):
+            raise app_not_purchased_exception
+
+        archive_path = app.archive_path
+
+        if archive_path is None:
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND,
+                "Application has no archive file"
+            )
+        logger.info(f"App's archive path: {app.archive_path}")
+        return archive_path
+        
     async def get_app(self, id: UUID, public_only: bool = True) -> AppDB:
         app = await self.app_repo.get_app(id, public_only)
 

@@ -53,6 +53,12 @@ class AppDB(BaseApp, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
+    archive_path: Optional[str] = None
+    thumbnail_path: Optional[str] = None
+    app_cover_paths: Optional[list[str]] = Field(
+        default=None, sa_type=ARRAY(String)
+        )
+
     published_at: datetime = Field(default_factory=lambda: datetime.now())
     genre: Optional[GameGenre] = Field(default=None, nullable=True)
     category: AppCategory = AppCategory.APPLICATION

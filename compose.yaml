@@ -51,6 +51,10 @@ services:
       - type: bind
         source: app
         target: /src/app
+      
+      - type: bind
+        source: media
+        target: /src/media
     depends_on:
       - db
       - redis

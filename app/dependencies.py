@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Annotated, Optional
+from collections.abc import Generator
 from uuid import UUID
 
 from redis.asyncio import Redis
@@ -12,7 +13,8 @@ from app.db.redis import get_redis
 from app.core.exceptions import (
     no_rights_exception,
     invalid_token_payload_exception,
-    too_many_requests_exception
+    too_many_requests_exception,
+    app_not_purchased_exception
 )
 from app.core.rate_limiter import RateLimiter
 from app.core.auth import decode_access_token
@@ -103,6 +105,12 @@ async def get_current_user(
     user = await user_service.get_user_by_id(UUID(user_id))
 
     return user
+
+
+async def user_purchased_app(app_id: UUID, user: UserDep) -> None:
+    purchased_apps_ids = (app.id for app in user.purchased_apps)
+    if app_id not in purchased_apps_ids:
+        raise app_not_purchased_exception
 
 
 def get_rate_limiter(redis: RedisDep) -> RateLimiter:
@@ -225,8 +233,9 @@ def get_discussion_service(
     return DiscussionService(discussion_repo, app_service)
 
 
-def get_unit_of_work() -> UnitOfWork:
-    return UnitOfWork()
+def get_unit_of_work() -> Generator[UnitOfWork, None, None]:
+    with UnitOfWork() as uow:
+        yield uow
 
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]

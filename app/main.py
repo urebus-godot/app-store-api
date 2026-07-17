@@ -1,9 +1,13 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.logging import setup_logging
+from app.core.config import settings
+from app.dependencies import RedisDep, SessionDep
 from app.api.v1 import (
     app_router,
     purchase_router,
@@ -12,7 +16,6 @@ from app.api.v1 import (
     discussion_router,
     finance_router
 )
-from app.core.config import settings
 from app.db.redis import connect_to_redis_client
 
 
@@ -51,6 +54,8 @@ app.include_router(
     finance_router.router, prefix="/api/v1", tags=["Finance"]
     )
 
+#app.mount("/media", StaticFiles(directory="/media/static"), "media")
+
 cors = CORSMiddleware(
     app=app,
     allow_origins=["*"],
@@ -62,8 +67,24 @@ cors = CORSMiddleware(
 
 
 @app.get("/health", tags=["Server"])
-async def health_check() -> dict[str, str]:
-    return {"status": "Healthy"}
+async def health_check(
+    redis: RedisDep,
+    session: SessionDep
+) -> dict[str, str]:
+    try:
+        redis_response = await redis.ping()
+        db_response = await session.exec("SELECT 1")
+        if not redis_response:
+            raise HTTPException(
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+                "Connection to redis failed"
+            )
+        return {"status": "Healthy"}
+    except Exception:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Connection to database failed"
+        )
 
 
 if __name__ == "__main__":

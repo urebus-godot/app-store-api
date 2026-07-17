@@ -1,7 +1,11 @@
+from decimal import Decimal
+
 import pytest
 from httpx import AsyncClient
+from unittest.mock import patch, Mock
 
 from app.models.user import UserDB
+from app.service.finance_service import FinanceService
 
 
 class TestFinance:
@@ -64,3 +68,46 @@ class TestFinance:
             "/api/v1/transfers/history"
         )
         assert response.status_code == 200
+
+    @patch("app.service.finance_service.AsyncClient.get")
+    @pytest.mark.parametrize(
+        argnames=["currency", "rate"],
+        argvalues=[
+            ["EUR", 0.011],
+            ["USD", 0.013],
+            ["GBP", 0.0095]
+        ],
+    )
+    async def test_get_balance(
+        self,
+        mock_get,
+        auth_client: AsyncClient, 
+        currency: str,
+        rate: float,
+        test_user: UserDB,
+        logger
+        ):
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = [
+                {
+                "date": "2026-07-17",
+                "base": "RUB",
+                "quote": currency,
+                "rate": rate
+                }
+            ]
+        mock_get.return_value = mock_response
+        test_user.balance = 1000
+        response = await auth_client.post(
+            "/api/v1/finance/me/balance",
+            params={
+                "currency": currency
+                }
+            )
+        data = response.json()
+        logger.info(f"\n\ndata: {data}\n\n")
+
+        assert response.status_code == 200
+        assert data["currency"] == currency
+        assert float(data["balance"]) == round(test_user.balance * rate, 5)

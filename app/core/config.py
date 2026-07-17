@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     REDIS_URL: str
 
     WINDOW_SECONDS: int = 30
-    REQUEST_LIMIT: int = 20
+    REQUEST_LIMIT: int = 120
 
     CACHE_TTL_SECONDS: int = 3600
 
@@ -61,6 +61,13 @@ class Settings(BaseSettings):
 
     LOGGING_LEVEL: int = logging.INFO
     LOG_FILE_PATH: Optional[str] = None
+
+    FILE_BASE_PATH: str = "media"
+    STATIC_BASE_PATH: str = f"{FILE_BASE_PATH}/static"
+    ARCHIVE_PATH: str = f"{FILE_BASE_PATH}/app_archives"
+
+    ARCHIVE_EXTENSIONS: tuple[str, str, str] = (".rar", ".zip", ".PNG")
+    IMAGE_EXTENSIONS: tuple[str, str, str] = (".PNG", ".jpg", ".svg")
 
     MAIL_USERNAME: str = "satalovserge"
     MAIL_PASSWORD: str

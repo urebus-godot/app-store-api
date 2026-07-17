@@ -124,51 +124,53 @@ class PurchaseService:
     async def purchase_apps_in_cart(
         self, user_id: UUID, uow: UnitOfWork
     ) -> list[AppDB]:
-        async with uow:
-            user = await self.user_service.get_user_by_id(user_id)
+        logger.info("Start purchasing apps")
 
-            logger.info("Start purchasing apps")
-            cart = await self.get_or_create_cart(user.id)
-            total_price = sum(item.app.price for item in cart.items)
-            logger.info(
-                f"Cart: {cart}\nItems: {cart.items}\nPrice: {total_price}"
+        user = await uow.user_repo.get_user_by_id(user_id)     
+        cart = await uow.purchase_repo.get_cart(user.id)
+        total_price = sum(item.app.price for item in cart.items)
+
+        logger.info(
+            f"Cart: {cart}\nItems: {cart.items}\nPrice: {total_price}"
+            )
+
+        if not cart.items:
+            raise empty_cart_exception
+
+        if user.balance < total_price:
+            raise insufficient_funds_exception
+
+        purchased_apps = []
+
+        for item in cart.items:
+            purchased = await uow.purchase_repo.get_purchase(
+                item.app_id, user.id
                 )
+            if purchased:
+                logger.info("App is purchased, so skip it")
+                continue
 
-            if not cart.items:
-                raise empty_cart_exception
+            await uow.purchase_repo.add_purchase(user.id, item)
+            purchased_apps.append(item.app)
+            logger.info("Added app to purchases")
 
-            if user.balance < total_price:
-                raise insufficient_funds_exception
+            item.app.times_purchased += 1
+            app_publisher = await uow.user_repo.get_user_by_id(
+                item.app.publisher_id
+            )
+            app_publisher.balance += item.app.price
 
-            purchased_apps = []
+        await self.delete_cart(user_id, uow)
+        logger.info("Deleted items in cart")
+        logger.info(f"Items: {cart.items}")
 
-            for item in cart.items:
-                purchased = await self.get_purchase(item.app_id, user.id)
-                if purchased:
-                    logger.info("App is purchased, so skip it")
-                    continue
+        user.balance -= total_price
+        await self.redis.delete(f"cart_cache:{user.id}")
+        await uow.commit()
 
-                await self.purchase_repo.add_purchase(user.id, item)
-                purchased_apps.append(item.app)
-                logger.info("Added app to purchases")
+        logger.info("Transaction has ended successfully")
 
-                item.app.times_purchased += 1
-                app_publisher = await self.user_service.get_user_by_id(
-                    item.app.publisher_id
-                )
-                app_publisher.balance += item.app.price
-
-            await self.delete_cart(user_id)
-            logger.info("Deleted items in cart")
-            logger.info(f"Items: {cart.items}")
-
-            user.balance -= total_price
-            await self.redis.delete(f"cart_cache:{user.id}")
-            await uow.commit()
-
-            logger.info("Transaction has ended successfully")
-
-            return purchased_apps
+        return purchased_apps
 
     async def remove_item_from_cart(
         self, app_id: UUID, user_id: UUID, commit: bool
@@ -184,9 +186,10 @@ class PurchaseService:
         await self.redis.delete(f"cart_cache:{user_id}")
         await self.purchase_repo.remove_item_from_cart(cart_item, commit)
 
-    async def delete_cart(self, user_id: UUID) -> None:
-        cart = await self.get_or_create_cart(user_id)
+    async def delete_cart(
+        self, user_id: UUID, uow: UnitOfWork
+    ) -> None:
+        cart = await uow.purchase_repo.get_cart(user_id)
         
         await self.redis.delete(f"cart_cache:{user_id}")
-        await self.purchase_repo.delete_cart(cart)
-
+        await uow.purchase_repo.delete_cart(cart)

@@ -1,7 +1,10 @@
-from typing import Optional
+from typing import Optional, Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, status, Depends, Query
+from fastapi import (
+    APIRouter, status, Depends, Query, UploadFile, status, HTTPException
+    )
+from fastapi.responses import FileResponse
 
 from app.dependencies import (
     UserIdDep,
@@ -9,7 +12,10 @@ from app.dependencies import (
     PublisherDep,
     AppServiceDep,
     ReviewServiceDep,
-    rate_limit
+    SessionDep,
+    rate_limit,
+    user_purchased_app,
+    UserDep
 )
 from app.utils.app import get_apps_with_rating, get_app_with_rating
 from app.utils.search import SearchQuery
@@ -54,6 +60,51 @@ async def upload_game(
 ) -> GameResponse:
     game = await app_service.upload_app(data, user)
     return game
+
+
+@router.post(
+    "/apps/{app_id}/files/archive"
+    )
+async def upload_app_archive(
+    file: UploadFile,
+    user_id: UserIdDep,
+    app_id: UUID,
+    session: SessionDep,
+    app_service: AppServiceDep
+):
+    await app_service.upload_app_archive(session, file, app_id, user_id)
+
+
+@router.post(
+    "/apps/{app_id}/files/covers"
+    )
+async def upload_app_cover(
+    file: UploadFile,
+    user_id: UserIdDep,
+    app_id: UUID,
+    session: SessionDep,
+    app_service: AppServiceDep
+) -> GameResponse:
+    await app_service.upload_app_cover(session, file, app_id, user_id)
+
+
+@router.post(
+    "/apps/{app_id}/download"
+    )
+async def download_app(
+    user: UserDep,
+    app_id: UUID,
+    app_service: AppServiceDep
+) -> AppResponse:
+    try:
+        archive_path = await app_service.get_app_archive_path(app_id, user)
+        response = FileResponse(archive_path)
+        return response
+    except FileNotFoundError:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            "Application has no archive file"
+        )
 
 
 @router.patch(
@@ -124,7 +175,7 @@ async def get_games(
     )
 async def get_top_games(
     app_service: AppServiceDep,
-    genre: Optional[GameGenre] = Query()
+    genre: Optional[GameGenre] = Query(default=None)
     ) -> list[GameResponseWithPublisher]:
     games = await app_service.get_top_games(genre)
     return games

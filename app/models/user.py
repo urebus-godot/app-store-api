@@ -38,6 +38,7 @@ class UserDB(BaseUser, table=True):
     roles: list["UserRole"] = Field(
         sa_type=ARRAY(String), default={UserRole.USER}
     )
+    profile_picture_path: Optional[str] = None
 
     registered_at: datetime = Field(default_factory=lambda: datetime.now())
     balance: Decimal = Field(default=0, ge=0)

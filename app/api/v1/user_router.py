@@ -7,6 +7,7 @@ from fastapi import (
     Response,
     Request,
     BackgroundTasks,
+    UploadFile
 )
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -17,7 +18,8 @@ from app.dependencies import (
     UserServiceDep,
     SendEmailDep,
     RefreshSecretKeyDep,
-    rate_limit
+    rate_limit,
+    SessionDep
 )
 from app.core import auth
 from app.utils.time import get_refresh_token_expire
@@ -118,6 +120,19 @@ async def become_publisher(
     return await user_service.become_publisher(user)
 
 
+@router.post(
+    "/users/me/profile_picture"
+    )
+async def upload_profile_picture(
+    file: UploadFile,
+    user: UserDep,
+    session: SessionDep,
+    user_service: UserServiceDep
+):
+    result = await user_service.upload_profile_picture(file, user, session)
+    return result
+
+
 @router.patch("/users/me")
 async def update_current_user(
     data: UserUpdate,
@@ -129,8 +144,11 @@ async def update_current_user(
 
 
 @router.get("/users/me")
-async def get_current_user(user: UserDep) -> CurrentUserResponse:
-    """Returns user retrieved via *dependency injection*."""
+async def get_current_user(
+    user: UserDep
+    ) -> CurrentUserResponse:
+    """Returns user that was found by JWT access token. 
+    The balance is measured in rubles"""
     return user
 
 

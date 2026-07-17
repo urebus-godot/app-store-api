@@ -8,6 +8,11 @@ too_many_requests_exception = HTTPException(
     "Request limit exceeded. Try again later"
 )
 
+invalid_file_exception = HTTPException(
+    status.HTTP_406_NOT_ACCEPTABLE,
+    "Invalid type of file"
+)
+
 
 # ----- User -----
 

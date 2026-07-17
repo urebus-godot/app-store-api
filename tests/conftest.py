@@ -438,8 +438,36 @@ async def test_game(db_session: AsyncSession, test_user_2: UserDB):
 
 
 @pytest_asyncio.fixture
-async def test_apps():
-    apps = [AppDB() for _ in range(40)]
+async def test_apps(db_session: AsyncSession, test_user_2: UserDB):
+    app_1 = AppDB(
+        title="test", 
+        keywords=[" KEY ", " key 2"], 
+        publisher_id=test_user_2.id
+        )
+    app_2 = AppDB(
+        title="test", 
+        keywords=["kEy"],
+        publisher_id=test_user_2.id
+        )
+    app_3 = AppDB(
+        title="test", 
+        keywords=["  key  "],
+        publisher_id=test_user_2.id
+        )
+    app_4 = AppDB(
+        title="test", 
+        keywords=[" Newkey "],
+        publisher_id=test_user_2.id
+        )
+    app_5 = AppDB(
+        title="hidden test", 
+        keywords=[" Newkey "],
+        publisher_id=test_user_2.id,
+        public=False
+        )
+
+    apps = [app_1, app_2, app_3, app_4, app_5]
+    db_session.add_all(apps)
 
     return apps
 

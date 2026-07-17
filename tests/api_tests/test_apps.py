@@ -87,6 +87,7 @@ class TestApps:
         assert response.status_code == 404
 
     async def test_get_apps(self, client: AsyncClient, test_apps: list[AppDB]):
-        query = {"search_query": ["APP", "Test", " free! "]}
+        query = {"search_query": "KEY NEWKEY"}
         response = await client.get("/api/v1/apps", params=query)
         assert response.status_code == 200
+        assert len(response.json()) == len(test_apps)

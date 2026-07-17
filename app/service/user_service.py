@@ -1,15 +1,18 @@
 from typing import Optional, Union
-from uuid import UUID
+from uuid import UUID, uuid4
+import os
 
-from fastapi import BackgroundTasks, Request
+from fastapi import BackgroundTasks, Request, UploadFile
+from sqlmodel.ext.asyncio.session import AsyncSession
 from pydantic import EmailStr
 from jwt.exceptions import DecodeError
 import jwt
 
-from app.core.tasks import send_email
+from app.db.redis import Redis
 from app.models.user import UserRequest, UserDB, UserUpdate, UserRole
 from app.models.token import LoginResponse
 from app.repo.user_repo import UserRepository
+from app.core.tasks import send_email
 from app.core.exceptions import (
     user_not_found_exception,
     email_used_exception,
@@ -18,12 +21,12 @@ from app.core.exceptions import (
     incorrect_creds_exception,
     user_data_used_exception,
     invalid_refresh_token_exception,
+    invalid_file_exception
 )
 from app.core.security import verify_password, get_password_hash
 from app.core.auth import create_token_pair
 from app.core.logging import logger
 from app.core.config import settings
-from app.db.redis import Redis
 
 
 class UserService:
@@ -137,6 +140,25 @@ class UserService:
         result = await self.user_repo.become_publisher(user)
 
         return result
+
+    async def upload_profile_picture(
+        self, file: UploadFile, user: UserDB, session: AsyncSession
+    ):
+        extension = os.path.splitext(file.filename)[1]
+
+        if extension not in settings.IMAGE_EXTENSIONS:
+            raise invalid_file_exception
+
+        path = f"{settings.STATIC_BASE_PATH}/profile_pictures"
+        filename = f"{user.id}{extension}"
+        file_path = f"{path}/{filename}"
+
+        with open(file_path, "wb") as buffer:
+            while chunk := file.file.read(1024 * 1024):
+                buffer.write(chunk)
+
+        user.profile_picture_path = file_path
+        await session.commit()
 
     async def update_user(
         self, user: UserDB, data: UserUpdate
