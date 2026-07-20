@@ -9,6 +9,8 @@ from app.models.review import ReviewDB
 from app.repo.review_repo import ReviewRepository
 from app.service.app_service import AppService
 
+from app.uow.unit_of_work import UnitOfWork
+
 
 class ReviewService:
     def __init__(self, review_repo: ReviewRepository, app_service: AppService):
@@ -16,21 +18,26 @@ class ReviewService:
         self.app_service = app_service
 
     async def create_review(
-        self, app_id: UUID, data: ReviewRequest, user_id: UUID
+        self, 
+        app_id: UUID, 
+        data: ReviewRequest,
+        user_id: UUID, 
+        uow: UnitOfWork
     ) -> ReviewDB:
-        app = await self.app_service.get_app(app_id)
-        logger.info(f"{app.publisher_id=} \n{user_id=}")
-        if app.publisher_id == user_id:
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST,
-                "You can't create review to your own app",
+        async with uow:
+            app = await self.app_service.get_app(app_id)
+            logger.info(f"{app.publisher_id=} \n{user_id=}")
+            if app.publisher_id == user_id:
+                raise HTTPException(
+                    status.HTTP_400_BAD_REQUEST,
+                    "You can't create review to your own app",
+                )
+
+            review = await uow.review_repo.create_review(
+                data, user_id, app_id
             )
 
-        review = await self.review_repo.create_review(
-            data, user_id, app_id
-        )
-
-        return review
+            return review
 
     async def get_review(self, id: UUID) -> ReviewDB:
         review = await self.review_repo.get_review(id)
@@ -54,11 +61,15 @@ class ReviewService:
         return user_reviews
 
     async def delete_review(
-        self, id: UUID, user_id: UUID
+        self, id: UUID, user_id: UUID, uow: UnitOfWork
     ) -> None:
-        review = await self.get_review(id)
+        async with uow:
+            review = await uow.review_repo.get_review(id)
 
-        if not review.author_id == user_id:
-            raise no_rights_exception
+            if review is None:
+                raise review_not_found_exception
 
-        await self.review_repo.delete_review(review)
+            if not review.author_id == user_id:
+                raise no_rights_exception
+
+            await uow.review_repo.delete_review(review)

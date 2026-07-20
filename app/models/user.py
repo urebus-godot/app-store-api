@@ -32,13 +32,14 @@ class BaseUser(SQLModel):
 class UserDB(BaseUser, table=True):
     __tablename__ = "users"
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    id: UUID = Field(
+        default_factory=uuid4, primary_key=True
+        )
 
     hashed_password: str
     roles: list["UserRole"] = Field(
         sa_type=ARRAY(String), default={UserRole.USER}
     )
-    profile_picture_path: Optional[str] = None
 
     registered_at: datetime = Field(default_factory=lambda: datetime.now())
     balance: Decimal = Field(default=0, ge=0)
@@ -59,6 +60,11 @@ class UserDB(BaseUser, table=True):
     reviews: list["ReviewDB"] = Relationship(
         back_populates="author",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
+
+    discussions: list["DiscussionDB"] = Relationship(
+        back_populates="creator",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
 
     messages: list["MessageDB"] = Relationship(

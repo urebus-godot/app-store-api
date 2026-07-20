@@ -32,9 +32,10 @@ router = APIRouter(
 async def add_app_to_cart(
     app_id: UUID,
     user_id: UserIdDep,
-    purchase_service: PurchaseServiceDep
+    purchase_service: PurchaseServiceDep,
+    uow: UnitOfWorkDep
 ) -> CartItemResponse:
-    return await purchase_service.add_app_to_cart(app_id, user_id)
+    return await purchase_service.add_app_to_cart(app_id, user_id, uow)
 
 
 @router.post("/carts/checkout")
@@ -58,9 +59,10 @@ async def purchase_apps_in_cart(
 @router.post("/carts/me")
 async def get_cart(
     user_id: UserIdDep,
-    purchase_service: PurchaseServiceDep
+    purchase_service: PurchaseServiceDep,
+    uow: UnitOfWorkDep
 ) -> CartResponse:
-    cart = await purchase_service.get_or_create_cart(user_id)
+    cart = await purchase_service.get_or_create_cart(user_id, uow)
     total_price = sum([item.app.price for item in cart.items])
     cart_response = CartResponse(
         id=cart.id, items=cart.items, total_price=total_price
@@ -87,9 +89,10 @@ async def get_purchase_history(
 async def remove_app_from_cart(
     app_id: UUID,
     user_id: UserIdDep,
-    purchase_service: PurchaseServiceDep
+    purchase_service: PurchaseServiceDep,
+    uow: UnitOfWorkDep
 ) -> None:
-    await purchase_service.remove_item_from_cart(app_id, user_id, True)
+    await purchase_service.remove_item_from_cart(app_id, user_id, uow)
 
 
 @router.delete(
@@ -98,6 +101,7 @@ async def remove_app_from_cart(
     )
 async def clear_cart(
     user_id: UserIdDep,
-    purchase_service: PurchaseServiceDep
+    purchase_service: PurchaseServiceDep,
+    uow: UnitOfWorkDep
 ) -> None:
-    await purchase_service.delete_cart(user_id)
+    await purchase_service.delete_cart(user_id, uow)

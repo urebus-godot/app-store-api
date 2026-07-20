@@ -2,6 +2,7 @@ from collections.abc import AsyncGenerator
 from uuid import UUID, uuid4
 from typing import Optional
 from datetime import datetime, timezone
+import asyncio
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
 from sqlmodel import SQLModel
@@ -81,11 +82,11 @@ def create_refresh_token(
     return str(token), str(jti), str(family_id)
 
 
-# @pytest_asyncio.fixture(scope="session")
-# async def event_loop():
-#    loop = asyncio.new_event_loop()
-#    yield loop
-#    loop.close()
+@pytest_asyncio.fixture(scope="session")
+async def event_loop():
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
 
 
 @pytest_asyncio.fixture(name="logger")

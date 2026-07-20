@@ -11,6 +11,10 @@ def setup_logging() -> None:
         level=settings.LOGGING_LEVEL,
         filename=settings.LOG_FILE_PATH,
     )
+    formatter = logging.Formatter(
+        fmt="%(asctime)s | %(name)s %(levelname)s : %(message)s"
+        )
+
 
 def get_logger() -> Logger:
     logger = logging.getLogger("app_logger")

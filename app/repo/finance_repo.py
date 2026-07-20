@@ -28,7 +28,6 @@ class FinanceRepository:
             )
 
         self.session.add(transfer_db)
-        await self.session.commit()
 
         return {"new_balance": user.balance}
 

@@ -16,22 +16,25 @@ router = APIRouter(
 @router.post("/transfers/balance")
 async def top_up_balance(
     data: TransferRequest,
-    user: UserDep,
-    finance_service: FinanceServiceDep
+    user_id: UserIdDep,
+    finance_service: FinanceServiceDep,
+    uow: UnitOfWorkDep
 ) -> dict[str, Decimal]:
     """Increases user's balance by specified amount"""
-    return await finance_service.create_transfer_to_balance(data, user)
+    return await finance_service.create_transfer_to_balance(
+        data, user_id, uow
+        )
 
 
 @router.post("/transfers/withdrawal")
 async def withdraw_funds_to_card(
     data: TransferRequest,
-    user: UserDep,
+    user_id: UserIdDep,
     finance_service: FinanceServiceDep,
     uow: UnitOfWorkDep
 ) -> dict[str, Decimal]:
     """Increases user's balance by specified amount"""
-    return await finance_service.create_transfer_to_card(data, user, uow)
+    return await finance_service.create_transfer_to_card(data, user_id, uow)
 
 
 @router.get("/transfers/history")
@@ -40,7 +43,6 @@ async def get_transfer_history(
     finance_service: FinanceServiceDep
 ) -> list[TransferResponse]:
     return await finance_service.get_transfers(user_id)
-
 
 
 @router.post("/finance/me/balance")
@@ -54,6 +56,6 @@ async def get_balance(
         float(user.balance), currency
         )
     if isinstance(result, Decimal):
-        return {"balance": result, "currency": currency, "base_currency": "RUB"}
+        return {"balance": result, "currency": currency}
     else:
         return result

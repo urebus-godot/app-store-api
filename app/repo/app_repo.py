@@ -14,12 +14,16 @@ from app.models.app import (
     GameGenre,
     AppCategory,
 )
+from app.models.file import AppArchive, AppCover
 from app.models.purchase import PurchaseDB
 
 
 class AppRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
+        self.public_app_conditions = (
+            AppDB.public
+            )
         self.load_attrs = (
             selectinload(AppDB.reviews),
             selectinload(AppDB.users_purchased),
@@ -36,46 +40,48 @@ class AppRepository:
             app.genre = None
 
         self.session.add(app)
-        await self.session.commit()
-
-        #app = (
-        #    await self.session.exec(
-        #        select(AppDB)
-        #        .where(AppDB.id == app.id)
-        #        .options(*self.load_attrs)
-        #    )
-        #).one()
 
         return app
 
     async def update_app(
         self,
         data: AppUpdate,
-        id: Optional[UUID] = None,
-        app: Optional[AppDB] = None,
+        app: AppDB,
     ) -> AppDB:
-        if app is None:
-            app = await self.get_app(id)
-
         data = data.model_dump(exclude_unset=True, exclude_none=True)
-
         app.sqlmodel_update(data)
 
-        await self.session.commit()
-
         return app
+
+    async def get_app_archive(
+        self, app_id: UUID
+    ) -> Optional[AppArchive]:
+        stmt = select(AppArchive).where(AppArchive.app_id == app_id)
+        app_archive = (await self.session.exec(stmt)).one_or_none()
+
+        return app_archive
+
+    async def get_app_cover(
+        self, cover_id: UUID
+    ) -> Optional[AppCover]:
+        stmt = select(AppCover).where(AppCover.id == cover_id)
+        app_cover = (await self.session.exec(stmt)).one_or_none()
+        return app_cover
+
+    async def get_app_covers(
+        self, app_id: UUID
+    ) -> list[AppCover]:
+        stmt = select(AppCover).where(AppCover.app_id == app_id)
+        app_covers = (await self.session.exec(stmt)).all()
+        return app_covers
 
     async def get_app(
         self, id: UUID, public_only: Optional[bool] = True
     ) -> AppDB:
-        conditions = [AppDB.id == id]
+        stmt = select(AppDB).where(AppDB.id == id)
 
         if public_only:
-            conditions.append(AppDB.public)
-            conditions.append(AppDB.archive_path is not None)
-
-        stmt = select(AppDB).where(*conditions)
-        logger.info(f"Conditions: {conditions}")
+            stmt.where(AppDB.public)
 
         app = (
             await self.session.exec(stmt.options(*self.load_attrs))
@@ -86,21 +92,24 @@ class AppRepository:
     async def get_apps(
         self,
         skip: int,
-        limit: int,
+        limit: Optional[int] = None,
         public_only: Optional[bool] = True,
         order_by: Optional[str] = "created_at",
     ) -> list[AppDB]:
         stmt = (
             select(AppDB)
             .offset(skip)
-            .limit(limit)
             .order_by(desc(AppDB.published_at))
+            .options(*self.load_attrs)
         )
 
-        if public_only:
-            stmt = stmt.where(AppDB.public, AppDB.archive_path is not None)
+        if limit is not None:
+            stmt = stmt.limit(limit)
 
-        apps = (await self.session.exec(stmt.options(*self.load_attrs))).all()
+        if public_only:
+            stmt = stmt.where(AppDB.public)
+
+        apps = (await self.session.exec(stmt)).all()
 
         return apps
 
@@ -133,7 +142,7 @@ class AppRepository:
         )
 
         if public_only:
-            stmt = stmt.where(AppDB.public, AppDB.archive_path is not None)
+            stmt = stmt.where(*self.public_app_conditions)
 
         publisher_apps = (
             await self.session.exec(stmt.options(*self.load_attrs))
@@ -148,24 +157,20 @@ class AppRepository:
         limit: int,
         only_public: bool = True,
     ) -> list[AppDB]:
-        conditions = [AppDB.category == "game"]
-
-        if genre is not None:
-            conditions.append(AppDB.genre == genre)
-
-        if only_public:
-            conditions.append(AppDB.public)
-            conditions.append(AppDB.archive_path is not None)
-
         stmt = (
             select(AppDB)
-            .where(*conditions)
+            .where(AppDB.category == AppCategory.GAME)
             .order_by(desc(AppDB.published_at))
             .offset(skip)
             .limit(limit)
         )
 
-        games = (await self.session.exec(stmt.options(*self.load_attrs))).all()
+        if only_public:
+            stmt.where(AppDB.public)
+
+        games = (
+            await self.session.exec(stmt.options(*self.load_attrs))
+            ).all()
 
         return games
 
@@ -175,8 +180,7 @@ class AppRepository:
             .where(
                 AppDB.category == "game",
                 AppDB.genre == genre,
-                AppDB.public,
-                AppDB.archive_path is not None
+                AppDB.public
                 ).order_by(
                     desc(AppDB.times_purchased)
                     ).limit(5).options(*self.load_attrs)
@@ -189,8 +193,7 @@ class AppRepository:
             select(AppDB)
             .where(
                 AppDB.category == "game",
-                AppDB.public,
-                AppDB.archive_path is not None
+                AppDB.public
                 )
             .order_by(
                 desc(AppDB.times_purchased)
@@ -198,7 +201,3 @@ class AppRepository:
         )).all()
 
         return games
-
-    async def delete_app(self, app: AppDB) -> None:
-        await self.session.delete(app)
-        await self.session.commit()

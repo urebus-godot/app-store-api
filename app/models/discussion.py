@@ -27,6 +27,7 @@ class DiscussionDB(BaseDiscussion, table=True):
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
     creator_id: UUID = Field(foreign_key="users.id")
+    creator: "UserDB" = Relationship(back_populates="discussions")
     app_id: UUID = Field(foreign_key="apps.id")
 
 
@@ -73,6 +74,7 @@ class MessageRequest(BaseMessage):
 
 class MessageResponse(BaseMessage):
     id: UUID
+    created_at: datetime
     author: "UserBaseResponse"
 
     model_config = ConfigDict(from_attributes=True)

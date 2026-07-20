@@ -19,7 +19,7 @@ from app.dependencies import (
     SendEmailDep,
     RefreshSecretKeyDep,
     rate_limit,
-    SessionDep
+    UnitOfWorkDep
 )
 from app.core import auth
 from app.utils.time import get_refresh_token_expire
@@ -44,10 +44,12 @@ router = APIRouter(
     response_model=CurrentUserResponse
 )
 async def register_user(
-    data: UserRequest, user_service: UserServiceDep
+    data: UserRequest, 
+    user_service: UserServiceDep,
+    uow: UnitOfWorkDep
 ) -> CurrentUserResponse:
     """Creates new user."""
-    return await user_service.register_user(data)
+    return await user_service.register_user(data, uow)
 
 
 @router.post("/users/login")
@@ -114,10 +116,12 @@ async def refresh_tokens(
 
 @router.post("/users/me/publisher")
 async def become_publisher(
-    user: UserDep, user_service: UserServiceDep
+    user: UserDep, 
+    user_service: UserServiceDep,
+    uow: UnitOfWorkDep
 ) -> dict[str, str]:
     """Adds "publisher" role to user roles on success."""
-    return await user_service.become_publisher(user)
+    return await user_service.become_publisher(user, uow)
 
 
 @router.post(
@@ -126,10 +130,10 @@ async def become_publisher(
 async def upload_profile_picture(
     file: UploadFile,
     user: UserDep,
-    session: SessionDep,
+    uow: UnitOfWorkDep,
     user_service: UserServiceDep
 ):
-    result = await user_service.upload_profile_picture(file, user, session)
+    result = await user_service.upload_profile_picture(file, user.id, uow)
     return result
 
 
@@ -137,10 +141,11 @@ async def upload_profile_picture(
 async def update_current_user(
     data: UserUpdate,
     user: UserDep,
-    user_service: UserServiceDep
+    user_service: UserServiceDep,
+    uow: UnitOfWorkDep
 ) -> CurrentUserResponse:
     """Changes attributes of user to the new ones"""
-    return await user_service.update_user(user=user, data=data)
+    return await user_service.update_user(user=user, data=data, uow=uow)
 
 
 @router.get("/users/me")
@@ -179,7 +184,8 @@ async def get_users(
 async def delete_current_user(
     user: UserDep,
     redis: RedisDep,
-    user_service: UserServiceDep
+    user_service: UserServiceDep,
+    uow: UnitOfWorkDep
 ) -> None:
     """Deletes user."""
-    await user_service.delete_user(user, redis)
+    await user_service.delete_user(user, redis, uow)

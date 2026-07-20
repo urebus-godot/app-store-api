@@ -7,6 +7,7 @@ from sqlmodel import select, desc
 from sqlalchemy.orm import selectinload
 
 from app.models.user import UserRequest, UserDB, UserUpdate, UserRole
+from app.models.file import UserProfilePicture
 from app.core.security import get_password_hash
 from app.core.logging import logger
 
@@ -47,13 +48,26 @@ class UserRepository:
         user.hashed_password = get_password_hash(data.password)
 
         self.session.add(user)
-        await self.session.commit()
 
         return user
 
+    async def get_profile_picture(
+        self, user_id: UUID
+    ) -> Optional[UserProfilePicture]:
+        stmt = (select(UserProfilePicture)
+        .where(UserProfilePicture.user_id == user_id))
+
+        user_profile_picture = (await self.session.exec(stmt)).one_or_none()
+        return user_profile_picture
+
+    async def remove_profile_picture(
+        self, profile_picture: UserProfilePicture
+    ) -> None:
+        await self.session.delete(profile_picture)
+
     async def become_publisher(self, user: UserDB) -> dict[str, str]:
         user.roles = user.roles + [UserRole.PUBLISHER]
-        await self.session.commit()
+        self.session.add(user)
         return {"message": "You have become a publisher"}
 
     async def update_user(self, data: UserUpdate, user: UserDB) -> UserDB:
@@ -62,8 +76,6 @@ class UserRepository:
 
         if "password" in data:
             user.hashed_password = get_password_hash(data["password"])
-
-        await self.session.commit()
 
         return user
 
@@ -102,4 +114,3 @@ class UserRepository:
 
     async def delete_user(self, user: UserDB) -> None:
         await self.session.delete(user)
-        await self.session.commit()

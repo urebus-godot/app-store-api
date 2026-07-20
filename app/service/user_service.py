@@ -1,17 +1,21 @@
 from typing import Optional, Union
-from uuid import UUID, uuid4
+from uuid import UUID
+from pathlib import Path
 import os
 
 from fastapi import BackgroundTasks, Request, UploadFile
-from sqlmodel.ext.asyncio.session import AsyncSession
 from pydantic import EmailStr
 from jwt.exceptions import DecodeError
 import jwt
 
 from app.db.redis import Redis
+
 from app.models.user import UserRequest, UserDB, UserUpdate, UserRole
 from app.models.token import LoginResponse
+from app.models.file import UserProfilePicture
+
 from app.repo.user_repo import UserRepository
+
 from app.core.tasks import send_email
 from app.core.exceptions import (
     user_not_found_exception,
@@ -21,12 +25,18 @@ from app.core.exceptions import (
     incorrect_creds_exception,
     user_data_used_exception,
     invalid_refresh_token_exception,
-    invalid_file_exception
+    invalid_file_exception,
+    file_too_large_exception,
+    no_profile_pic_exception
 )
 from app.core.security import verify_password, get_password_hash
 from app.core.auth import create_token_pair
 from app.core.logging import logger
 from app.core.config import settings
+
+from app.uow.unit_of_work import UnitOfWork
+
+from app.utils.files import write_file, to_megabytes
 
 
 class UserService:
@@ -40,26 +50,27 @@ class UserService:
         return await self.user_repo.email_registered(email)
 
     async def register_user(
-        self, data: UserRequest
+        self, data: UserRequest, uow: UnitOfWork
     ) -> UserDB:
-        logger.info("Enter register_user func")
-        username_used = await self.username_registered(data.username)
-        logger.info(f"Username is being used: {username_used}")
-        if username_used:
-            raise username_used_exception
+        async with uow:
+            logger.info("Enter register_user func")
+            username_used = await self.username_registered(data.username)
+            logger.info(f"Username is being used: {username_used}")
+            if username_used:
+                raise username_used_exception
 
-        if data.email is not None:
-            email_used = await self.user_repo.email_registered(data.email)
-            logger.info(f"Email is being used: {email_used}")
-            if email_used:
-                raise email_used_exception
+            if data.email is not None:
+                email_used = await self.email_registered(data.email)
+                logger.info(f"Email is being used: {email_used}")
+                if email_used:
+                    raise email_used_exception
 
-        logger.info("Start registering user in the database")
-        user = await self.user_repo.register_user(data)
+            logger.info("Start registering user in the database")
+            user = await uow.user_repo.register_user(data)
 
-        logger.info("Registered user")
+            logger.info("Registered user")
 
-        return user
+            return user
 
     async def authenticate_user(
         self,
@@ -132,50 +143,83 @@ class UserService:
             raise invalid_refresh_token_exception
 
     async def become_publisher(
-        self, user: UserDB
+        self, user: UserDB, uow: UnitOfWork
     ) -> dict[str, str]:
-        if UserRole.PUBLISHER in user.roles:
-            raise already_has_role_exception
+        async with uow:
+            if UserRole.PUBLISHER in user.roles:
+                raise already_has_role_exception
 
-        result = await self.user_repo.become_publisher(user)
+            user = await uow.user_repo.get_user_by_id(user.id)
+            result = await uow.user_repo.become_publisher(user)
 
-        return result
+            return result
 
     async def upload_profile_picture(
-        self, file: UploadFile, user: UserDB, session: AsyncSession
-    ):
-        extension = os.path.splitext(file.filename)[1]
+        self, 
+        file: UploadFile, 
+        user_id: UUID,
+        uow: UnitOfWork
+    ) -> UserProfilePicture:
+        async with uow:
+            extension = os.path.splitext(file.filename)[1]
 
-        if extension not in settings.IMAGE_EXTENSIONS:
-            raise invalid_file_exception
+            if extension not in settings.IMAGE_EXTENSIONS:
+                raise invalid_file_exception
 
-        path = f"{settings.STATIC_BASE_PATH}/profile_pictures"
-        filename = f"{user.id}{extension}"
-        file_path = f"{path}/{filename}"
+            file_size_mb = to_megabytes(file.size)
+            if file_size_mb > settings.MAX_IMAGE_SIZE_MB:
+                raise file_too_large_exception
 
-        with open(file_path, "wb") as buffer:
-            while chunk := file.file.read(1024 * 1024):
-                buffer.write(chunk)
+            filename = f"{user_id}{extension}"
 
-        user.profile_picture_path = file_path
-        await session.commit()
+            write_file(file, filename, settings.PROFILE_PICTURE_PATH)
+            profile_picture = await uow.user_repo.get_profile_picture(user_id)
+
+            if profile_picture is None:
+                profile_picture = UserProfilePicture(
+                    user_id=user_id
+                )
+                uow.session.add(profile_picture)
+
+            return profile_picture
+
+    async def remove_profile_picture(
+        self, 
+        user_id: UUID, 
+        uow: UnitOfWork
+    ) -> None:
+        async with uow:
+            profile_picture = await uow.user_repo.get_profile_picture(
+                user_id
+                )
+
+            if profile_picture is None:
+                raise no_profile_pic_exception
+
+            await uow.user_repo.remove_profile_picture(profile_picture)
+
+            profile_picture_path = (
+                settings.PROFILE_PICTURE_PATH / Path(profile_picture.user_id)
+                )
+            os.remove(profile_picture_path)
 
     async def update_user(
-        self, user: UserDB, data: UserUpdate
+        self, user: UserDB, data: UserUpdate, uow: UnitOfWork
     ):
-        if user.username == data.username or user.email == data.email:
-            raise user_data_used_exception
+        async with uow:
+            if user.username == data.username or user.email == data.email:
+                raise user_data_used_exception
 
-        if await self.username_registered(data.username):
-            raise username_used_exception
+            if await self.username_registered(data.username):
+                raise username_used_exception
 
-        if data.email is not None:
-            if await self.email_registered(data.email):
-                raise email_used_exception
+            if data.email is not None:
+                if await self.email_registered(data.email):
+                    raise email_used_exception
 
-        user = await self.user_repo.update_user(data, user)
+            user = await uow.user_repo.update_user(data, user)
 
-        return user
+            return user
 
     async def get_user_by_username(
         self, username: str
@@ -202,7 +246,9 @@ class UserService:
         return users
 
     async def delete_user(
-        self, user: UserDB, redis: Redis
+        self, user: UserDB, redis: Redis, uow: UnitOfWork
     ) -> None:
-        await redis.delete(f"user_tokens:{user.id}")
-        await self.user_repo.delete_user(user)
+        async with uow:
+            await self.remove_profile_picture(user.id, uow)
+            await redis.delete(f"user_tokens:{user.id}")
+            await uow.user_repo.delete_user(user)

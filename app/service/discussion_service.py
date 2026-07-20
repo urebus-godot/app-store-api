@@ -14,6 +14,8 @@ from app.models.discussion import (
     MessageDB,
     MessageRequest,
 )
+from app.models.user import UserDB
+from app.uow.unit_of_work import UnitOfWork
 
 
 class DiscussionService:
@@ -28,14 +30,17 @@ class DiscussionService:
         data: DiscussionRequest,
         user_id: UUID,
         app_id: UUID,
+        uow: UnitOfWork
     ) -> DiscussionDB:
-        app = await self.app_service.get_app(app_id)
-        logger.info(app)
-        discussion = await self.discussion_repo.create_discussion(
-            data, user_id, app_id
-        )
-        
-        return discussion
+        async with uow:
+            user = await uow.user_repo.get_user_by_id(user_id)
+            app = await self.app_service.get_app(app_id)
+            logger.info(app)
+            discussion = await uow.discussion_repo.create_discussion(
+                data, user, app_id
+            )
+            
+            return discussion
 
     async def get_discussion(self, id: UUID) -> DiscussionDB:
         discussion = await self.discussion_repo.get_discussion(id)
@@ -52,42 +57,46 @@ class DiscussionService:
         return discussions
 
     async def delete_discussion(
-        self, id: UUID, user_id: UUID
+        self, id: UUID, user_id: UUID, uow: UnitOfWork
     ) -> None:
-        discussion = await self.discussion_repo.get_discussion(id)
+        async with uow:
+            discussion = await uow.discussion_repo.get_discussion(id)
 
-        if discussion is None:
-            raise discussion_not_found_exception
-        if discussion.creator_id != user_id:
-            raise no_rights_exception
+            if discussion is None:
+                raise discussion_not_found_exception
+            if discussion.creator_id != user_id:
+                raise no_rights_exception
 
-        await self.discussion_repo.delete_discussion(discussion)
-           
+            await uow.discussion_repo.delete_discussion(discussion)
 
     async def create_message(
         self,
         data: MessageRequest,
         author_id: UUID,
         discussion_id: UUID,
+        uow: UnitOfWork
     ) -> MessageDB:
-        await self.get_discussion(discussion_id)
-        message = await self.discussion_repo.create_message(
-            data, author_id, discussion_id
-        )
-        
-        message = await self.discussion_repo.get_message(message.id)
-        return message
+        async with uow:
+            author = await uow.user_repo.get_user_by_id(author_id)
+            await self.get_discussion(discussion_id)
+            message = await uow.discussion_repo.create_message(
+                data, author, discussion_id
+            )
+            
+            #message = await uow.discussion_repo.get_message(message.id)
+            return message
 
     async def delete_message(
-        self, id: UUID, user_id: UUID
+        self, id: UUID, user_id: UUID, uow: UnitOfWork
     ) -> None:
-        message = await self.discussion_repo.get_message(id)
+        async with uow:
+            message = await uow.discussion_repo.get_message(id)
 
-        if message is None:
-            raise message_not_found_exception
+            if message is None:
+                raise message_not_found_exception
 
-        if message.author_id != user_id:
-            raise no_rights_exception
+            if message.author_id != user_id:
+                raise no_rights_exception
 
-        await self.discussion_repo.delete_message(message)
-        
+            await uow.discussion_repo.delete_message(message)
+            

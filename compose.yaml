@@ -4,8 +4,7 @@ services:
     ports:
       - "5432:5432"
     environment:
-      - DATABASE_URL=${DB_URL}
-      - DATABASE_USER=postgres
+      - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=db
     container_name: db
@@ -38,13 +37,55 @@ services:
     environment:
       - REDIS_HOSTS=local:redis:6379
 
+  celery_worker:
+    build:
+      context: .
+    container_name: worker
+    networks:
+      - app_network
+    volumes:
+      - type: bind
+        source: app/core
+        target: /src/app/core
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    command: celery -A app.core.celery_app worker --loglevel=info
+
+  celery_beat:
+    build:
+      context: .
+    container_name: beat
+    networks:
+      - app_network
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    command: celery -A app.core.celery_app beat --loglevel=info
+
+  celery_flower:
+    image: mher/flower:2.0
+    container_name: flower
+    networks:
+      - app_network
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    command: ['flower', '--broker=redis://redis:6379', '--port=5555']
+
   web:
     container_name: web
     build:
       context: .
     expose:
       - "8000"
-    networks: 
+    networks:
       - app_network
     volumes:
       #- ./project:/app
@@ -61,6 +102,7 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    command: python -m app.main
 
   nginx:
     container_name: nginx
@@ -74,7 +116,6 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     restart: unless-stopped
-    
 
 networks:
   app_network:

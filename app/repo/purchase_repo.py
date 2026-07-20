@@ -20,17 +20,9 @@ class PurchaseRepository:
     async def create_cart(self, user_id: UUID) -> CartDB:
         logger.info("Start creating cart")
         cart = CartDB(user_id=user_id)
+        cart.items = []
 
         self.session.add(cart)
-        await self.session.commit()
-
-        cart = (
-            await self.session.exec(
-                select(CartDB)
-                .where(CartDB.user_id == user_id)
-                .options(*self.load_attrs)
-            )
-        ).one()
 
         return cart
 
@@ -95,7 +87,6 @@ class PurchaseRepository:
         cart_item = CartItem(cart_id=cart.id, app_id=app_id)
 
         self.session.add(cart_item)
-        await self.session.commit()
 
         return cart_item
 
@@ -106,14 +97,10 @@ class PurchaseRepository:
         self.session.add(purchase)
 
     async def remove_item_from_cart(
-        self, item: CartItem, commit: bool = True
+        self, item: CartItem
     ) -> None:
         await self.session.delete(item)
-        if commit:
-            await self.session.commit()
 
     async def delete_cart(self, cart: CartDB) -> None:
         await self.session.delete(cart)
-        await self.session.commit()
-
 

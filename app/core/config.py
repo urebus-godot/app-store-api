@@ -1,6 +1,8 @@
-import logging
 from typing import Optional
 from datetime import timedelta
+from pathlib import Path
+import logging
+from os import environ
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from dotenv import load_dotenv
@@ -24,9 +26,12 @@ class Settings(BaseSettings):
     API_PORT: int = 8000
 
     DB_URL: Optional[str] = None
-    TEST_DB_URL: str
+    TEST_DB_URL: str = environ.get("TEST_DB_URL")
 
     REDIS_URL: str
+
+    BROKER_URL: str = environ.get("BROKER_URL")
+    RESULT_BACKEND_URL: str = environ.get("RESULT_BACKEND_URL")
 
     WINDOW_SECONDS: int = 30
     REQUEST_LIMIT: int = 120
@@ -62,12 +67,17 @@ class Settings(BaseSettings):
     LOGGING_LEVEL: int = logging.INFO
     LOG_FILE_PATH: Optional[str] = None
 
-    FILE_BASE_PATH: str = "media"
-    STATIC_BASE_PATH: str = f"{FILE_BASE_PATH}/static"
-    ARCHIVE_PATH: str = f"{FILE_BASE_PATH}/app_archives"
+    FILE_BASE_PATH: Path = Path("media")
+    STATIC_BASE_PATH: Path = FILE_BASE_PATH / Path("static")
+    APP_ARCHIVE_PATH: Path = FILE_BASE_PATH / Path("app_archives")
+    APP_COVER_PATH: Path = STATIC_BASE_PATH / Path("applications/covers")
+    PROFILE_PICTURE_PATH: Path = STATIC_BASE_PATH / Path("profile_pictures")
 
-    ARCHIVE_EXTENSIONS: tuple[str, str, str] = (".rar", ".zip", ".PNG")
-    IMAGE_EXTENSIONS: tuple[str, str, str] = (".PNG", ".jpg", ".svg")
+    ARCHIVE_EXTENSIONS: list[str] = [".rar", ".zip", ".7z"]
+    IMAGE_EXTENSIONS: list[str] = [".PNG", ".jpg", ".jpeg", ".webp"]
+
+    MAX_APP_ARCHIVE_SIZE_MB: int = 1024
+    MAX_IMAGE_SIZE_MB: int = 1
 
     MAIL_USERNAME: str = "satalovserge"
     MAIL_PASSWORD: str

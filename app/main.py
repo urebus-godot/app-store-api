@@ -1,13 +1,13 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, HTTPException, status, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.core.logging import setup_logging
 from app.core.config import settings
-from app.dependencies import RedisDep, SessionDep
+from app.dependencies import RedisDep, SessionDep, rate_limit
 from app.api.v1 import (
     app_router,
     purchase_router,
@@ -32,7 +32,8 @@ app = FastAPI(
     summary=settings.API_DESC,
     debug=settings.DEBUG,
     version=settings.API_VERSION,
-    lifespan=lifespan
+    lifespan=lifespan,
+    dependencies=[Depends(rate_limit)]
 )
 
 app.include_router(
@@ -71,20 +72,14 @@ async def health_check(
     redis: RedisDep,
     session: SessionDep
 ) -> dict[str, str]:
-    try:
         redis_response = await redis.ping()
-        db_response = await session.exec("SELECT 1")
-        if not redis_response:
+        db_response = await session.exec(text("SELECT 1"))
+        if not redis_response or not db_response:
             raise HTTPException(
                 status.HTTP_503_SERVICE_UNAVAILABLE,
-                "Connection to redis failed"
+                "Connection to redis or database failed"
             )
         return {"status": "Healthy"}
-    except Exception:
-        raise HTTPException(
-            status.HTTP_503_SERVICE_UNAVAILABLE,
-            "Connection to database failed"
-        )
 
 
 if __name__ == "__main__":

@@ -4,15 +4,8 @@ services:
     ports:
       - "5432:5432"
     environment:
-      - DATABASE_URL=${TEST_DB_URL}
-      - DATABASE_USER=postgres
+      - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=test_db
     container_name: db
     restart: unless-stopped
-    networks:
-      - test_app_network
-
-networks:
-  test_app_network:
-    driver: bridge

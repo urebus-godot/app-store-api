@@ -14,6 +14,7 @@ from app.models.review import ReviewDB
 from app.models.discussion import DiscussionDB, MessageDB
 from app.models.purchase import CartDB, PurchaseDB, CartItem
 from app.models.finance import TransferDB
+from app.models.file import AppArchive, AppCover, UserProfilePicture
 
 
 # this is the Alembic Config object, which provides

@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Annotated, Optional
-from collections.abc import Generator
+from collections.abc import AsyncGenerator
 from uuid import UUID
 
 from redis.asyncio import Redis
@@ -8,7 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from fastapi import Depends, Query, Request, Response
 from fastapi.security import OAuth2PasswordBearer
 
-from app.db.postgres import get_session
+from app.db.postgres import get_session, session_factory
 from app.db.redis import get_redis
 from app.core.exceptions import (
     no_rights_exception,
@@ -47,7 +47,7 @@ oauth_scheme_2 = OAuth2PasswordBearer(
 
 def skip_limit_params(
     skip: Annotated[int, Query(ge=0)] = 0,
-    limit: Annotated[int, Query(ge=0, le=1000)] = 10,
+    limit: Annotated[int, Query(gt=0, le=100)] = 10,
 ) -> tuple[int, int]:
     return skip, limit
 
@@ -233,9 +233,8 @@ def get_discussion_service(
     return DiscussionService(discussion_repo, app_service)
 
 
-def get_unit_of_work() -> Generator[UnitOfWork, None, None]:
-    with UnitOfWork() as uow:
-        yield uow
+async def get_unit_of_work() -> UnitOfWork:
+    return UnitOfWork(session_factory)
 
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]

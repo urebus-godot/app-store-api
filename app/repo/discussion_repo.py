@@ -11,6 +11,7 @@ from app.models.discussion import (
     MessageRequest,
     MessageDB,
 )
+from app.models.user import UserDB
 
 
 class DiscussionRepository:
@@ -25,14 +26,13 @@ class DiscussionRepository:
         )
 
     async def create_discussion(
-        self, data: DiscussionRequest, user_id: UUID, app_id: UUID
+        self, data: DiscussionRequest, user: UserDB, app_id: UUID
     ) -> DiscussionDB:
         discussion = DiscussionDB(**data.model_dump())
-        discussion.creator_id = user_id
+        discussion.creator = user
         discussion.app_id = app_id
 
         self.session.add(discussion)
-        await self.session.commit()
 
         return discussion
 
@@ -75,17 +75,15 @@ class DiscussionRepository:
 
     async def delete_discussion(self, discussion: DiscussionDB) -> None:
         await self.session.delete(discussion)
-        await self.session.commit()
 
     async def create_message(
-        self, data: MessageRequest, author_id: UUID, discussion_id: UUID
+        self, data: MessageRequest, author: UserDB, discussion_id: UUID
     ) -> MessageDB:
         message = MessageDB(**data.model_dump())
-        message.author_id = author_id
+        message.author = author
         message.discussion_id = discussion_id
 
         self.session.add(message)
-        await self.session.commit()
 
         return message
 
@@ -102,4 +100,3 @@ class DiscussionRepository:
 
     async def delete_message(self, message: MessageDB) -> None:
         await self.session.delete(message)
-        await self.session.commit()

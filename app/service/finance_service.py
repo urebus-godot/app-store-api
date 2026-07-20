@@ -17,24 +17,28 @@ class FinanceService:
         self.finance_repo = finance_repo
 
     async def create_transfer_to_balance(
-        self, data: TransferRequest, user: UserDB
+        self, data: TransferRequest, user_id: UUID, uow: UnitOfWork
     ) -> dict[str, Decimal]:
         """Increase user's balance and create row in the db for transfer."""
-        result = await self.finance_repo.create_transfer_to_balance(
-            data, user
-            )
-        return result
+        async with uow:
+            user = await uow.user_repo.get_user_by_id(user_id)
+            result = await uow.finance_repo.create_transfer_to_balance(
+                data, user
+                )
+            return result
 
     async def create_transfer_to_card(
-        self, data: TransferRequest, user: UserDB, uow: UnitOfWork
+        self, data: TransferRequest, user_id: UUID, uow: UnitOfWork
     ) -> dict[str, Decimal]:
-        if user.balance < data.amount:
-            raise insufficient_funds_exception
-        
-        result = await uow.finance_repo.create_transfer_to_card(
-            data, user
-            )
-        return result
+        async with uow:
+            user = await uow.user_repo.get_user_by_id(user_id)
+            if user.balance < data.amount:
+                raise insufficient_funds_exception
+            
+            result = await uow.finance_repo.create_transfer_to_card(
+                data, user
+                )
+            return result
 
     async def get_transfers(
         self, user_id: UUID
@@ -45,6 +49,8 @@ class FinanceService:
     async def convert_rubles(
         self, amount: float, to_currency: CurrencyType
     ) -> Decimal | JSONResponse:
+        """Makes call to external API to convert 
+        funds from rubles to specified currency"""
         async with AsyncClient(base_url="https://api.frankfurter.dev/v2") as ac:
             api_response = await ac.get(
                 "/rates",

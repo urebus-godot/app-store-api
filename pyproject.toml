@@ -27,6 +27,8 @@ dependencies = [
     "pydantic>=2.13.4",
     "pytest-cov>=7.1.0",
     "testcontainers>=4.14.2",
+    "pillow>=12.3.0",
+    "flower>=2.0.1",
 ]
 
 [tool.uv.workspace]

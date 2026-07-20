@@ -69,7 +69,8 @@ class CartDB(SQLModel, table=True):
     )
     user: "UserDB" = Relationship(back_populates="cart")
     items: list["CartItem"] = Relationship(
-        back_populates="cart", cascade_delete=True
+        back_populates="cart",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
 
 

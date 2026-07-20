@@ -19,13 +19,13 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 FROM python:3.13-slim AS runner
 WORKDIR /src
 
-RUN useradd -u 10001 -m appuser
+#RUN useradd -u 10001 -m appuser
 COPY --from=builder /src/.venv /src/.venv
 COPY . .
 
 ENV PATH="/src/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1
-USER appuser
+#USER appuser
 
 EXPOSE 8000
 CMD ["python", "-m", "app.main"]
