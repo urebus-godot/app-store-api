@@ -8,14 +8,17 @@ from app.core.exceptions import (
 from app.core.logging import logger
 from app.repo.discussion_repo import DiscussionRepository
 from app.service.app_service import AppService
+
 from app.models.discussion import (
-    DiscussionRequest,
     DiscussionDB,
-    MessageDB,
-    MessageRequest,
+    MessageDB
 )
-from app.models.user import UserDB
-from app.uow.unit_of_work import UnitOfWork
+from app.schemas.discussion import (
+    DiscussionRequest,
+    MessageRequest
+)
+
+from app.uow.orm import UnitOfWork
 
 
 class DiscussionService:

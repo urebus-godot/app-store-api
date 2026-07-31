@@ -11,7 +11,7 @@ from fastapi import (
 )
 from fastapi.security import OAuth2PasswordRequestForm
 
-from app.dependencies import (
+from app.api.dependencies import (
     UserDep,
     UserIdDep,
     SkipLimitParams,
@@ -19,19 +19,22 @@ from app.dependencies import (
     SendEmailDep,
     RefreshSecretKeyDep,
     rate_limit,
-    UnitOfWorkDep
+    UnitOfWorkDep,
+    RedisDep
 )
+from app.core.logging import logger
 from app.core import auth
 from app.utils.time import get_refresh_token_expire
-from app.models.user import (
+
+from app.schemas.user import (
     UserRequest,
     UserResponse,
     UserUpdate,
     CurrentUserResponse
 )
-from app.models.token import TokenResponse, LoginResponse
-from app.core.logging import logger
-from app.dependencies import RedisDep
+from app.models.file import UserProfilePicture
+from app.schemas.token import TokenResponse, LoginResponse
+
 
 router = APIRouter(
     dependencies=[Depends(rate_limit)]
@@ -63,7 +66,6 @@ async def login(
     sends_email: SendEmailDep
 ) -> LoginResponse:
     """Returns refresh and access tokens to the user on success."""
-
     login_response = await user_service.login(
         form_data.username,
         form_data.password,
@@ -86,7 +88,6 @@ async def login(
 
 @router.post("/users/logout")
 async def logout(
-    # refresh_token: str,
     request: Request,
     user_id: UserIdDep,
     secret_key: RefreshSecretKeyDep,
@@ -125,16 +126,33 @@ async def become_publisher(
 
 
 @router.post(
-    "/users/me/profile_picture"
+    "/users/me/profile_picture",
+    status_code=status.HTTP_201_CREATED
     )
 async def upload_profile_picture(
+    request: Request,
     file: UploadFile,
     user: UserDep,
     uow: UnitOfWorkDep,
     user_service: UserServiceDep
-):
-    result = await user_service.upload_profile_picture(file, user.id, uow)
+) -> UserProfilePicture:
+    request.headers
+    result = await user_service.upload_profile_picture(
+        request, file, user.id, uow
+        )
     return result
+
+
+@router.delete(
+    "/users/me/profile_picture",
+    status_code=status.HTTP_204_NO_CONTENT
+    )
+async def remove_profile_picture(
+    user_id: UserIdDep,
+    user_service: UserServiceDep,
+    uow: UnitOfWorkDep
+) -> None:
+    await user_service.remove_profile_picture_by_user(user_id, uow)
 
 
 @router.patch("/users/me")
@@ -182,10 +200,10 @@ async def get_users(
     status_code=status.HTTP_204_NO_CONTENT,
     )
 async def delete_current_user(
-    user: UserDep,
+    user_id: UserIdDep,
     redis: RedisDep,
     user_service: UserServiceDep,
     uow: UnitOfWorkDep
 ) -> None:
     """Deletes user."""
-    await user_service.delete_user(user, redis, uow)
+    await user_service.delete_user(user_id, redis, uow)

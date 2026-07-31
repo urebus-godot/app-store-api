@@ -35,7 +35,8 @@ async def test_discussion(
 
     db_session.add(discussion)
     db_session.add_all(test_messages)
-    await db_session.commit()
+    await db_session.flush()
+    await db_session.refresh(discussion)
 
     return discussion
 
@@ -50,7 +51,8 @@ async def test_discussion_2(
         app_id=test_app.id,
     )
     db_session.add(discussion)
-    await db_session.commit()
+    await db_session.flush()
+    await db_session.refresh(discussion)
 
     return discussion
 
@@ -65,7 +67,8 @@ async def test_message(
         discussion_id=test_discussion.id,
     )
     db_session.add(message)
-    await db_session.commit()
+    await db_session.flush()
+    await db_session.refresh(message)
 
     return message
 

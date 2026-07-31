@@ -2,23 +2,23 @@ from uuid import UUID
 
 from fastapi import APIRouter, status, BackgroundTasks, Depends
 
-from app.core.tasks import send_email
 from app.core.config import settings
-from app.dependencies import (
+from app.api.dependencies import (
     PurchaseServiceDep,
     UserIdDep,
     UserDep,
     SkipLimitParams,
     UnitOfWorkDep,
     SendEmailDep,
-    rate_limit
+    rate_limit,
+    RedisDep
 )
-from app.models.purchase import (
+from app.schemas.purchase import (
     CartResponse,
     CartItemResponse,
     PurchaseResponse,
 )
-from app.models.app import AppResponse
+from app.schemas.app import AppResponse
 
 router = APIRouter(
     dependencies=[Depends(rate_limit)]
@@ -46,14 +46,13 @@ async def purchase_apps_in_cart(
     uow: UnitOfWorkDep,
     sends_email: SendEmailDep
 ) -> list[AppResponse]:
-    if user.email is not None and sends_email:
-        bg_tasks.add_task(
-            send_email,
-            [str(user.email)],
-            "Purchase receipt",
-            settings.RECEIPT_TEMPLATE,
+    if sends_email:
+        return await purchase_service.purchase_apps_in_cart(
+            user_id=user.id, user_email=user.email, bg_tasks=bg_tasks, uow=uow
+            )
+    return await purchase_service.purchase_apps_in_cart(
+        user_id=user.id, user_email=None, bg_tasks=bg_tasks, uow=uow
         )
-    return await purchase_service.purchase_apps_in_cart(user.id, uow)
 
 
 @router.post("/carts/me")
@@ -62,12 +61,8 @@ async def get_cart(
     purchase_service: PurchaseServiceDep,
     uow: UnitOfWorkDep
 ) -> CartResponse:
-    cart = await purchase_service.get_or_create_cart(user_id, uow)
-    total_price = sum([item.app.price for item in cart.items])
-    cart_response = CartResponse(
-        id=cart.id, items=cart.items, total_price=total_price
-    )
-    return cart_response
+    cart = await purchase_service.get_cart_for_user(user_id, uow)
+    return cart
 
 
 @router.get("/purchases/history")
@@ -96,7 +91,7 @@ async def remove_app_from_cart(
 
 
 @router.delete(
-    "carts/{user_id}", 
+    "/carts/me", 
     status_code=status.HTTP_204_NO_CONTENT
     )
 async def clear_cart(
@@ -104,4 +99,4 @@ async def clear_cart(
     purchase_service: PurchaseServiceDep,
     uow: UnitOfWorkDep
 ) -> None:
-    await purchase_service.delete_cart(user_id, uow)
+    await purchase_service.delete_cart_by_user(user_id, uow)

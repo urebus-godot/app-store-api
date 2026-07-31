@@ -1,29 +1,10 @@
 from uuid import UUID, uuid4
-from decimal import Decimal
-from datetime import datetime
-from enum import StrEnum
+from datetime import datetime, timezone
 
-from sqlmodel import SQLModel, Field
+from sqlmodel import Field, Relationship
+from sqlalchemy.dialects.postgresql import TIMESTAMP
 
-
-class OperationType(StrEnum):
-    BALANCE_TOP_UP: str = "balance top-up"
-    WITHDRAWAL_TO_CARD: str = "withdrawal to card"
-
-
-class CurrencyType(StrEnum):
-    RUB: str = "RUB"
-    EUR: str = "EUR"
-    USD: str = "USD"
-    GBP: str = "GBP"
-
-
-class BaseTransfer(SQLModel):
-    amount: Decimal = Field(gt=0)
-
-
-class TransferRequest(BaseTransfer):
-    pass
+from app.base_models.finance import BaseTransfer, OperationType
 
 
 class TransferDB(BaseTransfer, table=True):
@@ -32,13 +13,12 @@ class TransferDB(BaseTransfer, table=True):
     id: UUID = Field(
         primary_key=True, default_factory=uuid4
         )
-    user_id: UUID = Field(foreign_key="users.id")
+    user_id: UUID = Field(foreign_key="users.id", ondelete="CASCADE")
+    user: "UserDB" = Relationship(
+        back_populates="transfers"
+    )
     made_at: datetime = Field(
-        default_factory=lambda: datetime.now()
+        sa_type=TIMESTAMP(timezone=True),
+        default_factory=lambda: datetime.now(timezone.utc)
         )
-    operation_type: OperationType
-
-
-class TransferResponse(BaseTransfer):
-    made_at: datetime
     operation_type: OperationType

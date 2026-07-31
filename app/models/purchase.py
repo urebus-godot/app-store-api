@@ -1,33 +1,24 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 from decimal import Decimal
 
 from sqlmodel import SQLModel, Field, Relationship
-from pydantic import ConfigDict
+from sqlalchemy.dialects.postgresql import TIMESTAMP
 
 
 class PurchaseDB(SQLModel, table=True):
     __tablename__ = "purchases"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    purchased_at: datetime = Field(default_factory=lambda: datetime.now())
+    purchased_at: datetime = Field(
+        sa_type=TIMESTAMP(timezone=True),
+        default_factory=lambda: datetime.now(timezone.utc)
+        )
 
     user_id: UUID = Field(foreign_key="users.id", primary_key=True)
-    # user: "UserDB" = Relationship(back_populates="purchased_apps")
-
     app_id: UUID = Field(foreign_key="apps.id", primary_key=True)
-    # app: "AppDB" = Relationship(back_populates="purchases")
 
     price: Decimal
-
-
-class PurchaseResponse(SQLModel):
-    id: UUID
-    app_id: UUID
-    purchased_at: datetime
-    price: Decimal
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class CartItem(SQLModel, table=True):
@@ -36,7 +27,8 @@ class CartItem(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
     added_at: datetime = Field(
-        default_factory=lambda: datetime.now()
+        sa_type=TIMESTAMP(timezone=True),
+        default_factory=lambda: datetime.now(timezone.utc)
         )
 
     cart_id: UUID = Field(foreign_key="carts.id", ondelete="CASCADE")
@@ -44,20 +36,6 @@ class CartItem(SQLModel, table=True):
 
     cart: "CartDB" = Relationship(back_populates="items")
     app: "AppDB" = Relationship()
-
-
-class CartItemResponse(SQLModel):
-    id: UUID
-    app_id: UUID
-    # app: "AppResponse"
-    added_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-# class BaseCart(SQLModel):
-#   id: UUID
-#  items: list["CartItem"]
 
 
 class CartDB(SQLModel, table=True):
@@ -72,11 +50,7 @@ class CartDB(SQLModel, table=True):
         back_populates="cart",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
-
-
-class CartResponse(SQLModel):
-    id: UUID
-    items: list["CartItemResponse"] = []
-    total_price: Decimal = Field(default=0.0, ge=0.0)
-
-    model_config = ConfigDict(from_attributes=True)
+    created_at: datetime = Field(
+        sa_type=TIMESTAMP(timezone=True),
+        default_factory=lambda: datetime.now(timezone.utc)
+        )

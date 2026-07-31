@@ -2,10 +2,10 @@ from uuid import UUID
 
 from fastapi import APIRouter, status, Depends
 
-from app.dependencies import (
+from app.api.dependencies import (
     UserIdDep, ReviewServiceDep, rate_limit, UnitOfWorkDep
     )
-from app.models.review import ReviewRequest, ReviewResponse
+from app.schemas.review import ReviewRequest, ReviewResponse
 
 router = APIRouter(
     dependencies=[Depends(rate_limit)]
@@ -20,7 +20,7 @@ async def create_review(
     review_service: ReviewServiceDep,
     uow: UnitOfWorkDep
 ) -> ReviewResponse:
-    return await review_service.create_review(app_id, data, user_id, uow)
+    return await review_service.create_review(data, app_id, user_id, uow)
 
 
 @router.get("/reviews/{app_id}")

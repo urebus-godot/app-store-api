@@ -1,10 +1,12 @@
 from decimal import Decimal
 from uuid import UUID
+from datetime import datetime, timezone
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, desc
 
-from app.models.finance import TransferRequest, TransferDB, OperationType
+from app.models.finance import TransferDB
+from app.schemas.finance import TransferRequest, OperationType
 from app.models.user import UserDB
 
 
@@ -47,11 +49,16 @@ class FinanceRepository:
         return {"new_balance": user.balance}
 
     async def get_transfers(
-        self, user_id: UUID
+        self, 
+        user_id: UUID,
+        skip: int, limit: int
     ) -> list[TransferDB]:
-        statement = (select(TransferDB)
-        .where(TransferDB.user_id == user_id)
-        .order_by(desc(TransferDB.made_at)))
+        statement = (
+            select(TransferDB)
+            .where(TransferDB.user_id == user_id)
+            .order_by(desc(TransferDB.made_at))
+            .offset(skip).limit(limit)
+            )
 
         transfers = (await self.session.exec(
             statement

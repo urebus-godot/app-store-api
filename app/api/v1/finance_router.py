@@ -3,9 +3,16 @@ from typing import Any
 
 from fastapi import APIRouter, Depends
 
-from app.models.finance import TransferRequest, TransferResponse, CurrencyType
-from app.dependencies import (
-    UserDep, UserIdDep, FinanceServiceDep, rate_limit, UnitOfWorkDep
+from app.schemas.finance import TransferRequest, TransferResponse
+from app.base_models.finance import CurrencyType
+
+from app.api.dependencies import (
+    UserDep, 
+    UserIdDep, 
+    FinanceServiceDep, 
+    rate_limit, 
+    UnitOfWorkDep,
+    SkipLimitParams
     )
 
 router = APIRouter(
@@ -40,16 +47,17 @@ async def withdraw_funds_to_card(
 @router.get("/transfers/history")
 async def get_transfer_history(
     user_id: UserIdDep,
+    skip_limit: SkipLimitParams,
     finance_service: FinanceServiceDep
 ) -> list[TransferResponse]:
-    return await finance_service.get_transfers(user_id)
+    return await finance_service.get_transfers(user_id, *skip_limit)
 
 
 @router.post("/finance/me/balance")
 async def get_balance(
     user: UserDep,
-    currency: CurrencyType,
-    finance_service: FinanceServiceDep
+    finance_service: FinanceServiceDep,
+    currency: CurrencyType = CurrencyType.RUB,
     ) -> dict[str, Any]:
     """Returns current user's balance measured in the specified currency."""
     result = await finance_service.convert_rubles(

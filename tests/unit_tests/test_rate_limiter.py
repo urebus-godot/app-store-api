@@ -12,9 +12,10 @@ class TestRateLimiter:
         fake_redis: FakeRedis,
         logger
     ):
-        logger.info(f"Start Rate Limit Test")
-        requests_count = settings.REQUEST_LIMIT
-        for _ in range(requests_count):
+        logger.info("Start Rate Limit Test")
+        request_count = settings.REQUEST_LIMIT
+
+        for _ in range(request_count):
             response = await rate_limited_client.get(
                 "/api/v1/apps"
             )
@@ -24,8 +25,8 @@ class TestRateLimiter:
         limited_response = await rate_limited_client.get(
             "/api/v1/apps"
         )
-        remaining = limited_response.headers.get("X-RateLimit-Remaining", "0")
-        rate_limit_len = await fake_redis.zcard(f"rate_limit:127.0.0.1")
+        remaining = limited_response.headers.get("X-RateLimit-Remaining")
+        rate_limit_len = await fake_redis.zcard("rate_limit:127.0.0.1")
         assert rate_limit_len == settings.REQUEST_LIMIT
         assert remaining == "0"
         assert limited_response.status_code == 429
@@ -37,16 +38,21 @@ class TestRateLimiter:
         test_user: UserDB,
         logger
     ):
-        requests_count = settings.REQUEST_LIMIT
-        for _ in range(requests_count):
+        request_count = settings.REQUEST_LIMIT
+
+        for _ in range(request_count):
             response = await rate_limited_auth_client.get(
-                "/api/v1/users/me"
+                "/api/v1/users"
             )
+            logger.info(f"\n\n\n{response.json()}\n\n\n")
             assert response.status_code == 200
 
         limited_response = await rate_limited_auth_client.get(
-            "/api/v1/users/me"
+            "/api/v1/users"
         )
-        remaining = limited_response.headers.get("X-RateLimit-Remaining", "0")
+        remaining = limited_response.headers.get("X-RateLimit-Remaining")
+        rate_limit_len = await fake_redis.zcard(f"rate_limit:{test_user.id}")
+
+        assert rate_limit_len == settings.REQUEST_LIMIT
         assert remaining == "0"
         assert limited_response.status_code == 429

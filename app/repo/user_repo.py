@@ -1,3 +1,4 @@
+from datetime import date, datetime
 from typing import Optional
 from uuid import UUID
 
@@ -6,8 +7,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, desc
 from sqlalchemy.orm import selectinload
 
-from app.models.user import UserRequest, UserDB, UserUpdate, UserRole
+from app.models.user import UserDB
+from app.schemas.user import UserRequest, UserUpdate, UserRole
 from app.models.file import UserProfilePicture
+
 from app.core.security import get_password_hash
 from app.core.logging import logger
 
@@ -44,7 +47,9 @@ class UserRepository:
         return user is not None
 
     async def register_user(self, data: UserRequest) -> UserDB:
-        user = UserDB(**data.model_dump())
+        user = UserDB(
+            **data.model_dump()
+            )
         user.hashed_password = get_password_hash(data.password)
 
         self.session.add(user)
@@ -59,11 +64,6 @@ class UserRepository:
 
         user_profile_picture = (await self.session.exec(stmt)).one_or_none()
         return user_profile_picture
-
-    async def remove_profile_picture(
-        self, profile_picture: UserProfilePicture
-    ) -> None:
-        await self.session.delete(profile_picture)
 
     async def become_publisher(self, user: UserDB) -> dict[str, str]:
         user.roles = user.roles + [UserRole.PUBLISHER]
@@ -92,7 +92,9 @@ class UserRepository:
     async def get_user_by_id(self, id: UUID) -> Optional[UserDB]:
         user = (
             await self.session.exec(
-                select(UserDB).where(UserDB.id == id).options(*self.load_attrs)
+                select(UserDB)
+                .where(UserDB.id == id)
+                .options(*self.load_attrs)
             )
         ).one_or_none()
 
@@ -109,6 +111,30 @@ class UserRepository:
             )
         ).all()
         logger.info(f"{users=}")
+
+        return users
+
+    async def get_users_with_birthday(
+        self, 
+        date: date = datetime.now().date(),
+        skip: int = 0, 
+        limit: int = 0
+    ) -> list[UserDB]:
+        stmt = (
+            select(UserDB)
+            .where(
+                UserDB.birth_date.month == date.month,
+                UserDB.birth_date.day == date.day
+                )
+            .offset(skip)
+            .order_by(desc(UserDB.registered_at))
+            .options(*self.load_attrs)
+                )
+
+        if limit > 0:
+            stmt.limit(limit)
+
+        users = (await self.session.exec(stmt)).all()
 
         return users
 

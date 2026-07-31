@@ -47,12 +47,17 @@ services:
       - type: bind
         source: app/core
         target: /src/app/core
-    restart: unless-stopped
+
+      - type: bind
+        source: media
+        target: /src/media
+
+    restart: always
     env_file:
       - .env
     depends_on:
       - redis
-    command: celery -A app.core.celery_app worker --loglevel=info
+    command: celery -A app.bg_tasks.celery_app worker --loglevel=info
 
   celery_beat:
     build:
@@ -63,9 +68,13 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    volumes:
+      - type: bind
+        source: app/core
+        target: /src/app/core
     depends_on:
       - redis
-    command: celery -A app.core.celery_app beat --loglevel=info
+    command: celery -A app.bg_tasks.celery_app beat --loglevel=info
 
   celery_flower:
     image: mher/flower:2.0
@@ -73,11 +82,14 @@ services:
     networks:
       - app_network
     restart: unless-stopped
+    ports:
+      - "5555:5555"
     env_file:
       - .env
     depends_on:
       - redis
-    command: ['flower', '--broker=redis://redis:6379', '--port=5555']
+      - celery_worker
+    command: celery flower ${REDIS_URL} --port=5555
 
   web:
     container_name: web
@@ -88,7 +100,6 @@ services:
     networks:
       - app_network
     volumes:
-      #- ./project:/app
       - type: bind
         source: app
         target: /src/app
@@ -96,6 +107,7 @@ services:
       - type: bind
         source: media
         target: /src/media
+
     depends_on:
       - db
       - redis

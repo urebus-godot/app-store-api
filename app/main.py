@@ -1,13 +1,13 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, status, Depends
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI, HTTPException, status, Depends, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.core.logging import setup_logging
 from app.core.config import settings
-from app.dependencies import RedisDep, SessionDep, rate_limit
+from app.api.dependencies import RedisDep, SessionDep, rate_limit
 from app.api.v1 import (
     app_router,
     purchase_router,
@@ -84,7 +84,7 @@ async def health_check(
 
 if __name__ == "__main__":
     import uvicorn
-    from app.core.middlewares import log_request
+    from app.middleware.log_request import log_request
 
     uvicorn.run(
         "app.main:app",

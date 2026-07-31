@@ -1,37 +1,40 @@
-from .user import (
-    UserDB,
+from .user import UserDB
+from app.schemas.user import (
     UserResponse,
     CurrentUserResponse,
     PublisherResponse,
-    UserBaseResponse,
+    UserBaseResponse
 )
-from .review import ReviewDB, ReviewResponse
-from .app import (
-    AppDB,
+from .review import ReviewDB
+from app.schemas.review import ReviewResponse
+from .app import AppDB
+from app.schemas.app import (
     AppResponse,
     GameResponse,
     AppResponseWithReviews,
     AppResponseWithPublisher,
-    GameResponseWithPublisher,
+    GameResponseWithPublisher
 )
 from .purchase import (
     PurchaseDB,
     CartItem,
+)
+from app.schemas.purchase import (
     CartResponse,
     CartItemResponse,
-    PurchaseResponse,
+    PurchaseResponse
 )
-from .discussion import (
+from app.schemas.discussion import (
     MessageResponse,
     ShortDiscussionResponse,
     DiscussionResponse,
 )
 
-UserDB.model_rebuild()
-ReviewDB.model_rebuild()
-AppDB.model_rebuild()
-PurchaseDB.model_rebuild()
-CartItem.model_rebuild()
+#UserDB.model_rebuild()
+#ReviewDB.model_rebuild()
+#AppDB.model_rebuild()
+#PurchaseDB.model_rebuild()
+#CartItem.model_rebuild()
 
 UserResponse.model_rebuild()
 CurrentUserResponse.model_rebuild()

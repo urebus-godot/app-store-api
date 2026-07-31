@@ -2,15 +2,15 @@ from uuid import UUID
 
 from fastapi import APIRouter, status, Depends
 
-from app.models.discussion import (
+from app.schemas.discussion import (
     DiscussionRequest,
     DiscussionResponse,
     ShortDiscussionResponse,
     MessageRequest,
     MessageResponse
 )
-from app.dependencies import (
-    DiscussionServiceDep, UserIdDep, rate_limit, UnitOfWorkDep, UserDep
+from app.api.dependencies import (
+    DiscussionServiceDep, UserIdDep, rate_limit, UnitOfWorkDep
     )
 
 router = APIRouter(

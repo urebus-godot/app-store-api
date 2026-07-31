@@ -1,27 +1,20 @@
-from datetime import datetime
-from typing import Optional
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
-from sqlmodel import SQLModel, Field, Relationship
-from pydantic import ConfigDict
+from sqlmodel import Field, Relationship
+from sqlalchemy.dialects.postgresql import TIMESTAMP
 
-
-# ----- Discussion Models -----
-
-
-class BaseDiscussion(SQLModel):
-    topic: Optional[str] = Field(default=None, max_length=80)
-
-
-class DiscussionRequest(BaseDiscussion):
-    pass
+from app.base_models.discussion import BaseDiscussion, BaseMessage
 
 
 class DiscussionDB(BaseDiscussion, table=True):
     __tablename__ = "discussions"
 
     id: UUID = Field(primary_key=True, default_factory=uuid4)
-    created_at: datetime = Field(default_factory=lambda: datetime.now())
+    created_at: datetime = Field(
+        sa_type=TIMESTAMP(timezone=True),
+        default_factory=lambda: datetime.now(timezone.utc)
+        )
     messages: list["MessageDB"] = Relationship(
         back_populates="discussion",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
@@ -31,33 +24,15 @@ class DiscussionDB(BaseDiscussion, table=True):
     app_id: UUID = Field(foreign_key="apps.id")
 
 
-class DiscussionResponse(BaseDiscussion):
-    id: UUID
-    created_at: datetime
-    messages: list["MessageResponse"] = []
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class ShortDiscussionResponse(BaseDiscussion):
-    id: UUID
-    created_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-# ----- Message Models -----
-
-
-class BaseMessage(SQLModel):
-    text: str = Field(max_length=500)
-
 
 class MessageDB(BaseMessage, table=True):
     __tablename__ = "messages"
 
     id: UUID = Field(primary_key=True, default_factory=uuid4)
-    created_at: datetime = Field(default_factory=lambda: datetime.now())
+    created_at: datetime = Field(
+        sa_type=TIMESTAMP(timezone=True),
+        default_factory=lambda: datetime.now(timezone.utc)
+        )
 
     author_id: UUID = Field(foreign_key="users.id", ondelete="CASCADE")
     author: "UserDB" = Relationship(back_populates="messages")
@@ -66,15 +41,3 @@ class MessageDB(BaseMessage, table=True):
         foreign_key="discussions.id", ondelete="CASCADE"
     )
     discussion: "DiscussionDB" = Relationship(back_populates="messages")
-
-
-class MessageRequest(BaseMessage):
-    pass
-
-
-class MessageResponse(BaseMessage):
-    id: UUID
-    created_at: datetime
-    author: "UserBaseResponse"
-
-    model_config = ConfigDict(from_attributes=True)

@@ -1,4 +1,4 @@
-from typing import Optional, Annotated
+from typing import Optional
 from uuid import UUID
 import os
 
@@ -6,35 +6,37 @@ from fastapi import (
     APIRouter, status, 
     Depends, Query,
     UploadFile, File,
-    HTTPException, 
+    HTTPException,
+    BackgroundTasks
     )
 from fastapi.responses import FileResponse
 
-from app.dependencies import (
+from app.api.dependencies import (
     UserIdDep,
     SkipLimitParams,
     PublisherDep,
     AppServiceDep,
     ReviewServiceDep,
-    SessionDep,
     rate_limit,
     UserDep,
     RedisDep,
     UnitOfWorkDep
 )
-from app.utils.app import get_apps_with_rating, get_app_with_rating
 from app.utils.search import SearchQuery
-from app.models.app import (
+from app.base_models.app import (
+    GameGenre
+)
+from app.schemas.app import (
     AppRequest,
     AppUpdate,
+    GameUpdate,
     AppResponse,
-    GameGenre,
     GameRequest,
     GameResponse,
     AppResponseWithPublisher,
     GameResponseWithPublisher,
 )
-from app.models.file import AppCover, AppArchive
+from app.models.file import AppCover, AppArchive, AppThumbnail
 from app.core.logging import logger
 from app.core.config import settings
 
@@ -92,12 +94,12 @@ async def upload_app_archive(
     "/apps/{app_id}/download"
     )
 async def download_app_archive(
-    user: UserDep,
+    user_id: UserIdDep,
     app_id: UUID,
     app_service: AppServiceDep
 ) -> FileResponse:
     try:
-        app_archive = await app_service.get_app_archive(app_id, user)
+        app_archive = await app_service.get_app_archive(app_id, user_id)
         filename = f"{app_id}{os.path.splitext(app_archive.filename)[1]}"
         file_path = settings.APP_ARCHIVE_PATH / filename
         return FileResponse(
@@ -112,7 +114,8 @@ async def download_app_archive(
 
 
 @router.post(
-    "/apps/{app_id}/files/thumbnail"
+    "/apps/{app_id}/files/thumbnail",
+    status_code=status.HTTP_201_CREATED
     )
 async def upload_app_thumbnail(
     user_id: UserIdDep,
@@ -120,19 +123,23 @@ async def upload_app_thumbnail(
     uow: UnitOfWorkDep,
     app_service: AppServiceDep,
     file: UploadFile = File(...),
-) -> AppCover:
-    return NotImplemented
+) -> AppThumbnail:
+    app_cover = await app_service.upload_app_thumbnail(
+        uow, file, app_id, user_id
+        )
+    return app_cover
 
 
 @router.post(
-    "/apps/{app_id}/files/covers"
+    "/apps/{app_id}/files/covers",
+    status_code=status.HTTP_201_CREATED
     )
 async def upload_app_cover(
     user_id: UserIdDep,
     app_id: UUID,
     uow: UnitOfWorkDep,
     app_service: AppServiceDep,
-    file: UploadFile = File(...),
+    file: UploadFile = File(...)
 ) -> AppCover:
     app_cover = await app_service.upload_app_cover(
         uow, file, app_id, user_id
@@ -152,7 +159,7 @@ async def get_app_covers(
 
 
 @router.delete(
-    "/apps/{app_id}/files/covers",
+    "/apps/files/covers/{cover_id}",
     status_code=status.HTTP_204_NO_CONTENT
     )
 async def remove_app_cover(
@@ -163,6 +170,21 @@ async def remove_app_cover(
 ) -> None:
     await app_service.remove_app_cover(
         cover_id, user_id, uow
+        )
+
+
+@router.delete(
+    "/apps/{app_id}/files/covers",
+    status_code=status.HTTP_204_NO_CONTENT
+    )
+async def remove_all_app_covers(
+    user_id: UserIdDep,
+    app_id: UUID,
+    app_service: AppServiceDep,
+    uow: UnitOfWorkDep
+) -> None:
+    await app_service.check_and_remove_all_app_covers(
+        app_id, user_id, uow
         )
 
 
@@ -179,7 +201,23 @@ async def update_app(
     app = await app_service.update_app(
         data=data, id=id, user_id=user_id, uow=uow
     )
-    return get_app_with_rating(app, app.reviews, AppResponse)
+    return app
+
+
+@router.patch(
+    "/games/{id}"
+    )
+async def update_game(
+    id: UUID,
+    data: GameUpdate,
+    user_id: UserIdDep,
+    app_service: AppServiceDep,
+    uow: UnitOfWorkDep
+) -> AppResponse | GameResponse:
+    app = await app_service.update_app(
+        data=data, id=id, user_id=user_id, uow=uow
+    )
+    return app
 
 
 @router.get(
@@ -190,7 +228,7 @@ async def get_app(
 ) -> AppResponseWithPublisher | GameResponseWithPublisher:
     logger.info("get_app")
     app = await app_service.get_app(id)
-    return get_app_with_rating(app, app.reviews, AppResponseWithPublisher)
+    return app
 
 
 @router.get(
@@ -199,16 +237,13 @@ async def get_app(
 async def get_apps(
     skip_limit: SkipLimitParams,
     app_service: AppServiceDep,
-    review_service: ReviewServiceDep,
     search_query: Optional[SearchQuery] = None,
 ) -> list[AppResponseWithPublisher]:
     skip, limit = skip_limit
     apps = await app_service.get_apps(
         search_query=search_query, skip=skip, limit=limit
     )
-    return await get_apps_with_rating(
-        apps, review_service, AppResponseWithPublisher
-    )
+    return apps
 
 
 @router.get(
@@ -225,9 +260,7 @@ async def get_games(
     games = await app_service.get_games(
         search_query=search_query, genre=genre, skip=skip, limit=limit
     )
-    return await get_apps_with_rating(
-        games, review_service, GameResponseWithPublisher
-    )
+    return games
 
 
 @router.get(
@@ -237,8 +270,11 @@ async def get_top_games(
     app_service: AppServiceDep,
     redis: RedisDep,
     genre: Optional[GameGenre] = Query(default=None)
-    ) -> list[GameResponseWithPublisher]:
-    games = await app_service.get_top_games(genre, redis)
+) -> list[GameResponseWithPublisher]:
+    if genre is None:
+        games = await app_service.get_top_games(redis)
+    else:
+        games = await app_service.get_top_games_genre(genre, redis)
     return games
 
 
@@ -251,7 +287,7 @@ async def get_purchased_apps(
     review_service: ReviewServiceDep,
 ) -> list[AppResponse | GameResponse]:
     apps = await app_service.get_purchased_apps(user_id)
-    return await get_apps_with_rating(apps, review_service, AppResponse)
+    return apps
 
 
 @router.get(
@@ -266,12 +302,8 @@ async def get_own_published_apps(
     logger.info("get_own_published_apps")
     skip, limit = skip_limit
     apps = await app_service.get_publisher_apps(skip, limit, user_id, False)
-    logger.info(f"publshed apps are \n {apps}")
-    apps_with_rating = await get_apps_with_rating(
-        apps, review_service, AppResponse, False
-        )
-    logger.info(f"Apps with rating are \n {apps}")
-    return apps_with_rating
+    logger.info(f"published apps are \n {apps}")
+    return apps
 
 
 @router.get(
@@ -285,7 +317,7 @@ async def get_publisher_apps(
 ) -> list[AppResponse | GameResponse]:
     skip, limit = skip_limit
     apps = await app_service.get_publisher_apps(skip, limit, user_id)
-    return await get_apps_with_rating(apps, review_service, AppResponse)
+    return apps
 
 
 @router.delete(
@@ -298,4 +330,4 @@ async def delete_app(
     app_service: AppServiceDep,
     uow: UnitOfWorkDep
 ) -> None:
-    return await app_service.delete_app(id, user_id, uow)
+    return await app_service.delete_app_by_user(id, user_id, uow)

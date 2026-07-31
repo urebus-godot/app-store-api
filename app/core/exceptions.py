@@ -1,11 +1,18 @@
 from fastapi import HTTPException, status
 
 
+# ----- Custom -----
+
+class SchemaValidationError(ValueError):
+    pass
+
+
 # ----- General -----
 
 too_many_requests_exception = HTTPException(
     status.HTTP_429_TOO_MANY_REQUESTS,
-    "Request limit exceeded. Try again later"
+    "Request limit exceeded. Try again later",
+    {"X-RateLimit-Remaining": "0"}
 )
 
 no_rights_exception = HTTPException(
@@ -19,7 +26,7 @@ invalid_file_exception = HTTPException(
 
 file_too_large_exception = HTTPException(
     status.HTTP_413_CONTENT_TOO_LARGE,
-    "Uploaded file size is too large. Consider compressing it"
+    "Uploaded file size is too large"
 )
 
 
@@ -56,7 +63,8 @@ not_positive_amount_exception = HTTPException(
 )
 
 no_profile_pic_exception = HTTPException(
-    status.HTTP_400_BAD_REQUEST
+    status.HTTP_400_BAD_REQUEST,
+    "Profile picture is not set"
 )
 
 
@@ -88,11 +96,6 @@ invalid_token_payload_exception = HTTPException(
 app_not_found_exception = HTTPException(
     status.HTTP_404_NOT_FOUND, 
     "Application not found"
-)
-
-apps_not_found_exception = HTTPException(
-    status.HTTP_404_NOT_FOUND, 
-    "No applications found"
 )
 
 app_not_purchased_exception = HTTPException(

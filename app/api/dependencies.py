@@ -1,9 +1,9 @@
 from __future__ import annotations
 from typing import Annotated, Optional
-from collections.abc import AsyncGenerator
 from uuid import UUID
 
 from redis.asyncio import Redis
+from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlmodel.ext.asyncio.session import AsyncSession
 from fastapi import Depends, Query, Request, Response
 from fastapi.security import OAuth2PasswordBearer
@@ -16,12 +16,12 @@ from app.core.exceptions import (
     too_many_requests_exception,
     app_not_purchased_exception
 )
-from app.core.rate_limiter import RateLimiter
+from app.dependencies.rate_limiter import RateLimiter
 from app.core.auth import decode_access_token
 from app.core.config import settings
 from app.models.user import UserDB, UserRole
 
-from app.uow.unit_of_work import UnitOfWork
+from app.uow.orm import UnitOfWork
 
 from app.repo.user_repo import UserRepository
 from app.repo.finance_repo import FinanceRepository
@@ -140,6 +140,10 @@ async def rate_limit(
         raise too_many_requests_exception
 
 
+def get_session_factory() -> async_sessionmaker[AsyncSession]:
+    return session_factory
+
+
 def require_role(role: UserRole) -> UserDB:
     def wrapper(user: UserDep) -> UserDB:
         if role not in user.roles:
@@ -177,8 +181,11 @@ def can_send_email() -> bool:
 def get_user_repo(session: SessionDep) -> UserRepository:
     return UserRepository(session)
 
-def get_user_service(user_repo: UserRepoDep) -> UserService:
-    return UserService(user_repo)
+def get_user_service(
+    user_repo: UserRepoDep,
+    app_service: AppServiceDep
+) -> UserService:
+    return UserService(user_repo, app_service)
 
 
 def get_finance_repo(session: SessionDep) -> FinanceRepository:
@@ -194,9 +201,11 @@ def get_app_repo(session: SessionDep) -> AppRepository:
     return AppRepository(session)
 
 def get_app_service(
-    app_repo: AppRepoDep, user_service: UserServiceDep
+    app_repo: AppRepoDep, 
+    user_repo: UserRepoDep,
+    purchase_repo: PurchaseRepoDep
 ) -> AppService:
-    return AppService(app_repo, user_service)
+    return AppService(app_repo, user_repo, purchase_repo)
 
 
 def get_review_repo(
@@ -233,11 +242,14 @@ def get_discussion_service(
     return DiscussionService(discussion_repo, app_service)
 
 
-async def get_unit_of_work() -> UnitOfWork:
+async def get_unit_of_work(
+    session_factory: SessionFactoryDep
+) -> UnitOfWork:
     return UnitOfWork(session_factory)
 
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
+SessionFactoryDep = Annotated[AsyncSession, Depends(get_session_factory)]
 
 UserIdDep = Annotated[UUID, Depends(get_current_user_id)]
 UserDep = Annotated[UserDB, Depends(get_current_user)]

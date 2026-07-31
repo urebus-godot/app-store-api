@@ -1,10 +1,6 @@
 from fastapi_mail import FastMail, ConnectionConfig, MessageSchema
-from PIL import Image
-
-from pathlib import Path
 
 from app.core.config import settings
-from app.core.celery_app import celery_app
 
 conn_config = ConnectionConfig(
     MAIL_USERNAME=settings.MAIL_USERNAME,
@@ -31,16 +27,3 @@ async def send_email(
         subtype=subtype
     )
     await mail.send_message(message)
-
-
-@celery_app.task
-def compress_and_save_image(path: Path):
-    with Image.open(path) as img:
-        img = img.convert("RGB")
-        img.thumbnail(128, 128)
-        img.save(path, quality=80)
-
-
-@celery_app.task
-def calculate_apps_rating():
-    pass

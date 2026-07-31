@@ -3,13 +3,14 @@ from uuid import UUID
 
 from httpx import AsyncClient
 from fastapi.responses import JSONResponse
-from fastapi import status
 
-from app.uow.unit_of_work import UnitOfWork
+from app.uow.orm import UnitOfWork
 from app.core.exceptions import insufficient_funds_exception
 from app.repo.finance_repo import FinanceRepository
-from app.models.finance import TransferRequest, TransferDB, CurrencyType
-from app.models.user import UserDB
+
+from app.schemas.finance import TransferRequest
+from app.models.finance import TransferDB
+from app.base_models.finance import CurrencyType
 
 
 class FinanceService:
@@ -41,9 +42,11 @@ class FinanceService:
             return result
 
     async def get_transfers(
-        self, user_id: UUID
+        self, 
+        user_id: UUID,
+        skip: int, limit: int
     ) -> list[TransferDB]:
-        transfers = await self.finance_repo.get_transfers(user_id)
+        transfers = await self.finance_repo.get_transfers(user_id, skip, limit)
         return transfers
 
     async def convert_rubles(
@@ -52,18 +55,19 @@ class FinanceService:
         """Makes call to external API to convert 
         funds from rubles to specified currency"""
         async with AsyncClient(base_url="https://api.frankfurter.dev/v2") as ac:
-            api_response = await ac.get(
-                "/rates",
-                params={"quotes": to_currency, "base": "RUB"}
-                )
-            data = api_response.json()
-            if api_response.status_code >= 400:
-                return JSONResponse(
-                    data,
-                    api_response.status_code
-                )
-            
-            rate = data[0]["rate"]
-            converted_amount = amount * rate
+            if to_currency != CurrencyType.RUB:
+                api_response = await ac.get(
+                    "/rates",
+                    params={"quotes": to_currency, "base": "RUB"}
+                    )
+                data = api_response.json()
+                if api_response.status_code >= 400:
+                    return JSONResponse(
+                        data,
+                        api_response.status_code
+                    )
+                
+                rate = data[0]["rate"]
+                converted_amount = amount * rate
 
         return round(Decimal(converted_amount), 2)

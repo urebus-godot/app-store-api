@@ -1,20 +1,24 @@
 from uuid import UUID
 from typing import Optional
+from datetime import datetime, timezone
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, desc
 from sqlalchemy.orm import selectinload
 
 from app.core.logging import logger
-from app.models.app import (
-    AppRequest,
-    GameRequest,
-    AppDB,
-    AppUpdate,
+
+from app.models.app import AppDB
+from app.base_models.app import (
     GameGenre,
-    AppCategory,
+    AppCategory
 )
-from app.models.file import AppArchive, AppCover
+from app.schemas.app import AppRequest, GameRequest, AppUpdate
+from app.base_models.app import (
+    GameGenre,
+    AppCategory
+)
+from app.models.file import AppArchive, AppCover, AppThumbnail
 from app.models.purchase import PurchaseDB
 
 
@@ -31,7 +35,10 @@ class AppRepository:
         )
 
     async def upload_app(self, data: AppRequest, user_id: UUID) -> AppDB:
-        app = AppDB(**data.model_dump(), publisher_id=user_id)
+        app = AppDB(
+            **data.model_dump(), 
+            publisher_id=user_id
+            )
 
         if isinstance(data, GameRequest):
             app.category = AppCategory.GAME
@@ -53,6 +60,19 @@ class AppRepository:
 
         return app
 
+    async def update_app_rating(
+        self, app: AppDB
+    ) -> None:
+        rating_sum = sum(review.rating for review in app.reviews)
+        review_count = len(app.reviews)
+        logger.info(f"{review_count = }; {rating_sum = }")
+        if review_count > 0:
+            app.rating = rating_sum / review_count
+        else:
+            app.rating = None
+
+        logger.info(f"Calculated app rating: {app.rating}")
+
     async def get_app_archive(
         self, app_id: UUID
     ) -> Optional[AppArchive]:
@@ -60,6 +80,14 @@ class AppRepository:
         app_archive = (await self.session.exec(stmt)).one_or_none()
 
         return app_archive
+
+    async def get_app_thumbnail(
+        self, app_id: UUID
+    ) -> Optional[AppThumbnail]:
+        stmt = select(AppThumbnail).where(AppThumbnail.app_id == app_id)
+        app_thumbnail = (await self.session.exec(stmt)).one_or_none()
+
+        return app_thumbnail
 
     async def get_app_cover(
         self, cover_id: UUID
@@ -76,12 +104,22 @@ class AppRepository:
         return app_covers
 
     async def get_app(
-        self, id: UUID, public_only: Optional[bool] = True
+        self, id: UUID
     ) -> AppDB:
         stmt = select(AppDB).where(AppDB.id == id)
+        app = (
+            await self.session.exec(stmt.options(*self.load_attrs))
+        ).one_or_none()
 
-        if public_only:
-            stmt.where(AppDB.public)
+        return app
+
+    async def get_public_app(
+        self, id: UUID
+    ) -> AppDB:
+        stmt = select(AppDB).where(
+            AppDB.id == id,
+            AppDB.public
+            )
 
         app = (
             await self.session.exec(stmt.options(*self.load_attrs))
@@ -91,15 +129,14 @@ class AppRepository:
 
     async def get_apps(
         self,
-        skip: int,
+        skip: int = 0,
         limit: Optional[int] = None,
-        public_only: Optional[bool] = True,
-        order_by: Optional[str] = "created_at",
+        public_only: bool = True,
+        order_by: Optional[str] = "published_at",
     ) -> list[AppDB]:
         stmt = (
             select(AppDB)
             .offset(skip)
-            .order_by(desc(AppDB.published_at))
             .options(*self.load_attrs)
         )
 
@@ -108,6 +145,9 @@ class AppRepository:
 
         if public_only:
             stmt = stmt.where(AppDB.public)
+
+        if order_by is not None:
+            stmt = stmt.order_by(desc(AppDB.published_at))
 
         apps = (await self.session.exec(stmt)).all()
 
@@ -128,21 +168,23 @@ class AppRepository:
 
     async def get_publisher_apps(
         self,
-        skip: int,
-        limit: int,
         user_id: UUID,
+        skip: int = 0,
+        limit: int = 0,
         public_only: Optional[bool] = True,
     ) -> list[AppDB]:
         stmt = (
             select(AppDB)
             .where(AppDB.publisher_id == user_id)
             .offset(skip)
-            .limit(limit)
             .order_by(desc(AppDB.published_at))
         )
 
         if public_only:
             stmt = stmt.where(*self.public_app_conditions)
+
+        if limit > 0:
+            stmt.limit(limit)
 
         publisher_apps = (
             await self.session.exec(stmt.options(*self.load_attrs))
@@ -174,7 +216,11 @@ class AppRepository:
 
         return games
 
-    async def get_top_games_genre(self, genre: GameGenre) -> list[AppDB]:
+    async def get_top_games_genre(
+        self, 
+        genre: GameGenre,
+        skip: int, limit: int
+    ) -> list[AppDB]:
         games = (await self.session.exec(
             select(AppDB)
             .where(
@@ -188,7 +234,10 @@ class AppRepository:
 
         return games
 
-    async def get_top_games(self) -> list[AppDB]:
+    async def get_top_games(
+        self,
+        skip: int, limit: int
+    ) -> list[AppDB]:
         games = (await self.session.exec(
             select(AppDB)
             .where(
@@ -196,8 +245,10 @@ class AppRepository:
                 AppDB.public
                 )
             .order_by(
-                desc(AppDB.times_purchased)
-                ).limit(5).options(*self.load_attrs)
+                desc(AppDB.times_purchased),
+                desc(AppDB.rating)
+                ).offset(skip).limit(limit)
+                .options(*self.load_attrs)
         )).all()
 
         return games

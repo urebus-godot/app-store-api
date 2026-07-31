@@ -1,5 +1,6 @@
 from uuid import UUID
 from typing import Optional
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import selectinload
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -7,9 +8,11 @@ from sqlmodel import select, desc
 
 from app.models.discussion import (
     DiscussionDB,
+    MessageDB,
+)
+from app.schemas.discussion import (
     DiscussionRequest,
     MessageRequest,
-    MessageDB,
 )
 from app.models.user import UserDB
 
@@ -28,7 +31,9 @@ class DiscussionRepository:
     async def create_discussion(
         self, data: DiscussionRequest, user: UserDB, app_id: UUID
     ) -> DiscussionDB:
-        discussion = DiscussionDB(**data.model_dump())
+        discussion = DiscussionDB(
+            **data.model_dump()
+            )
         discussion.creator = user
         discussion.app_id = app_id
 
@@ -79,9 +84,11 @@ class DiscussionRepository:
     async def create_message(
         self, data: MessageRequest, author: UserDB, discussion_id: UUID
     ) -> MessageDB:
-        message = MessageDB(**data.model_dump())
-        message.author = author
-        message.discussion_id = discussion_id
+        message = MessageDB(
+            **data.model_dump(),
+            author=author,
+            discussion_id=discussion_id
+            )
 
         self.session.add(message)
 

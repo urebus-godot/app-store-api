@@ -1,6 +1,6 @@
 from typing import Optional, Union
 from uuid import UUID
-from pathlib import Path
+import asyncio
 import os
 
 from fastapi import BackgroundTasks, Request, UploadFile
@@ -10,13 +10,18 @@ import jwt
 
 from app.db.redis import Redis
 
-from app.models.user import UserRequest, UserDB, UserUpdate, UserRole
-from app.models.token import LoginResponse
+from app.base_models.user import UserRole
+from app.models.user import UserDB
+from app.schemas.user import UserRequest, UserUpdate
+from app.schemas.token import LoginResponse
 from app.models.file import UserProfilePicture
 
 from app.repo.user_repo import UserRepository
+from app.service.app_service import AppService
 
-from app.core.tasks import send_email
+from app.bg_tasks.celery_tasks import process_image
+from app.bg_tasks.bg_tasks import send_email
+
 from app.core.exceptions import (
     user_not_found_exception,
     email_used_exception,
@@ -33,15 +38,21 @@ from app.core.security import verify_password, get_password_hash
 from app.core.auth import create_token_pair
 from app.core.logging import logger
 from app.core.config import settings
+from app.utils.time import get_time_string
 
-from app.uow.unit_of_work import UnitOfWork
+from app.uow.orm import UnitOfWork
 
 from app.utils.files import write_file, to_megabytes
 
 
 class UserService:
-    def __init__(self, user_repo: UserRepository):
+    def __init__(
+        self, 
+        user_repo: UserRepository,
+        app_service: AppService
+    ):
         self.user_repo = user_repo
+        self.app_service = app_service
 
     async def username_registered(self, username: str) -> bool:
         return await self.user_repo.username_registered(username)
@@ -103,12 +114,16 @@ class UserService:
         if not user:
             raise incorrect_creds_exception
 
+        email_body = settings.LOGIN_TEMPLATE % (
+            request.client.host, get_time_string()
+        )
+
         if user.email is not None and sends_email:
             bg_tasks.add_task(
                 send_email,
                 [str(user.email)],
                 "Someone has logged into your account",
-                settings.LOGIN_TEMPLATE % request.client.host,
+                email_body
             )
 
         tokens = await create_token_pair(str(user.id), redis)
@@ -156,6 +171,7 @@ class UserService:
 
     async def upload_profile_picture(
         self, 
+        request: Request,
         file: UploadFile, 
         user_id: UUID,
         uow: UnitOfWork
@@ -167,23 +183,34 @@ class UserService:
                 raise invalid_file_exception
 
             file_size_mb = to_megabytes(file.size)
-            if file_size_mb > settings.MAX_IMAGE_SIZE_MB:
+            if file_size_mb > settings.MAX_PROFILE_PICTURE_SIZE_MB:
                 raise file_too_large_exception
 
             filename = f"{user_id}{extension}"
+            file_path = settings.PROFILE_PICTURE_PATH / filename
 
-            write_file(file, filename, settings.PROFILE_PICTURE_PATH)
+            await asyncio.to_thread(
+                write_file, 
+                file, filename, settings.PROFILE_PICTURE_PATH
+                )
+            process_image.delay(
+                str(file_path), (128, 128), 85
+                )
+
             profile_picture = await uow.user_repo.get_profile_picture(user_id)
 
             if profile_picture is None:
                 profile_picture = UserProfilePicture(
-                    user_id=user_id
+                    user_id=user_id,
+                    extension=extension
                 )
                 uow.session.add(profile_picture)
 
+            profile_picture.extension = extension
+
             return profile_picture
 
-    async def remove_profile_picture(
+    async def remove_profile_picture_by_user(
         self, 
         user_id: UUID, 
         uow: UnitOfWork
@@ -196,12 +223,31 @@ class UserService:
             if profile_picture is None:
                 raise no_profile_pic_exception
 
-            await uow.user_repo.remove_profile_picture(profile_picture)
-
+            filename = f"{profile_picture.user_id}{profile_picture.extension}"
             profile_picture_path = (
-                settings.PROFILE_PICTURE_PATH / Path(profile_picture.user_id)
+                settings.PROFILE_PICTURE_PATH / filename
                 )
             os.remove(profile_picture_path)
+            await uow.session.delete(profile_picture)
+
+    async def remove_profile_picture(
+        self, 
+        user_id: UUID, 
+        uow: UnitOfWork
+    ) -> None:
+        profile_picture = await uow.user_repo.get_profile_picture(
+            user_id
+            )
+
+        if profile_picture is None:
+            return
+
+        filename = f"{profile_picture.user_id}{profile_picture.extension}"
+        profile_picture_path = (
+            settings.PROFILE_PICTURE_PATH / filename
+            )
+        os.remove(profile_picture_path)
+        await uow.session.delete(profile_picture)
 
     async def update_user(
         self, user: UserDB, data: UserUpdate, uow: UnitOfWork
@@ -246,9 +292,23 @@ class UserService:
         return users
 
     async def delete_user(
-        self, user: UserDB, redis: Redis, uow: UnitOfWork
+        self, 
+        user_id: UUID, 
+        redis: Redis, 
+        uow: UnitOfWork
     ) -> None:
         async with uow:
-            await self.remove_profile_picture(user.id, uow)
-            await redis.delete(f"user_tokens:{user.id}")
-            await uow.user_repo.delete_user(user)
+            user = await uow.user_repo.get_user_by_id(user_id)
+
+            if user is None:
+                raise user_not_found_exception
+
+            published_apps = await uow.app_repo.get_publisher_apps(
+                user_id=user_id, public_only=False
+                )
+
+            for app in published_apps:
+                await self.app_service.delete_app(app.id, uow)
+
+            await redis.delete(f"user_tokens:{user_id}")
+            await uow.session.delete(user)

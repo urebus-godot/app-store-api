@@ -25,13 +25,14 @@ class Settings(BaseSettings):
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8000
 
-    DB_URL: Optional[str] = None
-    TEST_DB_URL: str = environ.get("TEST_DB_URL")
+    DB_URL: str
+    TEST_DB_URL: str = f"postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/test_db"
 
     REDIS_URL: str
 
-    BROKER_URL: str = environ.get("BROKER_URL")
-    RESULT_BACKEND_URL: str = environ.get("RESULT_BACKEND_URL")
+    BROKER_URL: str
+    RESULT_BACKEND_URL: str
+    CELERY_TASKS_PATH: str = "app.bg_tasks.celery_tasks"
 
     WINDOW_SECONDS: int = 30
     REQUEST_LIMIT: int = 120
@@ -44,8 +45,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: timedelta = timedelta(minutes=120)
     REFRESH_TOKEN_EXPIRE_DAYS: timedelta = timedelta(days=7)
 
-    ACCESS_SECRET_KEY: Optional[str] = None
-    REFRESH_SECRET_KEY: Optional[str] = None
+    ACCESS_SECRET_KEY: str
+    REFRESH_SECRET_KEY: str
     TEST_ACCESS_SECRET_KEY: str = (
         "4a834639b4bee7011b42f243748c17f13c7aa211a86a06843b5683376e8f35d8"
         )
@@ -56,28 +57,34 @@ class Settings(BaseSettings):
 
     JWT_ALGORITHM: str = "HS256"
 
+    MIN_PASSWORD_LEN: int = 8
+
     MIN_TITLE_LEN: int = 3
-    MAX_TITLE_LEN: int = 40
+    MAX_TITLE_LEN: int = 64
 
     MIN_NAME_LEN: int = 3
-    MAX_NAME_LEN: int = 30
+    MAX_NAME_LEN: int = 64
 
-    MAX_DESC_LEN: int = 400
-
-    LOGGING_LEVEL: int = logging.INFO
-    LOG_FILE_PATH: Optional[str] = None
+    LOGGING_LEVEL: int = logging.DEBUG
+    LOG_FILE_PATH: Optional[str] = None#"app_logs.log"
 
     FILE_BASE_PATH: Path = Path("media")
     STATIC_BASE_PATH: Path = FILE_BASE_PATH / Path("static")
+
     APP_ARCHIVE_PATH: Path = FILE_BASE_PATH / Path("app_archives")
     APP_COVER_PATH: Path = STATIC_BASE_PATH / Path("applications/covers")
+    APP_THUMBNAIL_PATH: Path = (
+        STATIC_BASE_PATH / Path("applications/thumbnails")
+        )
+
     PROFILE_PICTURE_PATH: Path = STATIC_BASE_PATH / Path("profile_pictures")
 
     ARCHIVE_EXTENSIONS: list[str] = [".rar", ".zip", ".7z"]
     IMAGE_EXTENSIONS: list[str] = [".PNG", ".jpg", ".jpeg", ".webp"]
 
     MAX_APP_ARCHIVE_SIZE_MB: int = 1024
-    MAX_IMAGE_SIZE_MB: int = 1
+    MAX_APP_COVER_SIZE_MB: int = 5
+    MAX_PROFILE_PICTURE_SIZE_MB: int = 1
 
     MAIL_USERNAME: str = "satalovserge"
     MAIL_PASSWORD: str
@@ -94,6 +101,10 @@ class Settings(BaseSettings):
     <body>
         <h3>
             Apps have been purchased
+            <h2>Details</h2>
+            <p><b>Total price: <i>%s</i></b></p>
+            <p><b>Applications: <i>%s</i></b></p>
+            <p><b>Time of purchase: <i>%s</i></b></p>
         </h3>
     </body>
     """
@@ -105,9 +116,21 @@ class Settings(BaseSettings):
             <hr>
             <h2>Details</h2>
             <p><b>IP address: <i>%s</i></b></p>
+            <p><b>Time of login: <i>%s</i></b></p>
         </h3>
     </body>
     """
+
+    BIRTHDAY_CODE_TEMPLATE: str = """
+    <body>
+        <h3>
+            Happy birthday, %s! You receive a promo code as a gift. 
+            Enter it to receive 500 rubles on the balance.
+            <h2>Details</h2>
+            <p><b>Promo code: <i>%s</i></b></p>
+        </h3>
+    </body>
+"""
 
 
 settings = Settings()

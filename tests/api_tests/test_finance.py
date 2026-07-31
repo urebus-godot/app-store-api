@@ -1,11 +1,10 @@
-from decimal import Decimal
 
 import pytest
 from httpx import AsyncClient
 from unittest.mock import patch, Mock
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.user import UserDB
-from app.service.finance_service import FinanceService
 
 
 class TestFinance:
@@ -46,12 +45,15 @@ class TestFinance:
     async def test_withdraw_funds_to_card(
         self,
         auth_client: AsyncClient,
+        db_session: AsyncSession,
         test_user: UserDB,
         amount: float,
         expected_balance: str,
         expected_status_code: int
     ):
         test_user.balance = 10000
+        await db_session.flush()
+
         response = await auth_client.post(
             "/api/v1/transfers/withdrawal", 
             json={"amount": amount}

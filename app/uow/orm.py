@@ -1,5 +1,3 @@
-from abc import ABC, abstractmethod
-from collections.abc import Callable
 from typing import Self
 
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -14,22 +12,7 @@ from app.repo.discussion_repo import DiscussionRepository
 from app.repo.user_repo import UserRepository
 from app.repo.finance_repo import FinanceRepository
 
-
-class AbstractUnitOfWork(ABC):
-    async def __aenter__(self) -> Self:
-        return self
-
-    async def __aexit__(self, exc_type, exc_value, traceback) -> None:
-        pass
-
-    @abstractmethod
-    async def commit(self) -> None:
-        pass
-
-    @abstractmethod
-    async def rollback(self) -> None:
-        pass
-
+from app.uow.base import AbstractUnitOfWork
 
 class UnitOfWork(AbstractUnitOfWork):
     def __init__(
@@ -63,8 +46,8 @@ class UnitOfWork(AbstractUnitOfWork):
 
     async def commit(self) -> None:
         await self.session.commit()
-        logger.debug(f"Committed current transaction")
+        logger.debug("Committed current transaction")
 
     async def rollback(self) -> None:
         await self.session.rollback()
-        logger.debug(f"Rolled transaction back")
+        logger.debug("Rolled transaction back")

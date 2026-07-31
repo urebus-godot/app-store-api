@@ -2,6 +2,9 @@ from collections.abc import Callable
 
 import pytest
 
+from app.utils.search import format_keywords
+
+
 
 class TestSearch:
     @pytest.mark.parametrize(
@@ -22,9 +25,8 @@ class TestSearch:
     )
     async def test_format_keywords(
         self,
-        format_kws: Callable[[list[str]], list[str]],
         keywords: list[str],
         expected_keywords: list[str],
     ):
-        formatted_keywords = format_kws(keywords)
+        formatted_keywords = format_keywords(keywords)
         assert formatted_keywords == expected_keywords

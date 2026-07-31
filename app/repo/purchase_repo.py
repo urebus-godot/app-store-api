@@ -17,9 +17,22 @@ class PurchaseRepository:
             selectinload(CartDB.user),
         )
 
+    async def user_purchased_app(
+        self, user_id: UUID, app_id: UUID
+    ) -> bool:
+        stmt = select(PurchaseDB).where(
+            PurchaseDB.user_id == user_id, 
+            PurchaseDB.app_id == app_id
+            )
+        purchase = (await self.session.exec(stmt)).one_or_none()
+        logger.info(f"Purchase: {purchase}Purchased: {purchase is not None}")
+        return purchase is not None
+
     async def create_cart(self, user_id: UUID) -> CartDB:
         logger.info("Start creating cart")
-        cart = CartDB(user_id=user_id)
+        cart = CartDB(
+            user_id=user_id
+            )
         cart.items = []
 
         self.session.add(cart)
@@ -43,7 +56,8 @@ class PurchaseRepository:
         purchase = (
             await self.session.exec(
                 select(PurchaseDB).where(
-                    PurchaseDB.app_id == app_id, PurchaseDB.user_id == user_id
+                    PurchaseDB.app_id == app_id, 
+                    PurchaseDB.user_id == user_id
                 )
             )
         ).first()
@@ -84,7 +98,10 @@ class PurchaseRepository:
         cart: CartDB,
         app_id: UUID,
     ) -> CartItem:
-        cart_item = CartItem(cart_id=cart.id, app_id=app_id)
+        cart_item = CartItem(
+            cart_id=cart.id, 
+            app_id=app_id
+            )
 
         self.session.add(cart_item)
 
@@ -92,7 +109,9 @@ class PurchaseRepository:
 
     async def add_purchase(self, user_id: UUID, item: CartItem) -> None:
         purchase = PurchaseDB(
-            user_id=user_id, app_id=item.app_id, price=item.app.price
+            user_id=user_id, 
+            app_id=item.app_id, 
+            price=item.app.price
         )
         self.session.add(purchase)
 

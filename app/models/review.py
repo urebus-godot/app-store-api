@@ -1,14 +1,10 @@
 from uuid import UUID, uuid4
-from datetime import datetime
+from datetime import datetime, timezone
 
-from pydantic import ConfigDict
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import Field, Relationship
+from sqlalchemy.dialects.postgresql import TIMESTAMP
 
-
-class BaseReview(SQLModel):
-    rating: int = Field(ge=0, le=5)
-    subject: str | None = Field(default=None, max_length=50)
-    content: str | None = Field(default=None, max_length=400)
+from app.base_models.review import BaseReview
 
 
 class ReviewDB(BaseReview, table=True):
@@ -16,7 +12,10 @@ class ReviewDB(BaseReview, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
-    created_at: datetime = Field(default_factory=lambda: datetime.now())
+    created_at: datetime = Field(
+        sa_type=TIMESTAMP(timezone=True),
+        default_factory=lambda: datetime.now(timezone.utc)
+        )
 
     author_id: UUID = Field(foreign_key="users.id", ondelete="CASCADE")
     author: "UserDB" = Relationship(back_populates="reviews")
@@ -24,18 +23,3 @@ class ReviewDB(BaseReview, table=True):
     app_id: UUID = Field(foreign_key="apps.id", ondelete="CASCADE")
     app: "AppDB" = Relationship(back_populates="reviews")
 
-
-class ReviewRequest(BaseReview):
-    pass
-
-
-class ReviewResponse(BaseReview):
-    id: UUID
-    created_at: datetime
-    author_id: UUID
-    app_id: UUID
-    model_config = ConfigDict(from_attributes=True)
-
-
-class ReviewResponseWithAuthor(ReviewResponse):
-    author: "UserResponse"

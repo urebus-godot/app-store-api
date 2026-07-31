@@ -1,51 +1,14 @@
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from uuid import UUID, uuid4
-from decimal import Decimal
-from enum import StrEnum
 
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, TIMESTAMP
 from sqlalchemy import String
-from sqlmodel import SQLModel, Field, Relationship
-from pydantic import ConfigDict
-from fastapi import UploadFile
+from sqlmodel import Field, Relationship
 
 from app.models.purchase import PurchaseDB
-from app.core.config import settings
-
-
-class GameGenre(StrEnum):
-    ADVENTURE = "adventure"
-    ACTION = "action"
-    PUZZLE = "puzzle"
-    RACING = "racing"
-    SANDBOX = "sandbox"
-    MISC = "misc"
-
-
-class AppCategory(StrEnum):
-    APPLICATION = "application"
-    GAME = "game"
-
-
-class AppFile(SQLModel):
-    app_id: UUID
-    file: UploadFile
-    filename: str
-
-
-class BaseApp(SQLModel):
-    title: str = Field(
-        min_length=settings.MIN_TITLE_LEN, max_length=settings.MAX_TITLE_LEN
-    )
-    description: Optional[str] = Field(
-        default=None, max_length=settings.MAX_DESC_LEN
-    )
-    price: Decimal = Field(default=0.0, ge=0.0)
-    public: bool = True
-    keywords: Optional[set[str]] = Field(default=None)
-    version: str = Field(default="1.0")
+from app.base_models.app import BaseApp, GameGenre, AppCategory
 
 
 class AppDB(BaseApp, table=True):
@@ -53,12 +16,16 @@ class AppDB(BaseApp, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
-    published_at: datetime = Field(default_factory=lambda: datetime.now())
+    published_at: datetime = Field(
+        sa_type=TIMESTAMP(timezone=True),
+        default_factory=lambda: datetime.now(timezone.utc)
+        )
     genre: Optional[GameGenre] = Field(default=None, nullable=True)
     category: AppCategory = AppCategory.APPLICATION
     
     keywords: Optional[set[str]] = Field(default=None, sa_type=ARRAY(String))
 
+    rating: Optional[float] = Field(default=None, ge=1.0, le=5.0)
     times_purchased: int = Field(default=0, ge=0)
 
     publisher_id: UUID = Field(foreign_key="users.id", ondelete="CASCADE")
@@ -82,67 +49,7 @@ class AppDB(BaseApp, table=True):
         back_populates="app",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"}
         )
-
-
-class AppRequest(BaseApp):
-    pass
-    # @model_validator(mode="before")
-    # def validate_game_genre(self):
-    #    if (self.category == AppCategory.APPLICATION
-    #        and self.game_genre is not None):
-    #        raise ValueError("Non-game application can't have a game genre")
-
-
-class AppResponse(BaseApp):
-    id: UUID
-    category: AppCategory = AppCategory.APPLICATION
-    published_at: datetime
-    rating: Optional[float] = Field(default=None, gt=0.0, le=5.0)
-    times_purchased: int = Field(ge=0)
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class AppResponseWithPublisher(AppResponse):
-    publisher: "PublisherResponse"
-
-
-class AppResponseWithReviews(AppResponse):
-    id: UUID
-    reviews: list["ReviewResponse"]
-
-
-class AppUpdate(SQLModel):
-    title: Optional[str] = Field(
-        default=None,
-        min_length=settings.MIN_TITLE_LEN,
-        max_length=settings.MAX_TITLE_LEN,
-    )
-    description: Optional[str] = Field(
-        default=None, max_length=settings.MAX_DESC_LEN
-    )
-    price: Optional[Decimal] = Field(default=0.0, ge=0.0)
-    public: Optional[bool] = None
-    keywords: Optional[set[str]] = Field(default=None)
-    version: Optional[str] = Field(default="1.0")
-
-
-class GameRequest(AppRequest):
-    genre: GameGenre = GameGenre.MISC
-
-
-class GameResponse(AppResponse):
-    genre: GameGenre
-    category: AppCategory = AppCategory.GAME
-
-
-class GameResponseWithPublisher(GameResponse):
-    publisher: "PublisherResponse"
-
-
-def rebuild_models() -> None:
-    AppResponse.model_rebuild()
-    GameResponse.model_rebuild()
-
-
-# rebuild_models()
+    thumbnails: list["AppThumbnail"] = Relationship(
+        back_populates="app",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+        )

@@ -1,32 +1,14 @@
-from datetime import datetime
+from datetime import datetime, timezone, date
 from uuid import UUID, uuid4
-from enum import StrEnum
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import EmailStr, ConfigDict
-from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlmodel import Field, Relationship
+from sqlalchemy.dialects.postgresql import ARRAY, TIMESTAMP, DATE
 from sqlalchemy import String
 
 from app.models.purchase import PurchaseDB
-from app.core.config import settings
-
-
-class UserRole(StrEnum):
-    USER = "user"
-    PUBLISHER = "publisher"
-    MODERATOR = "moderator"
-
-
-class BaseUser(SQLModel):
-    username: str = Field(
-        index=True,
-        min_length=settings.MIN_NAME_LEN,
-        max_length=settings.MAX_NAME_LEN,
-        unique=True,
-    )
-    email: Optional[EmailStr] = Field(default=None, unique=True)
+from app.base_models.user import BaseUser, UserRole
 
 
 class UserDB(BaseUser, table=True):
@@ -38,10 +20,18 @@ class UserDB(BaseUser, table=True):
 
     hashed_password: str
     roles: list["UserRole"] = Field(
-        sa_type=ARRAY(String), default={UserRole.USER}
+        sa_type=ARRAY(String), default=[UserRole.USER]
     )
 
-    registered_at: datetime = Field(default_factory=lambda: datetime.now())
+    registered_at: datetime = Field(
+        sa_type=TIMESTAMP(timezone=True),
+        default_factory=lambda: datetime.now(timezone.utc)
+        )
+    birth_date: Optional[date] = Field(
+        default=None,
+        sa_type=DATE()
+        )
+    
     balance: Decimal = Field(default=0, ge=0)
 
     cart: Optional["CartDB"] = Relationship(
@@ -71,43 +61,7 @@ class UserDB(BaseUser, table=True):
         back_populates="author",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
-
-
-class UserRequest(BaseUser):
-    password: str
-
-
-class UserResponse(BaseUser):
-    id: UUID
-    registered_at: datetime
-
-    roles: set[UserRole]
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class PublisherResponse(BaseUser):
-    id: UUID
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class CurrentUserResponse(UserResponse):
-    balance: Decimal
-
-
-class UserResponseWithReviewsAndApps(UserResponse):
-    reviews: list["ReviewResponse"]
-    cart: list["AppResponse"]
-    purchased_apps: list["AppResponse"]
-    published_apps: list["AppResponse"]
-
-
-class UserBaseResponse(BaseUser):
-    model_config = ConfigDict(from_attributes=True)
-
-
-class UserUpdate(SQLModel):
-    username: Optional[str] = None
-    email: Optional[EmailStr] = None
-    password: Optional[str] = None
+    transfers: list["TransferDB"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    ) 

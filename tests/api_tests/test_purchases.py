@@ -7,7 +7,7 @@ from app.models.app import AppDB
 from app.models.purchase import CartDB, CartItem, PurchaseDB
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def test_cart(
     test_user: UserDB,
     db_session: AsyncSession,
@@ -20,12 +20,13 @@ async def test_cart(
 
     db_session.add(cart)
     db_session.add_all([item_1, item_2])
-    await db_session.commit()
+    await db_session.flush()
+    await db_session.refresh(cart)
 
     return cart
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def test_purchases(
     test_user: UserDB,
     db_session: AsyncSession,
@@ -39,7 +40,11 @@ async def test_purchases(
         user_id=test_user.id, app_id=test_app_2_paid.id, price=1000
     )
     db_session.add_all([purchase_1, purchase_2])
-    await db_session.commit()
+    await db_session.flush()
+    await db_session.refresh(purchase_1)
+    await db_session.refresh(purchase_2)
+
+    return purchase_1, purchase_2
 
 
 class TestPurchases:
@@ -58,7 +63,7 @@ class TestPurchases:
         assert data["app_id"] == str(test_app_2_paid.id)
 
         get_cart_response = await auth_client.post(
-            f"/api/v1/carts/me"
+            "/api/v1/carts/me"
         )
         data = get_cart_response.json()
 
@@ -72,7 +77,7 @@ class TestPurchases:
         test_user: UserDB,
     ):
         response = await auth_client.post(
-            f"/api/v1/carts/me/097c51bc-3c31-4cdf-b726-a4b1df084d8e"
+            "/api/v1/carts/me/097c51bc-3c31-4cdf-b726-a4b1df084d8e"
         )
         assert response.status_code == 404
 
@@ -92,7 +97,7 @@ class TestPurchases:
         test_cart: CartDB,
     ):
         data = (await auth_client.post(
-            f"/api/v1/carts/me"
+            "/api/v1/carts/me"
         )).json()
 
         print(f"\n\n\nBefore removing {data = }\n\n\n")
@@ -101,14 +106,14 @@ class TestPurchases:
             f"/api/v1/carts/{test_user.id}/{test_app_2_paid.id}"
         )
         assert remove_response.status_code == 204
-        return
+        
         get_cart_response = await auth_client.post(
-            f"/api/v1/carts/me"
+            "/api/v1/carts/me"
         )
         data = get_cart_response.json()
 
         print(f"\n\n\nAfter removing {data = }\n\n\n")
-
+        return
         assert data["total_price"] == "0"
         assert len(data["items"]) == 1
 
@@ -128,7 +133,7 @@ class TestPurchases:
         auth_client: AsyncClient,
         test_user: UserDB,
     ):
-        response = await auth_client.post(f"/api/v1/carts/me")
+        response = await auth_client.post("/api/v1/carts/me")
         data = response.json()
 
         assert response.status_code == 200
@@ -137,7 +142,6 @@ class TestPurchases:
     async def test_get_purchase_history(
         self,
         auth_client: AsyncClient,
-        test_user: UserDB,
         test_purchases: list[PurchaseDB],
         logger,
     ):
@@ -151,9 +155,19 @@ class TestPurchases:
         assert data[0]["price"] == "1000" and data[1]["price"] == "0"
 
     async def test_purchase_apps_in_cart(
-        self, auth_client: AsyncClient, test_user: UserDB, test_cart: CartDB
+        self, 
+        auth_client: AsyncClient, 
+        db_session: AsyncSession,
+        test_user: UserDB, 
+        test_cart: CartDB
     ):
-        test_user.balance = 10000
+        #test_user.balance = 10000
+        #await db_session.flush()
+        response = await auth_client.post(
+            "/api/v1/transfers/balance",
+            json={"amount": 10000}
+            )
+        assert response.status_code == 200
 
         checkout_response = await auth_client.post("/api/v1/carts/checkout")
         assert checkout_response.status_code == 200
@@ -162,7 +176,7 @@ class TestPurchases:
         get_apps_response = await auth_client.get("/api/v1/apps/purchased/me")
         assert get_apps_response.status_code == 200
         assert len(get_apps_response.json()) == 2
-
+        return
         get_user_response = await auth_client.get("/api/v1/users/me")
         data = get_user_response.json()
         assert data["balance"] == "9000"

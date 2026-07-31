@@ -4,26 +4,34 @@ from typing import Optional
 from datetime import datetime, timezone
 import asyncio
 
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
+from fastapi import BackgroundTasks
+from sqlalchemy.ext.asyncio import (
+    create_async_engine, async_sessionmaker
+    )
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 from httpx import ASGITransport, AsyncClient
 from fakeredis.aioredis import FakeRedis
+from fakeredis import FakeServer
 import pytest_asyncio
 import jwt
 
 from app.utils.search import format_keywords
+
 from app.models.user import UserDB, UserRole
 from app.models.app import AppDB, GameGenre
+from app.models.purchase import PurchaseDB
+
 from app.db.postgres import get_session
-from app.dependencies import (
+from app.api.dependencies import (
     get_current_user, 
     get_current_user_id, 
     get_redis, 
     can_send_email, 
     get_refresh_secret_key,
     get_access_secret_key,
-    rate_limit
+    rate_limit,
+    get_session_factory
     )
 from app.core.config import settings
 from app.core.security import get_password_hash
@@ -33,24 +41,22 @@ from app.main import app
 test_user_data = {
     "username": "testUser",
     "hashed_password": get_password_hash("testPassword"),
-    "email": "ureb588@gmail.com"
+    "email": "user@example.com"
 }
-
 
 # ----- Tokens -----
 
 def create_access_token(
     user_id: UUID,
     expires_delta: datetime = settings.ACCESS_TOKEN_EXPIRE_MINUTES,
-    extra_claims: Optional[dict[str, str]] = None,
+    #extra_claims: Optional[dict[str, str]] = None,
 ) -> str:
     expire = datetime.now(timezone.utc) + expires_delta
     payload = {
         "sub": str(user_id),
         "exp": int(expire.timestamp()),
-        "type": "access",
-        # "jti": str(uuid4),
-        **(extra_claims or {}),
+        "type": "access"
+        #**(extra_claims or {}),
     }
 
     return jwt.encode(
@@ -66,6 +72,7 @@ def create_refresh_token(
     family_id: UUID = uuid4(),
     expires_delta: datetime = settings.REFRESH_TOKEN_EXPIRE_DAYS,
 ) -> tuple[str, str, str]:
+    """Returns refresh token, jti, family_id"""
     expire = datetime.now(timezone.utc) + expires_delta
     payload = {
         "sub": str(user_id),
@@ -96,14 +103,14 @@ def get_logger():
 
 # ----- Database fixtures -----
 
-@pytest_asyncio.fixture(scope="session")
-async def engine():
-    engine = create_async_engine(settings.TEST_DB_URL)
+engine = create_async_engine(settings.TEST_DB_URL)
 
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
 
-    yield engine
+    yield
 
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.drop_all)
@@ -112,36 +119,65 @@ async def engine():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def db_session(
-    engine: AsyncEngine,
-) -> AsyncGenerator[AsyncSession, None]:
+async def db_connection():
+    """Открывает соединение и глобальную транзакцию на один тест."""
     async with engine.connect() as connection:
         async with connection.begin() as transaction:
-            async with AsyncSession(
-                bind=connection, expire_on_commit=False
-            ) as session:
-                yield session
-
+            yield connection
             await transaction.rollback()
 
 
+@pytest_asyncio.fixture(scope="function")
+def session_factory(db_connection):
+    """Фабрика, которая создает сессии строго внутри транзакции теста."""
+    return async_sessionmaker(
+        bind=db_connection,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autocommit=False,
+        autoflush=False,
+        join_transaction_mode="create_savepoint" 
+    )
+
+
+@pytest_asyncio.fixture(scope="function")
+async def db_session(session_factory):
+    """Сессия для использования прямо в фикстурах объектов тестов."""
+    async with session_factory() as session:
+        yield session
+
+
 @pytest_asyncio.fixture
-async def fake_redis() -> AsyncGenerator[FakeRedis, None]:
-    redis = FakeRedis()
+async def fake_redis() -> AsyncGenerator[FakeRedis, None, None]:
+    server = FakeServer()
+    redis = FakeRedis(server=server)
     yield redis
     await redis.flushall()
     await redis.aclose()
+
+
+@pytest_asyncio.fixture(scope="session", autouse=True)
+def setup_test_celery():
+    from app.bg_tasks.celery_app import celery_app
+    celery_app.conf.update(
+        task_always_eager=True,
+        task_eager_propagates=True,
+        broker_url="memory://",
+        result_backend="cache+memory://"
+    )
 
 
 # ----- Client fixtures -----
 
 def override_general_deps(
     db_session: AsyncSession, 
+    session_factory: async_sessionmaker[AsyncSession],
     fake_redis: FakeRedis,
     ignore_rate_limit: bool = True
     ) -> None:
     app.dependency_overrides[get_session] = lambda: db_session
-    app.dependency_overrides[get_redis] = lambda: fake_redis
+    app.dependency_overrides[get_session_factory] = lambda: session_factory
+    app.dependency_overrides[get_redis] = lambda: fake_redis 
     app.dependency_overrides[can_send_email] = lambda: False
     app.dependency_overrides[get_refresh_secret_key] = (
         lambda: settings.TEST_REFRESH_SECRET_KEY
@@ -156,9 +192,14 @@ def override_general_deps(
 @pytest_asyncio.fixture
 async def client(
     db_session: AsyncSession, 
+    session_factory: async_sessionmaker[AsyncSession],
     fake_redis: FakeRedis
 ):
-    override_general_deps(db_session, fake_redis)
+    override_general_deps(
+        db_session, 
+        session_factory,
+        fake_redis
+        )
 
     transport = ASGITransport(app)
     async with AsyncClient(
@@ -170,17 +211,39 @@ async def client(
     app.dependency_overrides.clear()
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def auth_client(
     db_session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
     fake_redis: FakeRedis,
     test_user: UserDB,
     access_token: str,
     refresh_token_data: dict[str, str],
 ):
-    override_general_deps(db_session, fake_redis)
+    override_general_deps(
+        db_session,
+        session_factory,
+        fake_redis
+    )
     app.dependency_overrides[get_current_user] = lambda: test_user
     app.dependency_overrides[get_current_user_id] = lambda: test_user.id
+
+    # --- ТРЮК ДЛЯ BACKGROUND TASKS ---
+    #running_background_tasks = []
+
+    #def mock_background_tasks_add_task(self, func, *args, **kwargs):
+    #    """Перехватывает фоновые задачи и сохраняет их в список для ожидания."""
+        #async def wrapped():
+            #if asyncio.iscoroutinefunction(func):
+            #    await func(*args, **kwargs)
+            #else:
+            #    func(*args, **kwargs)
+        # Оборачиваем в asyncio.task, чтобы выполнить в рамках текущего Loop теста
+        #running_background_tasks.append(asyncio.create_task(wrapped()))
+
+    # Подменяем метод add_task у стандартного класса FastAPI
+    #old_add_task = BackgroundTasks.add_task
+    #BackgroundTasks.add_task = mock_background_tasks_add_task
 
     transport = ASGITransport(app)
     async with AsyncClient(
@@ -191,17 +254,38 @@ async def auth_client(
     ) as ac:
         yield ac
 
+        # ПЕРЕД тем как закрыть клиент и фикстуру, ЖДЕМ завершения всех фоновых задач FastAPI
+        #if running_background_tasks:
+        #    await asyncio.gather(*running_background_tasks, return_exceptions=True)
+
+    #BackgroundTasks.add_task = old_add_task
     app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def auth_client_2(
+    auth_client: AsyncClient,
+    test_user_2: UserDB
+):
+    app.dependency_overrides[get_current_user] = lambda: test_user_2
+    app.dependency_overrides[get_current_user_id] = lambda: test_user_2.id
+    auth_client.headers = {"Authorization": f"Bearer {create_access_token(test_user_2.id)}"}
+    yield auth_client
 
 
 @pytest_asyncio.fixture
 async def real_auth_client(
     db_session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
     fake_redis: FakeRedis,
     access_token: str,
     refresh_token_data: dict[str, str],
 ):
-    override_general_deps(db_session, fake_redis)
+    override_general_deps(
+        db_session, 
+        session_factory,
+        fake_redis,
+        )
 
     transport = ASGITransport(app)
     async with AsyncClient(
@@ -218,12 +302,12 @@ async def real_auth_client(
 @pytest_asyncio.fixture
 async def publisher_client(
     db_session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
     fake_redis: FakeRedis,
     test_publisher: UserDB,
     access_token: str,
 ):
-    app.dependency_overrides[get_session] = lambda: db_session
-    app.dependency_overrides[get_redis] = lambda: fake_redis
+    override_general_deps(db_session, session_factory, fake_redis)
     app.dependency_overrides[get_current_user] = lambda: test_publisher
     app.dependency_overrides[get_current_user_id] = lambda: test_publisher.id
 
@@ -241,9 +325,15 @@ async def publisher_client(
 @pytest_asyncio.fixture
 async def rate_limited_client(
     db_session: AsyncSession, 
+    session_factory: async_sessionmaker[AsyncSession],
     fake_redis: FakeRedis
 ):
-    override_general_deps(db_session, fake_redis, False)
+    override_general_deps(
+        db_session, 
+        session_factory,
+        fake_redis,
+        False
+        )
 
     transport = ASGITransport(app)
     async with AsyncClient(
@@ -258,11 +348,17 @@ async def rate_limited_client(
 @pytest_asyncio.fixture
 async def rate_limited_auth_client(
     db_session: AsyncSession, 
+    session_factory: async_sessionmaker[AsyncSession],
     fake_redis: FakeRedis,
     test_user: UserDB,
     access_token: str
 ):
-    override_general_deps(db_session, fake_redis, False)
+    override_general_deps(
+        db_session, 
+        session_factory,
+        fake_redis, 
+        False
+        )
     app.dependency_overrides[get_current_user] = lambda: test_user
     app.dependency_overrides[get_current_user_id] = lambda: test_user.id
 
@@ -278,7 +374,6 @@ async def rate_limited_auth_client(
 
 
 # ----- Token fixtures -----
-
 
 @pytest_asyncio.fixture
 def access_token(test_user: UserDB) -> str:
@@ -308,82 +403,81 @@ async def user_data() -> dict[str, str]:
 
 # ----- Test user fixtures -----
 
-
-@pytest_asyncio.fixture
-async def test_user(db_session: AsyncSession) -> UserDB:
+@pytest_asyncio.fixture(scope="function")
+async def test_user(
+    db_session: AsyncSession
+) -> UserDB:
     user = UserDB(**test_user_data)
 
     db_session.add(user)
-    await db_session.commit()
-    # await db_session.refresh(user)
+    await db_session.flush()
+    await db_session.refresh(user)
 
     return user
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def test_user_2(db_session: AsyncSession) -> UserDB:
     user = UserDB(
         username="anotherUser",
-        hashed_password="12345",
+        hashed_password="testPassword2",
         roles=[UserRole.PUBLISHER],
     )
 
     db_session.add(user)
-    await db_session.commit()
-    # await db_session.refresh(user)
+    await db_session.flush()
+    await db_session.refresh(user)
 
     return user
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def test_publisher(
     test_user: UserDB, db_session: AsyncSession
 ) -> UserDB:
     test_user.roles = [UserRole.USER, UserRole.PUBLISHER]
 
-    db_session.add(test_user)
-    await db_session.commit()
-    # await db_session.refresh(user)
+    await db_session.flush()
+    await db_session.refresh(test_user)
 
     return test_user
 
 
 # ----- App fixtures -----
 
-
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def test_app(db_session: AsyncSession, test_publisher: UserDB) -> AppDB:
     app = AppDB(
-        title="MS Code",
-        description="IDE for programming with brainf*ck",
+        title="test app",
+        description="test desc",
         price=300,
         publisher_id=test_publisher.id,
-        keywords=["code", "ms", "bf", "programming", "test", "app"],
+        keywords=["paid", "test", "app"],
     )
     db_session.add(app)
-    await db_session.commit()
-    # await db_session.refresh(app)
+    await db_session.flush()
+    await db_session.refresh(app)
 
     return app
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def test_app_2(db_session: AsyncSession, test_user_2: UserDB) -> AppDB:
     app = AppDB(
-        title="my app",
-        description="This is a simple app for testing purposes, and it's FREE",
+        title="test app 2",
+        description="test desc for test app",
         price=0,
         publisher_id=test_user_2.id,
         keywords=["free", "app", "test"],
     )
     db_session.add(app)
-    await db_session.commit()
-    # await db_session.refresh(app)
+    await db_session.flush()
+    await db_session.refresh(app)
 
     return app
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def test_app_2_paid(
     db_session: AsyncSession, test_user_2: UserDB
 ) -> AppDB:
@@ -392,90 +486,85 @@ async def test_app_2_paid(
         description="This is a simple app for testing purposes",
         price=1000,
         publisher_id=test_user_2.id,
-        keywords=["free", "app", "test"],
+        keywords=["paid", "app", "test"],
     )
     db_session.add(app)
-    await db_session.commit()
-    # await db_session.refresh(app)
+    await db_session.flush()
+    await db_session.refresh(app)
 
     return app
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def test_app_private(
     db_session: AsyncSession, test_user_2: UserDB
 ) -> AppDB:
     app = AppDB(
         title="my private app",
-        description="This is a simple app for testing purposes, "
-        "and it's FREE but PRIVATE",
+        description="test description",
         price=0,
         publisher_id=test_user_2.id,
         keywords=["free", "app", "test"],
         public=False,
     )
     db_session.add(app)
-    await db_session.commit()
-    # await db_session.refresh(app)
+    await db_session.flush()
+    await db_session.refresh(app)
 
     return app
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def test_game(db_session: AsyncSession, test_user_2: UserDB):
     game = AppDB(
-        title="gta7",
-        description="This is test of gta7",
+        title="game1",
+        description="test game",
         price=1000,
         publisher_id=test_user_2.id,
-        keywords=["paid", "game", "test", "gta"],
+        keywords=["paid", "game", "test"],
         category="game",
         genre=GameGenre.ADVENTURE
     )
     db_session.add(game)
-    await db_session.commit()
+    await db_session.flush()
+    await db_session.refresh(game)
 
     return game
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def test_apps(db_session: AsyncSession, test_user_2: UserDB):
-    app_1 = AppDB(
-        title="test", 
-        keywords=[" KEY ", " key 2"], 
-        publisher_id=test_user_2.id
-        )
-    app_2 = AppDB(
-        title="test", 
-        keywords=["kEy"],
-        publisher_id=test_user_2.id
-        )
-    app_3 = AppDB(
-        title="test", 
-        keywords=["  key  "],
-        publisher_id=test_user_2.id
-        )
-    app_4 = AppDB(
-        title="test", 
-        keywords=[" Newkey "],
-        publisher_id=test_user_2.id
-        )
-    app_5 = AppDB(
-        title="hidden test", 
-        keywords=[" Newkey "],
-        publisher_id=test_user_2.id,
-        public=False
-        )
-
-    apps = [app_1, app_2, app_3, app_4, app_5]
+    apps = [
+        AppDB(
+            title="test", 
+            keywords=[" KEY ", " key 2"], 
+            publisher_id=test_user_2.id
+            ),
+        AppDB(
+            title="test", 
+            keywords=["kEy"],
+            publisher_id=test_user_2.id
+            ),
+        AppDB(
+            title="test", 
+            keywords=["  key  "],
+            publisher_id=test_user_2.id
+            ),
+        AppDB(
+            title="test", 
+            keywords=[" Newkey "],
+            publisher_id=test_user_2.id
+            ),
+        AppDB(
+            title="hidden test", 
+            keywords=[" Newkey "],
+            publisher_id=test_user_2.id,
+            public=False
+            )
+        ]
     db_session.add_all(apps)
+    await db_session.flush()
+    for app in apps:
+        await db_session.refresh(app)
 
     return apps
-
-
-# ----- Utilities -----
-
-
-@pytest_asyncio.fixture
-async def format_kws():
-    return format_keywords
