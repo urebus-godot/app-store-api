@@ -37,6 +37,9 @@ jobs:
       REDIS_URL: empty
       MAIL_PASSWORD: empty
       DB_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
+      BROKER_URL: redis://redis:6379/0
+      RESULT_BACKEND_URL: redis://redis:6379/0
+      WORKER_DB_URL: postgresql+psycopg://postgres:postgres@localhost:5432/test_db
 
     steps:
       - name: Download code
