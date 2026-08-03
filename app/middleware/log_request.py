@@ -3,10 +3,8 @@ from time import perf_counter
 from fastapi import Request, Response
 
 from app.core.logging import logger
-from app.main import app
 
 
-@app.middleware("http")
 async def log_request(request: Request, call_next) -> Response:
     start_time = perf_counter()
 

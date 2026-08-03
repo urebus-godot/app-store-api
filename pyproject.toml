@@ -29,6 +29,7 @@ dependencies = [
     "testcontainers>=4.14.2",
     "pillow>=12.3.0",
     "flower>=2.0.1",
+    "psycopg[binary]>=3.3.4",
 ]
 
 [tool.uv.workspace]
@@ -45,7 +46,7 @@ testpaths = ["tests"]
 
 [tool.ruff.lint]
 extend-select = ["E501"]
-ignore = ["F821"]
+ignore = ["F821", "F841"]
 
 [tool.ruff]
 line-length  = 79

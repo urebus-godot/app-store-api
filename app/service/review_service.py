@@ -2,7 +2,6 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 
-from app.core.logging import logger
 from app.core.exceptions import (
     review_not_found_exception, 
     no_rights_exception,
@@ -17,6 +16,8 @@ from app.repo.review_repo import ReviewRepository
 from app.service.app_service import AppService
 
 from app.uow.orm import UnitOfWork
+from app.core.logging import logger
+from app.task_queue.tasks.db_tasks import update_app_rating
 
 
 class ReviewService:
@@ -35,7 +36,7 @@ class ReviewService:
             app = await uow.app_repo.get_public_app(app_id)
             if not app:
                 raise app_not_found_exception
-            logger.info(f"{app.publisher_id=} \n{user_id=}")
+
             if app.publisher_id == user_id:
                 raise HTTPException(
                     status.HTTP_400_BAD_REQUEST,
@@ -54,8 +55,11 @@ class ReviewService:
             review = await uow.review_repo.create_review(
                 data, user_id, app_id
             )
+            await uow.commit()
+            logger.info("Created review!")
 
-        await self.app_service.update_app_rating(app_id, uow)
+        update_app_rating.delay(str(app_id))
+ 
         return review
 
     async def get_review(self, id: UUID) -> ReviewDB:
@@ -91,7 +95,7 @@ class ReviewService:
             if not review.author_id == user_id:
                 raise no_rights_exception
 
-            app_id = review.app_id
-            
             await uow.session.delete(review)
-            await self.app_service.update_app_rating(app_id, uow)
+            await uow.commit()
+        app_id = str(review.app_id)
+        update_app_rating.delay(app_id)

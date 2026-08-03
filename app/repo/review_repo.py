@@ -63,4 +63,3 @@ class ReviewRepository:
             .order_by(desc(ReviewDB.created_at))
         )
         return user_reviews
-

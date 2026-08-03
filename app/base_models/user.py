@@ -2,7 +2,7 @@ from enum import StrEnum
 from typing import Optional
 
 from sqlmodel import SQLModel, Field
-from pydantic import EmailStr, field_validator
+from pydantic import EmailStr
 
 from app.core.config import settings
 

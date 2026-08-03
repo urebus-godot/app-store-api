@@ -1,12 +1,23 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, status, Depends, Request
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, HTTPException, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import ResponseValidationError
+
 from sqlalchemy import text
 
+import httpx
+
+from app.middleware.log_request import log_request
+from app.core.exception_handlers import (
+    response_validation_error_handler,
+    file_not_found_error_handler,
+    request_error_handler,
+    timeout_error_handler
+    )
 from app.core.logging import setup_logging
 from app.core.config import settings
+
 from app.api.dependencies import RedisDep, SessionDep, rate_limit
 from app.api.v1 import (
     app_router,
@@ -33,7 +44,13 @@ app = FastAPI(
     debug=settings.DEBUG,
     version=settings.API_VERSION,
     lifespan=lifespan,
-    dependencies=[Depends(rate_limit)]
+    dependencies=[Depends(rate_limit)],
+    exception_handlers={
+        ResponseValidationError: response_validation_error_handler,
+        FileNotFoundError: file_not_found_error_handler,
+        httpx.RequestError: request_error_handler,
+        httpx.ReadTimeout: timeout_error_handler
+    }
 )
 
 app.include_router(
@@ -84,8 +101,6 @@ async def health_check(
 
 if __name__ == "__main__":
     import uvicorn
-    from app.middleware.log_request import log_request
-
     uvicorn.run(
         "app.main:app",
         host=settings.API_HOST,

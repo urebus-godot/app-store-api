@@ -23,9 +23,14 @@ class AppDB(BaseApp, table=True):
     genre: Optional[GameGenre] = Field(default=None, nullable=True)
     category: AppCategory = AppCategory.APPLICATION
     
-    keywords: Optional[set[str]] = Field(default=None, sa_type=ARRAY(String))
+    keywords: Optional[set[str]] = Field(
+        default=None, sa_type=ARRAY(String)
+        )
 
-    rating: Optional[float] = Field(default=None, ge=1.0, le=5.0)
+    rating: Optional[float] = Field(
+        default=None, 
+        ge=1.0, le=5.0
+        )
     times_purchased: int = Field(default=0, ge=0)
 
     publisher_id: UUID = Field(foreign_key="users.id", ondelete="CASCADE")

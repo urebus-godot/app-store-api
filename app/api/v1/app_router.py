@@ -6,8 +6,7 @@ from fastapi import (
     APIRouter, status, 
     Depends, Query,
     UploadFile, File,
-    HTTPException,
-    BackgroundTasks
+    HTTPException
     )
 from fastapi.responses import FileResponse
 
@@ -18,7 +17,6 @@ from app.api.dependencies import (
     AppServiceDep,
     ReviewServiceDep,
     rate_limit,
-    UserDep,
     RedisDep,
     UnitOfWorkDep
 )

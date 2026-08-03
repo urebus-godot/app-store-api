@@ -12,8 +12,8 @@ from app.core.config import settings
 
 
 class AppRequest(BaseApp):
-    @classmethod
     @field_validator("title", check_fields=False)
+    @classmethod
     def validate_title(cls, value: str) -> str:
         if not value.strip():
             raise ValueError("Title can't consist only of spaces")
@@ -54,6 +54,7 @@ class AppUpdate(SQLModel):
     version: Optional[str] = Field(default="1.0")
 
     @field_validator("title", check_fields=False)
+    @classmethod
     def validate_title(cls, value: str) -> str:
         if not value.strip():
             raise ValueError("Title can't consist only of spaces")

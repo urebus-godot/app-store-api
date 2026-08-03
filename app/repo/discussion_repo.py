@@ -1,6 +1,5 @@
 from uuid import UUID
 from typing import Optional
-from datetime import datetime, timezone
 
 from sqlalchemy.orm import selectinload
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -105,5 +104,3 @@ class DiscussionRepository:
 
         return message
 
-    async def delete_message(self, message: MessageDB) -> None:
-        await self.session.delete(message)

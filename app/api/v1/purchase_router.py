@@ -2,7 +2,6 @@ from uuid import UUID
 
 from fastapi import APIRouter, status, BackgroundTasks, Depends
 
-from app.core.config import settings
 from app.api.dependencies import (
     PurchaseServiceDep,
     UserIdDep,
@@ -10,8 +9,7 @@ from app.api.dependencies import (
     SkipLimitParams,
     UnitOfWorkDep,
     SendEmailDep,
-    rate_limit,
-    RedisDep
+    rate_limit
 )
 from app.schemas.purchase import (
     CartResponse,

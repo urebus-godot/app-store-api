@@ -3,6 +3,7 @@ from typing import Optional
 import asyncio
 import os
 
+
 from fastapi import UploadFile, HTTPException, status
 from redis.asyncio import Redis
 
@@ -17,14 +18,14 @@ from app.core.exceptions import (
     user_not_found_exception
 )
 from app.core.config import settings
-from app.bg_tasks import celery_tasks
+from app.task_queue.tasks import image_tasks
 
 from app.repo.user_repo import UserRepository
 
-from app.models.app import GameGenre, AppDB
 from app.schemas.app import (
     AppRequest, AppUpdate, GameUpdate, 
     )
+from app.models.app import GameGenre, AppDB
 from app.models.user import UserDB
 from app.models.file import AppArchive, AppCover, AppThumbnail
 
@@ -53,7 +54,9 @@ class AppService:
     ) -> AppDB:
         async with uow:
             app = await uow.app_repo.upload_app(data, user.id)
-            return app
+            await uow.commit()
+
+        return app
 
     async def update_app(
         self, id: UUID, user_id: UUID, data: AppUpdate, uow: UnitOfWork
@@ -74,17 +77,9 @@ class AppService:
                 )
 
             app = await uow.app_repo.update_app(data, app)
+            await uow.commit()
 
-            return app
-
-    async def update_app_rating(
-        self, app_id: UUID, uow: UnitOfWork
-    ) -> None:
-        logger.info("Start calculating app rating...")
-        app = await uow.app_repo.get_app(app_id)
-        await uow.app_repo.update_app_rating(app)
-
-        logger.info(f"New app rating: {app.rating}")
+        return app
 
     async def upload_app_archive(
         self, 
@@ -135,7 +130,9 @@ class AppService:
                 "Committing. App archive path is now: "
                 f"{settings.APP_ARCHIVE_PATH / str(app_archive.app_id)}"
                 )
-            return app_archive
+            await uow.commit()
+            
+        return app_archive
 
     async def get_app_archive(
         self, app_id: UUID, user_id: UUID
@@ -200,7 +197,7 @@ class AppService:
                 write_file, 
                 file, filename, settings.APP_THUMBNAIL_PATH
                 )
-            celery_tasks.process_image.delay(
+            image_tasks.process_image.delay(
                 str(file_path), (128, 128), 85
                 )
 
@@ -215,7 +212,9 @@ class AppService:
 
             app_thumbnail.extension = extension
 
-            return app_thumbnail
+            await uow.commit()
+
+        return app_thumbnail
 
     async def remove_app_thumbnail(
         self, app_id: UUID, uow: UnitOfWork
@@ -273,15 +272,15 @@ class AppService:
                 write_file,
                 file, filename, settings.APP_COVER_PATH
                 )
-            celery_tasks.process_image.delay(
+            image_tasks.process_image.delay(
                 str(file_path), (1280, 720)
                 )
 
             uow.session.add(app_cover)
-
+            await uow.commit()
             logger.info(f"Committed. App cover paths is now: {file_path}")
 
-            return app_cover
+        return app_cover
 
     async def get_app_covers(
         self, 
@@ -324,6 +323,7 @@ class AppService:
             os.remove(app_cover_path)
 
             await uow.session.delete(app_cover)
+            await uow.commit()
 
     async def check_and_remove_all_app_covers(
         self,
@@ -342,6 +342,7 @@ class AppService:
                 raise no_rights_exception
 
             await self.remove_all_app_covers(app_id, uow)
+            await uow.commit()
 
     async def remove_all_app_covers(
         self,
@@ -453,3 +454,5 @@ class AppService:
             await self.remove_all_app_covers(id, uow)
             await self.remove_app_archive(id, uow)
             await self.remove_app_thumbnail(id, uow)
+            
+            await uow.commit()

@@ -39,8 +39,8 @@ class UnitOfWork(AbstractUnitOfWork):
             logger.error(f"Error: {exc_value}")
             logger.error(f"Traceback: {traceback}")
             await self.rollback()
-        else:
-            await self.commit()
+        #else:
+        #    await self.commit()
             
         await self.session.close()
 

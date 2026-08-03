@@ -2,7 +2,7 @@ from typing import Optional
 from uuid import UUID
 
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select, desc
+from sqlmodel import select, desc, delete
 from sqlalchemy.orm import selectinload
 
 from app.core.logging import logger
@@ -120,6 +120,8 @@ class PurchaseRepository:
     ) -> None:
         await self.session.delete(item)
 
-    async def delete_cart(self, cart: CartDB) -> None:
-        await self.session.delete(cart)
-
+    async def delete_cart(
+        self, user_id: UUID
+    ) -> None:
+        stmt = delete(CartDB).where(CartDB.user_id == user_id)
+        await self.session.exec(stmt)

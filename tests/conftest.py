@@ -1,26 +1,26 @@
+from app.core.config import settings
+
+settings.WORKER_DB_URL = settings.TEST_WORKER_DB_URL
+
 from collections.abc import AsyncGenerator
 from uuid import UUID, uuid4
-from typing import Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 import asyncio
 
-from fastapi import BackgroundTasks
 from sqlalchemy.ext.asyncio import (
     create_async_engine, async_sessionmaker
     )
-from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlmodel import SQLModel
+
 from httpx import ASGITransport, AsyncClient
 from fakeredis.aioredis import FakeRedis
-from fakeredis import FakeServer
+#from fakeredis import FakeServer
 import pytest_asyncio
 import jwt
 
-from app.utils.search import format_keywords
-
 from app.models.user import UserDB, UserRole
 from app.models.app import AppDB, GameGenre
-from app.models.purchase import PurchaseDB
 
 from app.db.postgres import get_session
 from app.api.dependencies import (
@@ -33,15 +33,17 @@ from app.api.dependencies import (
     rate_limit,
     get_session_factory
     )
-from app.core.config import settings
+
 from app.core.security import get_password_hash
 from app.core.logging import logger
 from app.main import app
 
+
 test_user_data = {
     "username": "testUser",
     "hashed_password": get_password_hash("testPassword"),
-    "email": "user@example.com"
+    "email": "user@example.com",
+    "birth_date": date(year=1980, month=4, day=1)
 }
 
 # ----- Tokens -----
@@ -56,7 +58,6 @@ def create_access_token(
         "sub": str(user_id),
         "exp": int(expire.timestamp()),
         "type": "access"
-        #**(extra_claims or {}),
     }
 
     return jwt.encode(
@@ -120,7 +121,6 @@ async def init_db():
 
 @pytest_asyncio.fixture(scope="function")
 async def db_connection():
-    """Открывает соединение и глобальную транзакцию на один тест."""
     async with engine.connect() as connection:
         async with connection.begin() as transaction:
             yield connection
@@ -129,7 +129,6 @@ async def db_connection():
 
 @pytest_asyncio.fixture(scope="function")
 def session_factory(db_connection):
-    """Фабрика, которая создает сессии строго внутри транзакции теста."""
     return async_sessionmaker(
         bind=db_connection,
         class_=AsyncSession,
@@ -142,23 +141,21 @@ def session_factory(db_connection):
 
 @pytest_asyncio.fixture(scope="function")
 async def db_session(session_factory):
-    """Сессия для использования прямо в фикстурах объектов тестов."""
     async with session_factory() as session:
         yield session
 
 
 @pytest_asyncio.fixture
 async def fake_redis() -> AsyncGenerator[FakeRedis, None, None]:
-    server = FakeServer()
-    redis = FakeRedis(server=server)
+    redis = FakeRedis()
     yield redis
     await redis.flushall()
     await redis.aclose()
 
 
-@pytest_asyncio.fixture(scope="session", autouse=True)
+@pytest_asyncio.fixture(scope="function", autouse=True)
 def setup_test_celery():
-    from app.bg_tasks.celery_app import celery_app
+    from app.task_queue.celery_app import celery_app
     celery_app.conf.update(
         task_always_eager=True,
         task_eager_propagates=True,
@@ -269,7 +266,10 @@ async def auth_client_2(
 ):
     app.dependency_overrides[get_current_user] = lambda: test_user_2
     app.dependency_overrides[get_current_user_id] = lambda: test_user_2.id
-    auth_client.headers = {"Authorization": f"Bearer {create_access_token(test_user_2.id)}"}
+    auth_client.headers = {
+        "Authorization": 
+        f"Bearer {create_access_token(test_user_2.id)}"
+        }
     yield auth_client
 
 

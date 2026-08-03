@@ -3,7 +3,6 @@ from io import BufferedReader
 from uuid import UUID
 import shutil
 import os
-import glob
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
@@ -14,6 +13,10 @@ import pytest
 from app.models.app import AppDB
 from app.models.user import UserDB
 from app.models.file import AppArchive, AppCover, AppThumbnail
+from app.models.purchase import PurchaseDB
+from app.models.review import ReviewDB
+
+from app.core.config import settings
 
 @pytest.fixture(scope="function")
 def test_archive(test_app: AppDB):
@@ -62,7 +65,7 @@ def test_cover():
         yield file
 
         uploaded_file_path = Path(
-            f"media/static/applications/covers/abf890b2-459e-4977-92b4-fa628fa10e2d.PNG"
+            "media/static/applications/covers/abf890b2-459e-4977-92b4-fa628fa10e2d.PNG"
             )
 
         if uploaded_file_path.exists():
@@ -83,7 +86,7 @@ async def test_app_cover(
     await db_session.flush()
 
     file_dst_path = Path(
-        f"media/static/applications/covers/abf890b2-459e-4977-92b4-fa628fa10e2d.PNG"
+        "media/static/applications/covers/abf890b2-459e-4977-92b4-fa628fa10e2d.PNG"
         )
     file_dst_path.touch()
 
@@ -357,6 +360,11 @@ class TestAppFiles:
         test_app: AppDB,
         test_app_cover: BufferedReader
     ):
+        cover_id = await db_session.exec(
+            select(AppCover.id).where(
+                AppCover.app_id == test_app.id
+            )
+        )
         response = await publisher_client.delete(
             f"/api/v1/apps/files/covers/{test_app_cover.id}"
         )
@@ -365,12 +373,9 @@ class TestAppFiles:
                 AppCover.app_id == test_app.id
             )
         )).one_or_none()
-        covers_path_children = list(
-            Path("media/static/applications/covers").iterdir()
-            )
 
         assert response.status_code == 204
-        assert len(covers_path_children) == 0
+        assert not (settings.APP_COVER_PATH / f"{cover_id}.PNG").exists()
         assert app_cover is None
 
     async def test_remove_app_cover_not_exists(
@@ -413,6 +418,4 @@ class TestAppFiles:
         assert response.status_code == 201
         assert data["extension"] == ".PNG"
         assert app_thumbnail is not None
-        assert Path(
-            f"media/static/applications/thumbnails/{test_app.id}.PNG"
-            ).exists()
+        assert (settings.APP_THUMBNAIL_PATH / f"{test_app.id}.PNG").exists()

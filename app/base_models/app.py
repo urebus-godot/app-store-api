@@ -4,7 +4,6 @@ from decimal import Decimal
 from enum import StrEnum
 
 from sqlmodel import SQLModel, Field
-from pydantic import field_validator
 
 from app.core.config import settings
 

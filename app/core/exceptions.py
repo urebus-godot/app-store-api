@@ -166,3 +166,11 @@ discussion_not_found_exception = HTTPException(
     status.HTTP_404_NOT_FOUND, 
     "Discussion not found"
 )
+
+
+# ------ Promo code -----
+
+invalld_promo_code_exception = HTTPException(
+    status.HTTP_404_NOT_FOUND, 
+    "Promo code has expired or is invalid"
+)

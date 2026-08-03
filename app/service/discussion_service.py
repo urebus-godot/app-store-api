@@ -42,8 +42,9 @@ class DiscussionService:
             discussion = await uow.discussion_repo.create_discussion(
                 data, user, app_id
             )
+            await uow.commit()
             
-            return discussion
+        return discussion
 
     async def get_discussion(self, id: UUID) -> DiscussionDB:
         discussion = await self.discussion_repo.get_discussion(id)
@@ -71,6 +72,7 @@ class DiscussionService:
                 raise no_rights_exception
 
             await uow.discussion_repo.delete_discussion(discussion)
+            await uow.commit()
 
     async def create_message(
         self,
@@ -85,9 +87,9 @@ class DiscussionService:
             message = await uow.discussion_repo.create_message(
                 data, author, discussion_id
             )
-            
+            await uow.commit()
             #message = await uow.discussion_repo.get_message(message.id)
-            return message
+        return message
 
     async def delete_message(
         self, id: UUID, user_id: UUID, uow: UnitOfWork
@@ -101,5 +103,5 @@ class DiscussionService:
             if message.author_id != user_id:
                 raise no_rights_exception
 
-            await uow.discussion_repo.delete_message(message)
-            
+            await uow.session.delete(message)
+            await uow.commit()

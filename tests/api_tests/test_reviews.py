@@ -122,11 +122,11 @@ class TestReviews:
                 f"/api/v1/carts/{test_user.id}/{test_app_2.id}"
             )
             response = await auth_client.post(
-                f"/api/v1/carts/checkout"
+                "/api/v1/carts/checkout"
             )
 
         response = await auth_client.get(
-            f"/api/v1/apps/purchased/me"
+            "/api/v1/apps/purchased/me"
         )
         logger.info(f"\n\n\nPurchased apps: {response.json()}\n\n")
 

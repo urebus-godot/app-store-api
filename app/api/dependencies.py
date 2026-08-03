@@ -192,9 +192,10 @@ def get_finance_repo(session: SessionDep) -> FinanceRepository:
     return FinanceRepository(session)
 
 def get_finance_service(
-    finance_repo: FinanceRepoDep
+    finance_repo: FinanceRepoDep,
+    user_repo: UserRepoDep
 ) -> FinanceService:
-    return FinanceService(finance_repo)
+    return FinanceService(finance_repo, user_repo)
 
 
 def get_app_repo(session: SessionDep) -> AppRepository:

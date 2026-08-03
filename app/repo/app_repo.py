@@ -1,12 +1,10 @@
 from uuid import UUID
 from typing import Optional
-from datetime import datetime, timezone
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, desc
 from sqlalchemy.orm import selectinload
 
-from app.core.logging import logger
 
 from app.models.app import AppDB
 from app.base_models.app import (
@@ -14,10 +12,6 @@ from app.base_models.app import (
     AppCategory
 )
 from app.schemas.app import AppRequest, GameRequest, AppUpdate
-from app.base_models.app import (
-    GameGenre,
-    AppCategory
-)
 from app.models.file import AppArchive, AppCover, AppThumbnail
 from app.models.purchase import PurchaseDB
 
@@ -59,19 +53,6 @@ class AppRepository:
         app.sqlmodel_update(data)
 
         return app
-
-    async def update_app_rating(
-        self, app: AppDB
-    ) -> None:
-        rating_sum = sum(review.rating for review in app.reviews)
-        review_count = len(app.reviews)
-        logger.info(f"{review_count = }; {rating_sum = }")
-        if review_count > 0:
-            app.rating = rating_sum / review_count
-        else:
-            app.rating = None
-
-        logger.info(f"Calculated app rating: {app.rating}")
 
     async def get_app_archive(
         self, app_id: UUID

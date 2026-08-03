@@ -2,7 +2,6 @@ from typing import Optional
 from datetime import timedelta
 from pathlib import Path
 import logging
-from os import environ
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from dotenv import load_dotenv
@@ -25,14 +24,26 @@ class Settings(BaseSettings):
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8000
 
+    TEST: bool = False
+
     DB_URL: str
-    TEST_DB_URL: str = f"postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/test_db"
+    TEST_DB_URL: str = (
+        "postgresql+asyncpg://postgres:postgres@localhost:5432/test_db"
+        )
 
     REDIS_URL: str
 
     BROKER_URL: str
     RESULT_BACKEND_URL: str
-    CELERY_TASKS_PATH: str = "app.bg_tasks.celery_tasks"
+    BASE_TASK_PATH: str = "app.task_queue.tasks"
+    CELERY_TASKS_PATH: list[str] = [
+        f"{BASE_TASK_PATH}.db_tasks", 
+        f"{BASE_TASK_PATH}.image_tasks"
+        ]
+    WORKER_DB_URL: str
+    TEST_WORKER_DB_URL: str = (
+        "postgresql+psycopg://postgres:postgres@localhost:5432/test_db"
+        )
 
     WINDOW_SECONDS: int = 30
     REQUEST_LIMIT: int = 120
@@ -125,9 +136,10 @@ class Settings(BaseSettings):
     <body>
         <h3>
             Happy birthday, %s! You receive a promo code as a gift. 
-            Enter it to receive 500 rubles on the balance.
-            <h2>Details</h2>
+            Enter it to receive %s rubles on the balance.
             <p><b>Promo code: <i>%s</i></b></p>
+            <p><b>Time of issue: <i>%s</i></b></p>
+            <p><b>Expiration time: <i>%s</i></b></p>
         </h3>
     </body>
 """

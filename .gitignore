@@ -12,6 +12,7 @@ wheels/
 .env
 x/
 *.sql
+*.sh
 *.python-version
 *.json
 *.html

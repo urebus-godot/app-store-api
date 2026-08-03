@@ -1,7 +1,9 @@
 from decimal import Decimal
+from uuid import UUID
 from typing import Any
 
 from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse
 
 from app.schemas.finance import TransferRequest, TransferResponse
 from app.base_models.finance import CurrencyType
@@ -12,7 +14,8 @@ from app.api.dependencies import (
     FinanceServiceDep, 
     rate_limit, 
     UnitOfWorkDep,
-    SkipLimitParams
+    SkipLimitParams,
+    RedisDep
     )
 
 router = APIRouter(
@@ -30,6 +33,19 @@ async def top_up_balance(
     """Increases user's balance by specified amount"""
     return await finance_service.create_transfer_to_balance(
         data, user_id, uow
+        )
+
+
+@router.post("/promo_codes")
+async def enter_promo_code(
+    promo_code: UUID,
+    user_id: UserIdDep,
+    redis: RedisDep,
+    finance_service: FinanceServiceDep,
+    uow: UnitOfWorkDep
+) -> dict[str, Any]:
+    return await finance_service.process_promo_code(
+        user_id, promo_code, redis, uow
         )
 
 
@@ -58,7 +74,7 @@ async def get_balance(
     user: UserDep,
     finance_service: FinanceServiceDep,
     currency: CurrencyType = CurrencyType.RUB,
-    ) -> dict[str, Any]:
+    ) -> JSONResponse:
     """Returns current user's balance measured in the specified currency."""
     result = await finance_service.convert_rubles(
         float(user.balance), currency

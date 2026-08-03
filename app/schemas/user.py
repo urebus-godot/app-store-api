@@ -1,4 +1,4 @@
-from datetime import datetime, date, timezone, timedelta
+from datetime import datetime, date, timezone
 from uuid import UUID
 from decimal import Decimal
 from typing import Optional
@@ -12,28 +12,33 @@ from app.core.config import settings
 
 class UserRequest(BaseUser):
     password: str = Field(min_length=settings.MIN_PASSWORD_LEN)
-    birth_date: Optional[date] = None
+    birth_date: Optional[date] = Field(
+        default=date(year=2000, month=1, day=1)
+        )
 
-    @classmethod
     @field_validator("password")
+    @classmethod
     def validate_password(cls, value: str) -> str:
         if " " in value:
             raise ValueError("Password can't contain spaces")
         return value
 
-    @classmethod
     @field_validator("username")
+    @classmethod
     def validate_username(cls, value: str) -> str:
         if " " in value:
             raise ValueError("Username can't contain spaces")
         return value
 
-    @classmethod
+    
     @field_validator("birth_date")
+    @classmethod
     def validate_birth_date(cls, value: date) -> date:
         current_date = datetime.now(timezone.utc).date()
         thirteen_years_ago = current_date.replace(year=current_date.year - 13)
-        #thirteen_years_ago = current_date.replace(year=current_date.year - 13, day=28)
+        #thirteen_years_ago = current_date.replace(
+        # year=current_date.year - 13, day=28
+        #)
         if value > thirteen_years_ago:
             raise ValueError("You must be at least 13 to sign up")
         return value
@@ -73,7 +78,8 @@ class UserBaseResponse(BaseUser):
 class UserUpdate(SQLModel):
     username: Optional[str] = Field(
         default=None, 
-        min_length=settings.MIN_NAME_LEN
+        min_length=settings.MIN_NAME_LEN,
+        max_length=settings.MAX_NAME_LEN
         )
     email: Optional[EmailStr] = None
     password: Optional[str] = Field(
@@ -82,12 +88,14 @@ class UserUpdate(SQLModel):
         )
     
     @field_validator("password")
+    @classmethod
     def validate_password(cls, value: str) -> str:
         if " " in value:
             raise ValueError("Password can't contain spaces")
         return value
 
     @field_validator("username")
+    @classmethod
     def validate_username(cls, value: str) -> str:
         if " " in value:
             raise ValueError("Username can't contain spaces")

@@ -8,7 +8,7 @@ from sqlmodel import select, desc
 from sqlalchemy.orm import selectinload
 
 from app.models.user import UserDB
-from app.schemas.user import UserRequest, UserUpdate, UserRole
+from app.schemas.user import UserRequest, UserRole
 from app.models.file import UserProfilePicture
 
 from app.core.security import get_password_hash
@@ -70,15 +70,6 @@ class UserRepository:
         self.session.add(user)
         return {"message": "You have become a publisher"}
 
-    async def update_user(self, data: UserUpdate, user: UserDB) -> UserDB:
-        data = data.model_dump(exclude_unset=True, exclude_none=True)
-        user.sqlmodel_update(data)
-
-        if "password" in data:
-            user.hashed_password = get_password_hash(data["password"])
-
-        return user
-
     async def get_user_by_username(self, username: str) -> Optional[UserDB]:
         user = (
             await self.session.exec(
@@ -89,14 +80,19 @@ class UserRepository:
         ).one_or_none()
         return user
 
-    async def get_user_by_id(self, id: UUID) -> Optional[UserDB]:
-        user = (
-            await self.session.exec(
-                select(UserDB)
-                .where(UserDB.id == id)
-                .options(*self.load_attrs)
-            )
-        ).one_or_none()
+    async def get_user_by_id(
+        self, id: UUID,
+        for_update: bool = False
+    ) -> Optional[UserDB]:
+        stmt =  (
+            select(UserDB)
+            .where(UserDB.id == id)
+            .options(*self.load_attrs)
+                )
+        if for_update:
+            stmt = stmt.with_for_update()
+            
+        user = (await self.session.exec(stmt)).one_or_none()
 
         return user
 

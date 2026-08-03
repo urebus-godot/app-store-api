@@ -113,8 +113,8 @@ class TestPurchases:
         data = get_cart_response.json()
 
         print(f"\n\n\nAfter removing {data = }\n\n\n")
-        return
-        assert data["total_price"] == "0"
+
+        assert float(data["total_price"]) == 0
         assert len(data["items"]) == 1
 
     async def test_remove_item_from_cart_not_exists(
@@ -137,7 +137,7 @@ class TestPurchases:
         data = response.json()
 
         assert response.status_code == 200
-        assert data["total_price"] == "0"
+        assert float(data["total_price"]) == 0
 
     async def test_get_purchase_history(
         self,
@@ -159,16 +159,19 @@ class TestPurchases:
         auth_client: AsyncClient, 
         db_session: AsyncSession,
         test_user: UserDB, 
+        test_app_2_paid,
+        test_app_2,
         test_cart: CartDB
     ):
-        #test_user.balance = 10000
-        #await db_session.flush()
-        response = await auth_client.post(
-            "/api/v1/transfers/balance",
-            json={"amount": 10000}
-            )
-        assert response.status_code == 200
+        test_user.balance = 10000
+        await db_session.flush()
 
+        add_response = await auth_client.post(
+            f"/api/v1/carts/{test_user.id}/{test_app_2_paid.id}"
+        )
+        add_response = await auth_client.post(
+            f"/api/v1/carts/{test_user.id}/{test_app_2.id}"
+        )
         checkout_response = await auth_client.post("/api/v1/carts/checkout")
         assert checkout_response.status_code == 200
         assert len(checkout_response.json()) == 2
@@ -176,6 +179,7 @@ class TestPurchases:
         get_apps_response = await auth_client.get("/api/v1/apps/purchased/me")
         assert get_apps_response.status_code == 200
         assert len(get_apps_response.json()) == 2
+
         return
         get_user_response = await auth_client.get("/api/v1/users/me")
         data = get_user_response.json()

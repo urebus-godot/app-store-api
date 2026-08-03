@@ -19,8 +19,8 @@ from app.models.file import UserProfilePicture
 from app.repo.user_repo import UserRepository
 from app.service.app_service import AppService
 
-from app.bg_tasks.celery_tasks import process_image
-from app.bg_tasks.bg_tasks import send_email
+from app.task_queue.tasks.image_tasks import process_image
+from app.utils.email_send import send_email
 
 from app.core.exceptions import (
     user_not_found_exception,
@@ -78,10 +78,11 @@ class UserService:
 
             logger.info("Start registering user in the database")
             user = await uow.user_repo.register_user(data)
-
             logger.info("Registered user")
 
-            return user
+            await uow.commit()
+
+        return user
 
     async def authenticate_user(
         self,
@@ -167,7 +168,9 @@ class UserService:
             user = await uow.user_repo.get_user_by_id(user.id)
             result = await uow.user_repo.become_publisher(user)
 
-            return result
+            await uow.commit()
+
+        return result
 
     async def upload_profile_picture(
         self, 
@@ -208,7 +211,9 @@ class UserService:
 
             profile_picture.extension = extension
 
-            return profile_picture
+            await uow.commit()
+
+        return profile_picture
 
     async def remove_profile_picture_by_user(
         self, 
@@ -229,6 +234,8 @@ class UserService:
                 )
             os.remove(profile_picture_path)
             await uow.session.delete(profile_picture)
+
+            await uow.commit()
 
     async def remove_profile_picture(
         self, 
@@ -262,10 +269,17 @@ class UserService:
             if data.email is not None:
                 if await self.email_registered(data.email):
                     raise email_used_exception
+                
+            data = data.model_dump(exclude_unset=True, exclude_none=True)
+            user.sqlmodel_update(data)
 
-            user = await uow.user_repo.update_user(data, user)
+            if "password" in data:
+                user.hashed_password = get_password_hash(data["password"])
 
-            return user
+            await uow.commit()
+
+        return user
+    
 
     async def get_user_by_username(
         self, username: str
@@ -312,3 +326,5 @@ class UserService:
 
             await redis.delete(f"user_tokens:{user_id}")
             await uow.session.delete(user)
+
+            await uow.commit()
