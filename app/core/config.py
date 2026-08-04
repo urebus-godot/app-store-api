@@ -35,11 +35,6 @@ class Settings(BaseSettings):
 
     BROKER_URL: str
     RESULT_BACKEND_URL: str
-    BASE_TASK_PATH: str = "app.task_queue.tasks"
-    CELERY_TASKS_PATH: list[str] = [
-        f"{BASE_TASK_PATH}.db_tasks", 
-        f"{BASE_TASK_PATH}.image_tasks"
-        ]
     WORKER_DB_URL: str
     TEST_WORKER_DB_URL: str = (
         "postgresql+psycopg://postgres:postgres@localhost:5432/test_db"

@@ -1,29 +1,25 @@
 from datetime import datetime, timezone, timedelta
-from uuid import UUID
+from uuid import UUID, uuid4
 import asyncio
+import json
 
-from sqlalchemy import create_engine, func, select, update
+from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
-from sqlmodel import Session
+from sqlmodel import Session, extract, select, update
 
-from app.core.logging import logger
 from app.core.config import settings
 from app.utils.time import get_time_string
 
-from app.db.postgres import session_factory
-from app.db.redis import get_redis
+from app.db.redis import connect_to_sync_redis_client
 
-from app.task_queue.celery_app import celery_app
+from app.task_queue.celery_app import celery_app, logger
 from app.utils.email_send import send_email
 
 from app.models.app import AppDB
 from app.models.review import ReviewDB
-
-from app.repo.user_repo import UserRepository
-from app.service.finance_service import FinanceService, FinanceRepository
+from app.models.user import UserDB
 
 engine = create_engine(settings.WORKER_DB_URL)
-
 
 SessionLocal = sessionmaker(
     bind=engine, 
@@ -31,6 +27,8 @@ SessionLocal = sessionmaker(
     autoflush=False, 
     expire_on_commit=False
     )
+
+redis_client = connect_to_sync_redis_client()
 
 
 @celery_app.task(name="tasks.update_app_rating")
@@ -67,37 +65,58 @@ def update_app_rating(app_id: str) -> None:
 
 @celery_app.task(name="tasks.check_for_users_birthday")
 def check_for_users_birthday():
-    async def _check():
-        async with session_factory() as session:
-            user_repo = UserRepository(session)
-            finance_repo = FinanceRepository(session)
-            finance_service = FinanceService(finance_repo, user_repo)
+    with SessionLocal() as session:
+        logger.info("Start check_for_users_birthday")
+        now = datetime.now(timezone.utc)
+        current_date = now.date()
+        logger.info(f"{current_date = }")
+        stmt = (
+            select(UserDB)
+            .where(
+                extract("month", UserDB.birth_date) == current_date.month,
+                extract("day", UserDB.birth_date) == current_date.day
+                )
+        )
 
-            redis = get_redis()
-            users = await user_repo.get_users_with_birthday()
+        users: list[UserDB] = session.exec(stmt).all()
+        logger.info(f"Users: {users}")
 
-            for user in users:
-                if user.email is not None:
-                    balance = 500
-                    code = await finance_service.create_promo_code(
-                        data={"balance": balance}, 
-                        expire=3600 * 24, 
-                        redis=redis
-                        )
-                    tomorrow_time = get_time_string(
-                        datetime.now(timezone.utc) + timedelta(days=1)
-                        )
-                    email_body = settings.BIRTHDAY_CODE_TEMPLATE % (
-                            user.username,
-                            balance,
-                            code, 
-                            get_time_string(),
-                            tomorrow_time
-                        )
-                    await send_email(
-                        recipients=[user.email],
-                        subject="Happy birthday!",
-                        body=email_body
+        for user in users:
+            logger.info(
+                f"User with bday today: \n{user.username}, {user.birth_date}"
+                )
+            if user.email is not None:
+                redis = redis_client.redis
+                balance = 500
+                code = uuid4()
+
+                redis.set(
+                    name=f"promo_codes:{code}",
+                    value=balance,
+                    ex=3600 * 24
+                    )
+                logger.info(
+                    f"Set promo code in redis: \nkey: {code}, value: {balance}"
+                    )
+                tomorrow_time = get_time_string(
+                    now + timedelta(days=1)
                     )
                 
-    asyncio.run(_check())
+                email_body = settings.BIRTHDAY_CODE_TEMPLATE % (
+                    user.username,
+                    balance,
+                    code, 
+                    get_time_string(),
+                    tomorrow_time
+                    )
+
+                #asyncio.run(
+                #    send_email(
+                #        [str(user.email)], 
+                #        "Happy birthday!", 
+                #        email_body
+                #        )
+                #)
+
+                logger.info(f"Sent email: {email_body}")
+                

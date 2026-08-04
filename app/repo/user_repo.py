@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import EmailStr
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select, desc
+from sqlmodel import select, desc, extract
 from sqlalchemy.orm import selectinload
 
 from app.models.user import UserDB
@@ -119,8 +119,8 @@ class UserRepository:
         stmt = (
             select(UserDB)
             .where(
-                UserDB.birth_date.month == date.month,
-                UserDB.birth_date.day == date.day
+                extract("month", UserDB.birth_date) == date.month,
+                extract("day", UserDB.birth_date) == date.day
                 )
             .offset(skip)
             .order_by(desc(UserDB.registered_at))

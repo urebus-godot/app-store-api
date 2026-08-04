@@ -9,6 +9,7 @@ from sqlmodel import Field, Relationship
 
 from app.models.purchase import PurchaseDB
 from app.base_models.app import BaseApp, GameGenre, AppCategory
+from app.models.file import AppArchive, AppCover, AppThumbnail
 
 
 class AppDB(BaseApp, table=True):

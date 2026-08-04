@@ -30,6 +30,7 @@ dependencies = [
     "pillow>=12.3.0",
     "flower>=2.0.1",
     "psycopg[binary]>=3.3.4",
+    "aioboto3>=15.5.0",
 ]
 
 [tool.uv.workspace]

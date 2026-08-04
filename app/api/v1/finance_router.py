@@ -43,7 +43,7 @@ async def enter_promo_code(
     redis: RedisDep,
     finance_service: FinanceServiceDep,
     uow: UnitOfWorkDep
-) -> dict[str, Any]:
+) -> dict[str, Decimal]:
     return await finance_service.process_promo_code(
         user_id, promo_code, redis, uow
         )

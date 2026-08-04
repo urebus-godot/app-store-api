@@ -155,7 +155,7 @@ async def fake_redis() -> AsyncGenerator[FakeRedis, None, None]:
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
 def setup_test_celery():
-    from app.task_queue.celery_app import celery_app
+    from app.task_queue.tasks.celery_app import celery_app
     celery_app.conf.update(
         task_always_eager=True,
         task_eager_propagates=True,

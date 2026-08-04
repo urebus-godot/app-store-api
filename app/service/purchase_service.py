@@ -1,6 +1,7 @@
 from uuid import UUID
 from typing import Optional
 from collections import defaultdict
+from decimal import Decimal
 
 from redis.asyncio import Redis
 from fastapi import BackgroundTasks
@@ -148,7 +149,7 @@ class PurchaseService:
 
             purchased_apps = []
             actual_total_price = 0
-            publisher_earnings = defaultdict(float)
+            publisher_earnings = defaultdict(Decimal)
 
             for item in cart.items:
                 purchased = await uow.purchase_repo.get_purchase(
@@ -239,7 +240,7 @@ class PurchaseService:
     async def delete_cart(
         self, user_id: UUID, uow: UnitOfWork
     ) -> None:
-        await uow.purchase_repo.delete_cart(user_id, uow)
+        await uow.purchase_repo.delete_cart(user_id)
 
     async def delete_cart_by_user(
         self, user_id: UUID, uow: UnitOfWork

@@ -1,5 +1,6 @@
 from decimal import Decimal
 from uuid import UUID, uuid4
+from typing import Any
 import json
 
 from httpx import AsyncClient
@@ -24,7 +25,7 @@ class FinanceService:
     def __init__(
         self, 
         finance_repo: FinanceRepository,
-        user_repo: UserRepository
+        user_repo: UserRepository,
     ):
         self.finance_repo = finance_repo
         self.user_repo = user_repo
@@ -49,23 +50,21 @@ class FinanceService:
         code: UUID, 
         redis: Redis,
         uow: UnitOfWork
-    ):
+    ) -> dict[str, Decimal]:
         async with uow:
-            data = await redis.get(name=f"promo_codes:{code}")
+            amount = await redis.get(name=f"promo_codes:{code}")
 
-            if data is None:
+            if amount is None:
                 raise invalld_promo_code_exception
 
-            data = json.loads(data)
+            amount = Decimal(amount)
+            user = await uow.user_repo.get_user_by_id(user_id)
+            user.balance += amount
 
-            user = await self.user_repo.get_user_by_id(user_id)
-
-            for key in data:
-                if key == "balance":
-                    user.balance += data["balance"]
-
-            await redis.delete(name=f"promo_codes:{code}")
+            await redis.delete(f"promo_codes:{code}")
             await uow.commit()
+
+        return {"balance": user.balance, "amount_received": amount}
 
     async def create_transfer_to_balance(
         self, data: TransferRequest, user_id: UUID, uow: UnitOfWork
