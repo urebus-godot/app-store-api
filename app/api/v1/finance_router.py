@@ -1,6 +1,5 @@
 from decimal import Decimal
 from uuid import UUID
-from typing import Any
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
@@ -13,7 +12,6 @@ from app.api.dependencies import (
     UserIdDep, 
     FinanceServiceDep, 
     rate_limit, 
-    UnitOfWorkDep,
     SkipLimitParams,
     RedisDep
     )
@@ -27,12 +25,11 @@ router = APIRouter(
 async def top_up_balance(
     data: TransferRequest,
     user_id: UserIdDep,
-    finance_service: FinanceServiceDep,
-    uow: UnitOfWorkDep
+    finance_service: FinanceServiceDep
 ) -> dict[str, Decimal]:
     """Increases user's balance by specified amount"""
     return await finance_service.create_transfer_to_balance(
-        data, user_id, uow
+        data, user_id
         )
 
 
@@ -41,11 +38,10 @@ async def enter_promo_code(
     promo_code: UUID,
     user_id: UserIdDep,
     redis: RedisDep,
-    finance_service: FinanceServiceDep,
-    uow: UnitOfWorkDep
+    finance_service: FinanceServiceDep
 ) -> dict[str, Decimal]:
     return await finance_service.process_promo_code(
-        user_id, promo_code, redis, uow
+        user_id, promo_code, redis
         )
 
 
@@ -53,11 +49,10 @@ async def enter_promo_code(
 async def withdraw_funds_to_card(
     data: TransferRequest,
     user_id: UserIdDep,
-    finance_service: FinanceServiceDep,
-    uow: UnitOfWorkDep
+    finance_service: FinanceServiceDep
 ) -> dict[str, Decimal]:
     """Increases user's balance by specified amount"""
-    return await finance_service.create_transfer_to_card(data, user_id, uow)
+    return await finance_service.create_transfer_to_card(data, user_id)
 
 
 @router.get("/transfers/history")

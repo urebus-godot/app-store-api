@@ -17,8 +17,7 @@ from app.api.dependencies import (
     AppServiceDep,
     ReviewServiceDep,
     rate_limit,
-    RedisDep,
-    UnitOfWorkDep
+    RedisDep
 )
 from app.utils.search import SearchQuery
 from app.base_models.app import (
@@ -50,10 +49,9 @@ router = APIRouter(
 async def upload_app(
     data: AppRequest,
     user: PublisherDep,
-    app_service: AppServiceDep,
-    uow: UnitOfWorkDep
+    app_service: AppServiceDep
 ) -> AppResponse:
-    app = await app_service.upload_app(data, user, uow)
+    app = await app_service.upload_app(data, user)
     return app
 
 
@@ -64,10 +62,9 @@ async def upload_app(
 async def upload_game(
     data: GameRequest,
     user: PublisherDep,
-    app_service: AppServiceDep,
-    uow: UnitOfWorkDep
+    app_service: AppServiceDep
 ) -> GameResponse:
-    game = await app_service.upload_app(data, user, uow)
+    game = await app_service.upload_app(data, user)
     return game
 
 
@@ -79,11 +76,10 @@ async def upload_app_archive(
     user_id: UserIdDep,
     app_id: UUID,
     app_service: AppServiceDep,
-    uow: UnitOfWorkDep,
     file: UploadFile = File(...)
 ) -> AppArchive:
     result = await app_service.upload_app_archive(
-        uow, file, app_id, user_id
+        file, app_id, user_id
         )
     return result
 
@@ -118,12 +114,11 @@ async def download_app_archive(
 async def upload_app_thumbnail(
     user_id: UserIdDep,
     app_id: UUID,
-    uow: UnitOfWorkDep,
     app_service: AppServiceDep,
     file: UploadFile = File(...),
 ) -> AppThumbnail:
     app_cover = await app_service.upload_app_thumbnail(
-        uow, file, app_id, user_id
+        file, app_id, user_id
         )
     return app_cover
 
@@ -135,12 +130,11 @@ async def upload_app_thumbnail(
 async def upload_app_cover(
     user_id: UserIdDep,
     app_id: UUID,
-    uow: UnitOfWorkDep,
     app_service: AppServiceDep,
     file: UploadFile = File(...)
 ) -> AppCover:
     app_cover = await app_service.upload_app_cover(
-        uow, file, app_id, user_id
+        file, app_id, user_id
         )
     return app_cover
 
@@ -150,10 +144,9 @@ async def upload_app_cover(
     )
 async def get_app_covers(
     app_id: UUID,
-    app_service: AppServiceDep,
-    uow: UnitOfWorkDep
+    app_service: AppServiceDep
 ) -> list[AppCover]:
-    return await app_service.get_app_covers(app_id, uow)
+    return await app_service.get_app_covers(app_id)
 
 
 @router.delete(
@@ -163,11 +156,10 @@ async def get_app_covers(
 async def remove_app_cover(
     user_id: UserIdDep,
     cover_id: UUID,
-    app_service: AppServiceDep,
-    uow: UnitOfWorkDep
+    app_service: AppServiceDep
 ) -> None:
     await app_service.remove_app_cover(
-        cover_id, user_id, uow
+        cover_id, user_id
         )
 
 
@@ -178,11 +170,10 @@ async def remove_app_cover(
 async def remove_all_app_covers(
     user_id: UserIdDep,
     app_id: UUID,
-    app_service: AppServiceDep,
-    uow: UnitOfWorkDep
+    app_service: AppServiceDep
 ) -> None:
     await app_service.check_and_remove_all_app_covers(
-        app_id, user_id, uow
+        app_id, user_id
         )
 
 
@@ -193,11 +184,10 @@ async def update_app(
     id: UUID,
     data: AppUpdate,
     user_id: UserIdDep,
-    app_service: AppServiceDep,
-    uow: UnitOfWorkDep
+    app_service: AppServiceDep
 ) -> AppResponse | GameResponse:
     app = await app_service.update_app(
-        data=data, id=id, user_id=user_id, uow=uow
+        data=data, id=id, user_id=user_id
     )
     return app
 
@@ -209,11 +199,10 @@ async def update_game(
     id: UUID,
     data: GameUpdate,
     user_id: UserIdDep,
-    app_service: AppServiceDep,
-    uow: UnitOfWorkDep
+    app_service: AppServiceDep
 ) -> AppResponse | GameResponse:
     app = await app_service.update_app(
-        data=data, id=id, user_id=user_id, uow=uow
+        data=data, id=id, user_id=user_id
     )
     return app
 
@@ -325,7 +314,6 @@ async def get_publisher_apps(
 async def delete_app(
     id: UUID, 
     user_id: UserIdDep, 
-    app_service: AppServiceDep,
-    uow: UnitOfWorkDep
+    app_service: AppServiceDep
 ) -> None:
-    return await app_service.delete_app_by_user(id, user_id, uow)
+    return await app_service.delete_app_by_user(id, user_id)

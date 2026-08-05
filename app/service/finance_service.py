@@ -26,9 +26,11 @@ class FinanceService:
         self, 
         finance_repo: FinanceRepository,
         user_repo: UserRepository,
+        uow: UnitOfWork
     ):
         self.finance_repo = finance_repo
         self.user_repo = user_repo
+        self.self.uow = uow
 
     async def create_promo_code(
         self, 
@@ -48,49 +50,48 @@ class FinanceService:
         self, 
         user_id: UUID,
         code: UUID, 
-        redis: Redis,
-        uow: UnitOfWork
+        redis: Redis
     ) -> dict[str, Decimal]:
-        async with uow:
+        async with self.uow:
             amount = await redis.get(name=f"promo_codes:{code}")
 
             if amount is None:
                 raise invalld_promo_code_exception
 
             amount = Decimal(amount)
-            user = await uow.user_repo.get_user_by_id(user_id)
+            user = await self.uow.user_repo.get_user_by_id(user_id)
             user.balance += amount
 
             await redis.delete(f"promo_codes:{code}")
-            await uow.commit()
+            await self.uow.commit()
 
         return {"balance": user.balance, "amount_received": amount}
 
     async def create_transfer_to_balance(
-        self, data: TransferRequest, user_id: UUID, uow: UnitOfWork
+        self, data: TransferRequest, user_id: UUID
     ) -> dict[str, Decimal]:
         """Increase user's balance and create row in the db for transfer."""
-        async with uow:
-            user = await uow.user_repo.get_user_by_id(user_id)
-            result = await uow.finance_repo.create_transfer_to_balance(
+        async with self.uow:
+            user = await self.uow.user_repo.get_user_by_id(user_id)
+            result = await self.uow.finance_repo.create_transfer_to_balance(
                 data, user
                 )
-            await uow.commit()
+            await self.uow.commit()
 
         return result
 
     async def create_transfer_to_card(
-        self, data: TransferRequest, user_id: UUID, uow: UnitOfWork
+        self, data: TransferRequest, user_id: UUID
     ) -> dict[str, Decimal]:
-        async with uow:
-            user = await uow.user_repo.get_user_by_id(user_id)
+        async with self.uow:
+            user = await self.uow.user_repo.get_user_by_id(user_id)
             if user.balance < data.amount:
                 raise insufficient_funds_exception
             
-            result = await uow.finance_repo.create_transfer_to_card(
+            result = await self.uow.finance_repo.create_transfer_to_card(
                 data, user
                 )
-            await uow.commit()
+            await self.uow.commit()
 
         return result
 

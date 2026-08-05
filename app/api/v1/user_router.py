@@ -19,7 +19,6 @@ from app.api.dependencies import (
     SendEmailDep,
     RefreshSecretKeyDep,
     rate_limit,
-    UnitOfWorkDep,
     RedisDep
 )
 from app.core.logging import logger
@@ -35,7 +34,6 @@ from app.schemas.user import (
 from app.models.file import UserProfilePicture
 from app.schemas.token import TokenResponse, LoginResponse
 
-
 router = APIRouter(
     dependencies=[Depends(rate_limit)]
 )
@@ -48,11 +46,10 @@ router = APIRouter(
 )
 async def register_user(
     data: UserRequest, 
-    user_service: UserServiceDep,
-    uow: UnitOfWorkDep
+    user_service: UserServiceDep
 ) -> CurrentUserResponse:
     """Creates new user."""
-    return await user_service.register_user(data, uow)
+    return await user_service.register_user(data)
 
 
 @router.post("/users/login")
@@ -118,11 +115,10 @@ async def refresh_tokens(
 @router.post("/users/me/publisher")
 async def become_publisher(
     user: UserDep, 
-    user_service: UserServiceDep,
-    uow: UnitOfWorkDep
+    user_service: UserServiceDep
 ) -> dict[str, str]:
     """Adds "publisher" role to user roles on success."""
-    return await user_service.become_publisher(user, uow)
+    return await user_service.become_publisher(user)
 
 
 @router.post(
@@ -133,12 +129,11 @@ async def upload_profile_picture(
     request: Request,
     file: UploadFile,
     user: UserDep,
-    uow: UnitOfWorkDep,
     user_service: UserServiceDep
 ) -> UserProfilePicture:
     request.headers
     result = await user_service.upload_profile_picture(
-        request, file, user.id, uow
+        request, file, user.id
         )
     return result
 
@@ -149,21 +144,19 @@ async def upload_profile_picture(
     )
 async def remove_profile_picture(
     user_id: UserIdDep,
-    user_service: UserServiceDep,
-    uow: UnitOfWorkDep
+    user_service: UserServiceDep
 ) -> None:
-    await user_service.remove_profile_picture_by_user(user_id, uow)
+    await user_service.remove_profile_picture_by_user(user_id)
 
 
 @router.patch("/users/me")
 async def update_current_user(
     data: UserUpdate,
     user: UserDep,
-    user_service: UserServiceDep,
-    uow: UnitOfWorkDep
+    user_service: UserServiceDep
 ) -> CurrentUserResponse:
     """Changes attributes of user to the new ones"""
-    return await user_service.update_user(user=user, data=data, uow=uow)
+    return await user_service.update_user(user=user, data=data)
 
 
 @router.get("/users/me")
@@ -202,8 +195,7 @@ async def get_users(
 async def delete_current_user(
     user_id: UserIdDep,
     redis: RedisDep,
-    user_service: UserServiceDep,
-    uow: UnitOfWorkDep
+    user_service: UserServiceDep
 ) -> None:
     """Deletes user."""
-    await user_service.delete_user(user_id, redis, uow)
+    await user_service.delete_user(user_id, redis)

@@ -41,6 +41,12 @@ class AppDB(BaseApp, table=True):
         back_populates="purchased_apps", link_model=PurchaseDB
     )
 
+    pending_archive_key: Optional[str] = None
+    archive_key: Optional[str] = None
+
+    pending_cover_key: Optional[str] = None
+    cover_keys: list[str] = []
+
     reviews: list["ReviewDB"] = Relationship(
         back_populates="app",
         cascade_delete=True,

@@ -92,6 +92,20 @@ class Settings(BaseSettings):
     MAX_APP_COVER_SIZE_MB: int = 5
     MAX_PROFILE_PICTURE_SIZE_MB: int = 1
 
+    MINIO_ACCESS_KEY: str
+    MINIO_SECRET_KEY: str
+    MINIO_INTERNAL_ENDPOINT: str = "http://minio:9000"
+    MINIO_PUBLIC_ENDPOINT: str = "http://localhost:9000"
+
+    APP_ARCHIVE_BUCKET: str = "app-archive"
+    APP_COVER_BUCKET: str = "app-cover"
+    APP_THUMBNAIL_BUCKET: str = "app-thumbnail"
+
+    USER_AVATAR_BUCKET: str = "user-avatar"
+
+    UPLOAD_TTL_SECONDS: int = 300
+    DOWNLOAD_TTL_SECONDS: int = 300
+
     MAIL_USERNAME: str = "satalovserge"
     MAIL_PASSWORD: str
     MAIL_FROM: str = "satalovserge@gmail.com"

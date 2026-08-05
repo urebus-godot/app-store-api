@@ -21,19 +21,24 @@ from app.task_queue.tasks.db_tasks import update_app_rating
 
 
 class ReviewService:
-    def __init__(self, review_repo: ReviewRepository, app_service: AppService):
+    def __init__(
+        self, 
+        review_repo: ReviewRepository, 
+        app_service: AppService,
+        uow: UnitOfWork
+    ):
         self.review_repo = review_repo
         self.app_service = app_service
+        self.uow = uow
 
     async def create_review(
         self, 
         data: ReviewRequest,
         app_id: UUID, 
-        user_id: UUID, 
-        uow: UnitOfWork
+        user_id: UUID
     ) -> ReviewDB:
-        async with uow:
-            app = await uow.app_repo.get_public_app(app_id)
+        async with self.uow:
+            app = await self.uow.app_repo.get_public_app(app_id)
             if not app:
                 raise app_not_found_exception
 
@@ -42,20 +47,20 @@ class ReviewService:
                     status.HTTP_400_BAD_REQUEST,
                     "You can't create review to your own app",
                 )
-            if await uow.review_repo.user_created_review(user_id, app_id):
+            if await self.uow.review_repo.user_created_review(user_id, app_id):
                 raise HTTPException(
                     status.HTTP_409_CONFLICT,
                     "You already created review to this app",
                 )
-            if not await uow.purchase_repo.user_purchased_app(
+            if not await self.uow.purchase_repo.user_purchased_app(
                 user_id, app_id
             ):
                 raise app_not_purchased_exception
 
-            review = await uow.review_repo.create_review(
+            review = await self.uow.review_repo.create_review(
                 data, user_id, app_id
             )
-            await uow.commit()
+            await self.uow.commit()
             logger.info("Created review!")
 
         update_app_rating.delay(str(app_id))
@@ -72,8 +77,7 @@ class ReviewService:
 
     async def get_app_reviews(
         self,
-        app_id: UUID,
-        public_only: bool = True
+        app_id: UUID
     ) -> list[ReviewDB]:
         await self.app_service.get_app(app_id)
         app_reviews = await self.review_repo.get_app_reviews(app_id)
@@ -84,10 +88,10 @@ class ReviewService:
         return user_reviews
 
     async def delete_review(
-        self, id: UUID, user_id: UUID, uow: UnitOfWork
+        self, id: UUID, user_id: UUID
     ) -> None:
-        async with uow:
-            review = await uow.review_repo.get_review(id)
+        async with self.uow:
+            review = await self.uow.review_repo.get_review(id)
 
             if review is None:
                 raise review_not_found_exception
@@ -95,7 +99,8 @@ class ReviewService:
             if not review.author_id == user_id:
                 raise no_rights_exception
 
-            await uow.session.delete(review)
-            await uow.commit()
+            await self.uow.session.delete(review)
+            await self.uow.commit()
+            
         app_id = str(review.app_id)
         update_app_rating.delay(app_id)

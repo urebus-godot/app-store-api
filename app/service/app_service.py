@@ -43,26 +43,28 @@ class AppService:
             self, 
             app_repo: AppRepository, 
             user_repo: UserRepository,
-            purchase_repo: PurchaseRepository
+            purchase_repo: PurchaseRepository,
+            uow: UnitOfWork
             ):
         self.app_repo = app_repo
         self.user_repo = user_repo
         self.purchase_repo = purchase_repo
+        self.uow = uow
 
     async def upload_app(
-        self, data: AppRequest, user: UserDB, uow: UnitOfWork
+        self, data: AppRequest, user: UserDB
     ) -> AppDB:
-        async with uow:
-            app = await uow.app_repo.upload_app(data, user.id)
-            await uow.commit()
+        async with self.uow:
+            app = await self.uow.app_repo.upload_app(data, user.id)
+            await self.uow.commit()
 
         return app
 
     async def update_app(
-        self, id: UUID, user_id: UUID, data: AppUpdate, uow: UnitOfWork
+        self, id: UUID, user_id: UUID, data: AppUpdate
     ) -> AppDB:
-        async with uow:
-            app = await uow.app_repo.get_app(id)
+        async with self.uow:
+            app = await self.uow.app_repo.get_app(id)
 
             if app is None:
                 raise app_not_found_exception
@@ -76,8 +78,8 @@ class AppService:
                     "This app is not game"
                 )
 
-            app = await uow.app_repo.update_app(data, app)
-            await uow.commit()
+            app = await self.uow.app_repo.update_app(data, app)
+            await self.uow.commit()
 
         return app
 
@@ -112,7 +114,7 @@ class AppService:
                 file, filename, settings.APP_ARCHIVE_PATH
             )
 
-            app_archive = await uow.app_repo.get_app_archive(app_id)
+            app_archive = await self.uow.app_repo.get_app_archive(app_id)
             
             logger.info(f"{ app_archive = }")
 
@@ -121,7 +123,7 @@ class AppService:
                     filename=file.filename, 
                     app_id=app_id
                     )
-                uow.session.add(app_archive)
+                self.uow.session.add(app_archive)
                 logger.info("Created new app archive")
 
             app_archive.filename = file.filename
@@ -130,7 +132,7 @@ class AppService:
                 "Committing. App archive path is now: "
                 f"{settings.APP_ARCHIVE_PATH / str(app_archive.app_id)}"
                 )
-            await uow.commit()
+            await self.uow.commit()
             
         return app_archive
 
@@ -156,15 +158,15 @@ class AppService:
         return app_archive
 
     async def remove_app_archive(
-        self, id: UUID, uow: UnitOfWork
+        self, id: UUID
     ) -> None:
-        app_archive = await uow.app_repo.get_app_archive(id)
+        app_archive = await self.uow.app_repo.get_app_archive(id)
         if app_archive is not None:
             ext = os.path.splitext(app_archive.filename)[1]
             filename = f"{id}{ext}"
             app_archive_path = settings.APP_ARCHIVE_PATH / filename
             os.remove(app_archive_path)
-            await uow.session.delete(app_archive)
+            await self.uow.session.delete(app_archive)
 
     async def upload_app_thumbnail(
         self, 
@@ -173,10 +175,12 @@ class AppService:
         app_id: UUID, user_id: UUID
     ) -> AppThumbnail:
         async with uow:
-            app = await self.get_app(app_id)
+            app = await self.uow.app_repo.get_app(app_id)
             logger.info(f"Start uploading archive for app: {app_id}")
 
-            if not app.public and app.publisher_id != user_id:
+            if app is None or (
+                not app.public and app.publisher_id != user_id
+            ):
                 raise app_not_found_exception
 
             if app.publisher_id != user_id:
@@ -201,14 +205,14 @@ class AppService:
                 str(file_path), (128, 128), 85
                 )
 
-            app_thumbnail = await uow.app_repo.get_app_thumbnail(app_id)
+            app_thumbnail = await self.uow.app_repo.get_app_thumbnail(app_id)
 
             if app_thumbnail is None:
                 app_thumbnail = AppThumbnail(
                     app_id=app_id,
                     extension=extension
                 )
-                uow.session.add(app_thumbnail)
+                self.uow.session.add(app_thumbnail)
 
             app_thumbnail.extension = extension
 
@@ -217,33 +221,34 @@ class AppService:
         return app_thumbnail
 
     async def remove_app_thumbnail(
-        self, app_id: UUID, uow: UnitOfWork
+        self, app_id: UUID
     ) -> None:
-        app_thumbnail = await uow.app_repo.get_app_thumbnail(app_id)
+        app_thumbnail = await self.uow.app_repo.get_app_thumbnail(app_id)
 
         if app_thumbnail is None:
             return
 
-        await uow.session.delete(app_thumbnail)
+        await self.uow.session.delete(app_thumbnail)
 
         filename = f"{app_id}{app_thumbnail.extension}"
         thumbnail_path = (
             settings.APP_THUMBNAIL_PATH / filename
             )
         os.remove(thumbnail_path)
-        await uow.session.delete(app_thumbnail)
+        await self.uow.session.delete(app_thumbnail)
         
     async def upload_app_cover(
         self,
-        uow: UnitOfWork, 
         file: UploadFile, 
         app_id: UUID, user_id: UUID
     ) -> AppCover:
-        async with uow:
-            app = await self.get_app(app_id)
+        async with self.uow:
+            app = await self.uow.app_repo.get_app(app_id)
             logger.info(f"Start uploading archive for app: {app_id}")
 
-            if not app.public and app.publisher_id != user_id:
+            if app is None or (
+                not app.public and app.publisher_id != user_id
+            ):
                 raise app_not_found_exception
 
             if app.publisher_id != user_id:
@@ -276,16 +281,15 @@ class AppService:
                 str(file_path), (1280, 720)
                 )
 
-            uow.session.add(app_cover)
-            await uow.commit()
+            self.uow.session.add(app_cover)
+            await self.uow.commit()
             logger.info(f"Committed. App cover paths is now: {file_path}")
 
         return app_cover
 
     async def get_app_covers(
         self, 
-        app_id: UUID,
-        uow: UnitOfWork
+        app_id: UUID
     ) -> list[AppCover]:
         logger.info(f"\n\n\n {uow.__dict__} \n\n\n")
         app = await self.app_repo.get_public_app(app_id)
@@ -300,11 +304,10 @@ class AppService:
     async def remove_app_cover(
         self,
         cover_id: UUID,
-        user_id: UUID,
-        uow: UnitOfWork
+        user_id: UUID
     ) -> None:
-        async with uow:
-            app_cover = await uow.app_repo.get_app_cover(cover_id)
+        async with self.uow:
+            app_cover = await self.uow.app_repo.get_app_cover(cover_id)
             logger.info(f"{app_cover = }")
 
             if app_cover is None:
@@ -322,18 +325,17 @@ class AppService:
             app_cover_path = settings.APP_COVER_PATH / filename
             os.remove(app_cover_path)
 
-            await uow.session.delete(app_cover)
-            await uow.commit()
+            await self.uow.session.delete(app_cover)
+            await self.uow.commit()
 
     async def check_and_remove_all_app_covers(
         self,
         app_id: UUID,
-        user_id: UUID,
-        uow: UnitOfWork
+        user_id: UUID
     ) -> None:
         logger.info("check_and_remove_all_app_covers")
-        async with uow:
-            app = await uow.app_repo.get_app(app_id)
+        async with self.uow:
+            app = await self.uow.app_repo.get_app(app_id)
 
             if app is None or (not app.public and app.publisher_id != user_id):
                 raise app_not_found_exception
@@ -341,23 +343,22 @@ class AppService:
             if app.publisher_id != user_id:
                 raise no_rights_exception
 
-            await self.remove_all_app_covers(app_id, uow)
-            await uow.commit()
+            await self.remove_all_app_covers(app_id)
+            await self.uow.commit()
 
     async def remove_all_app_covers(
         self,
-        app_id: UUID,
-        uow: UnitOfWork
+        app_id: UUID
     ) -> None:
         logger.info("remove_all_app_covers")
-        app_covers = await uow.app_repo.get_app_covers(app_id)
+        app_covers = await self.uow.app_repo.get_app_covers(app_id)
 
         for app_cover in app_covers:
             filename = f"{app_cover.id}{app_cover.extension}"
             app_cover_path = settings.APP_COVER_PATH / filename
             os.remove(app_cover_path)
             logger.info(f"Deleting cover at path: {app_cover_path}")
-            await uow.session.delete(app_cover)
+            await self.uow.session.delete(app_cover)
 
     async def get_app(self, id: UUID) -> AppDB:
         app = await self.app_repo.get_public_app(id)
@@ -417,32 +418,32 @@ class AppService:
         return games
 
     async def get_top_games(
-        self, redis: Redis
+        self
     ) -> list[AppDB]:
         games = await self.app_repo.get_top_games(0, 10)
         return games
 
     async def get_top_games_genre(
-        self, genre: Optional[GameGenre], redis: Redis
+        self, genre: Optional[GameGenre]
     ) -> list[AppDB]:
         games = await self.app_repo.get_top_games_genre(genre, 0, 10)
         return games
 
     async def delete_app(
-        self, id: UUID, uow: UnitOfWork
+        self, id: UUID
     ) -> None:
-        app = await uow.app_repo.get_app(id)
+        app = await self.uow.app_repo.get_app(id)
 
-        await uow.session.delete(app)
-        await self.remove_all_app_covers(id, uow)
-        await self.remove_app_archive(id, uow)
-        await self.remove_app_thumbnail(id, uow)
+        await self.uow.session.delete(app)
+        await self.remove_all_app_covers(id)
+        await self.remove_app_archive(id)
+        await self.remove_app_thumbnail(id)
 
     async def delete_app_by_user(
-        self, id: UUID, user_id: UUID, uow: UnitOfWork
+        self, id: UUID, user_id: UUID
     ) -> None:
-        async with uow:
-            app = await uow.app_repo.get_app(id)
+        async with self.uow:
+            app = await self.uow.app_repo.get_app(id)
 
             if app is None:
                 raise app_not_found_exception
@@ -450,9 +451,9 @@ class AppService:
             if not app.publisher_id == user_id:
                 raise no_rights_exception
 
-            await uow.session.delete(app)
-            await self.remove_all_app_covers(id, uow)
-            await self.remove_app_archive(id, uow)
-            await self.remove_app_thumbnail(id, uow)
+            await self.uow.session.delete(app)
+            await self.remove_all_app_covers(id)
+            await self.remove_app_archive(id)
+            await self.remove_app_thumbnail(id)
             
-            await uow.commit()
+            await self.uow.commit()

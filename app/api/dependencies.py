@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Annotated, Optional
 from uuid import UUID
+from functools import lru_cache
 
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -36,8 +37,12 @@ from app.service.app_service import AppService
 from app.service.review_service import ReviewService
 from app.service.purchase_service import PurchaseService
 from app.service.discussion_service import DiscussionService
+from app.service.file_service import FileService
 
 from app.core.logging import logger
+
+from app.storage.minio_repository import MinioStorage
+from app.storage.protocols import ObjectStorage
 
 oauth_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/login")
 oauth_scheme_2 = OAuth2PasswordBearer(
@@ -183,9 +188,10 @@ def get_user_repo(session: SessionDep) -> UserRepository:
 
 def get_user_service(
     user_repo: UserRepoDep,
-    app_service: AppServiceDep
+    app_service: AppServiceDep,
+    uow: UnitOfWorkDep
 ) -> UserService:
-    return UserService(user_repo, app_service)
+    return UserService(user_repo, app_service, uow)
 
 
 def get_finance_repo(session: SessionDep) -> FinanceRepository:
@@ -193,9 +199,10 @@ def get_finance_repo(session: SessionDep) -> FinanceRepository:
 
 def get_finance_service(
     finance_repo: FinanceRepoDep,
-    user_repo: UserRepoDep
+    user_repo: UserRepoDep,
+    uow: UnitOfWorkDep
 ) -> FinanceService:
-    return FinanceService(finance_repo, user_repo)
+    return FinanceService(finance_repo, user_repo, uow)
 
 
 def get_app_repo(session: SessionDep) -> AppRepository:
@@ -204,9 +211,10 @@ def get_app_repo(session: SessionDep) -> AppRepository:
 def get_app_service(
     app_repo: AppRepoDep, 
     user_repo: UserRepoDep,
-    purchase_repo: PurchaseRepoDep
+    purchase_repo: PurchaseRepoDep,
+    uow: UnitOfWorkDep
 ) -> AppService:
-    return AppService(app_repo, user_repo, purchase_repo)
+    return AppService(app_repo, user_repo, purchase_repo, uow)
 
 
 def get_review_repo(
@@ -215,9 +223,11 @@ def get_review_repo(
     return ReviewRepository(session)
 
 def get_review_service(
-    review_repo: ReviewRepoDep, app_service: AppServiceDep
+    review_repo: ReviewRepoDep, 
+    app_service: AppServiceDep,
+    uow: UnitOfWorkDep
 ) -> ReviewService:
-    return ReviewService(review_repo, app_service)
+    return ReviewService(review_repo, app_service, uow)
 
 
 def get_purchase_repo(
@@ -229,24 +239,44 @@ def get_purchase_service(
     redis: RedisDep, 
     app_service: AppServiceDep, 
     user_service: UserServiceDep,
-    purchase_repo: PurchaseRepoDep
+    purchase_repo: PurchaseRepoDep,
+    uow: UnitOfWorkDep
 ) -> PurchaseService:
-    return PurchaseService(redis, app_service, user_service, purchase_repo)
+    return PurchaseService(
+        redis, app_service, user_service, purchase_repo, uow
+        )
 
 
 def get_discussion_repo(session: SessionDep) -> DiscussionRepository:
     return DiscussionRepository(session)
 
 def get_discussion_service(
-    discussion_repo: DiscussionRepoDep, app_service: AppServiceDep
+    discussion_repo: DiscussionRepoDep, 
+    app_service: AppServiceDep,
+    uow: UnitOfWorkDep
 ) -> DiscussionService:
-    return DiscussionService(discussion_repo, app_service)
+    return DiscussionService(discussion_repo, app_service, uow)
 
 
 async def get_unit_of_work(
     session_factory: SessionFactoryDep
 ) -> UnitOfWork:
     return UnitOfWork(session_factory)
+
+
+@lru_cache
+def get_object_storage() -> ObjectStorage:
+    # MinioStorage не держит постоянного соединения (клиент создаётся
+    # внутри каждого метода через async with), поэтому его безопасно
+    # переиспользовать как синглтон на всё приложение.
+    return MinioStorage()
+
+
+def get_file_service(
+    uow: UnitOfWorkDep,  # подставь свой провайдер UoW
+    storage: Annotated[ObjectStorage, Depends(get_object_storage)]
+) -> FileService:
+    return FileService(storage=storage, uow=uow)
 
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -275,6 +305,8 @@ ReviewRepoDep = Annotated[ReviewRepository, Depends(get_review_repo)]
 PurchaseServiceDep = Annotated[PurchaseService, Depends(get_purchase_service)]
 PurchaseRepoDep = Annotated[PurchaseRepository, Depends(get_purchase_repo)]
 
+FileServiceDep = Annotated[FileService, Depends(get_file_service)]
+
 UnitOfWorkDep = Annotated[UnitOfWork, Depends(get_unit_of_work)]
 
 DiscussionServiceDep = Annotated[
@@ -290,9 +322,5 @@ SendEmailDep = Annotated[
     bool, Depends(can_send_email)
 ]
 
-RefreshSecretKeyDep = Annotated[
-    str, Depends(get_refresh_secret_key)
-]
-AccessSecretKeyDep = Annotated[
-    str, Depends(get_access_secret_key)
-]
+RefreshSecretKeyDep = Annotated[str, Depends(get_refresh_secret_key)]
+AccessSecretKeyDep = Annotated[str, Depends(get_access_secret_key)]

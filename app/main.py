@@ -25,7 +25,9 @@ from app.api.v1 import (
     review_router,
     user_router,
     discussion_router,
-    finance_router
+    finance_router,
+    app_file_router,
+    user_file_router
 )
 from app.db.redis import connect_to_redis_client
 
@@ -71,8 +73,14 @@ app.include_router(
 app.include_router(
     finance_router.router, prefix="/api/v1", tags=["Finance"]
     )
-
-#app.mount("/media", StaticFiles(directory="/media/static"), "media")
+app.include_router(
+    app_file_router.router, 
+    prefix="/api/v1/files/apps/{app_id}", 
+    tags=["Application", "Files"]
+    )
+app.include_router(
+    user_file_router.router, prefix="/api/v1/users", tags=["User", "Files"]
+    )
 
 cors = CORSMiddleware(
     app=app,

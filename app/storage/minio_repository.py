@@ -2,7 +2,7 @@ import aioboto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
 
-from core.config import settings
+from app.core.config import settings
 
 
 class MinioStorage:
@@ -27,8 +27,14 @@ class MinioStorage:
             config=Config(signature_version="s3v4"),  # обязателен для MinIO
             region_name="us-east-1",
         )
-        self._internal_kwargs = {**common, "endpoint_url": settings.MINIO_INTERNAL_ENDPOINT}
-        self._public_kwargs = {**common, "endpoint_url": settings.MINIO_PUBLIC_ENDPOINT}
+        self._internal_kwargs = {
+            **common, 
+            "endpoint_url": settings.MINIO_INTERNAL_ENDPOINT
+            }
+        self._public_kwargs = {
+            **common, 
+            "endpoint_url": settings.MINIO_PUBLIC_ENDPOINT
+            }
 
     async def generate_presigned_upload_url(
         self,
@@ -37,10 +43,16 @@ class MinioStorage:
         content_type: str,
         expires_in: int = 300,
     ) -> str:
-        async with self._session.client("s3", **self._public_kwargs) as client:
+        async with self._session.client(
+            "s3", **self._public_kwargs
+        ) as client:
             return await client.generate_presigned_url(
                 "put_object",
-                Params={"Bucket": bucket, "Key": key, "ContentType": content_type},
+                Params={
+                    "Bucket": bucket, 
+                    "Key": key, 
+                    "ContentType": content_type
+                    },
                 ExpiresIn=expires_in,
             )
 
@@ -50,7 +62,9 @@ class MinioStorage:
         key: str,
         expires_in: int = 300,
     ) -> str:
-        async with self._session.client("s3", **self._public_kwargs) as client:
+        async with self._session.client(
+            "s3", **self._public_kwargs
+        ) as client:
             return await client.generate_presigned_url(
                 "get_object",
                 Params={"Bucket": bucket, "Key": key},
@@ -58,7 +72,9 @@ class MinioStorage:
             )
 
     async def object_exists(self, bucket: str, key: str) -> bool:
-        async with self._session.client("s3", **self._internal_kwargs) as client:
+        async with self._session.client(
+            "s3", **self._internal_kwargs
+        ) as client:
             try:
                 await client.head_object(Bucket=bucket, Key=key)
                 return True
@@ -68,5 +84,7 @@ class MinioStorage:
                 raise
 
     async def delete_object(self, bucket: str, key: str) -> None:
-        async with self._session.client("s3", **self._internal_kwargs) as client:
+        async with self._session.client(
+            "s3", **self._internal_kwargs
+        ) as client:
             await client.delete_object(Bucket=bucket, Key=key)

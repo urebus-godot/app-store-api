@@ -38,29 +38,31 @@ class PurchaseService:
         app_service: AppService,
         user_service: UserService,
         purchase_repo: PurchaseRepository,
+        uow: UnitOfWork
     ):
         self.redis = redis
         self.purchase_repo = purchase_repo
         self.app_service = app_service
         self.user_service = user_service
+        self.uow = self.uow
 
     async def get_or_create_cart(
-        self, user_id: UUID, uow: UnitOfWork
+        self, user_id: UUID, 
     ) -> CartDB:
         logger.info("Start creating or getting cart")
-        cart = await uow.purchase_repo.get_cart(user_id)
+        cart = await self.uow.purchase_repo.get_cart(user_id)
         logger.info(f"Get cart: {cart}")
 
         if cart is None:
-            async with uow:
-                cart = await uow.purchase_repo.create_cart(user_id)
+            async with self.uow:
+                cart = await self.uow.purchase_repo.create_cart(user_id)
                 logger.info(f"Created cart in the db: {cart}")
-                await uow.commit()
+                await self.uow.commit()
 
         return cart
 
     async def get_cart_for_user(
-        self, user_id: UUID, uow: UnitOfWork
+        self, user_id: UUID, 
     ) -> CartResponse:
         """Returns user's cart or creates it and writes to the cache"""
         cached_cart = await self.redis.get(f"cart_cache:{user_id}")
@@ -70,12 +72,12 @@ class PurchaseService:
             logger.info(f"Found cart in the cache: {cart}")
             return cart
 
-        async with uow:
-            cart = await uow.purchase_repo.get_cart(user_id)
+        async with self.uow:
+            cart = await self.uow.purchase_repo.get_cart(user_id)
 
             if cart is None:
-                cart = await uow.purchase_repo.create_cart(user_id)
-                await uow.commit()
+                cart = await self.uow.purchase_repo.create_cart(user_id)
+                await self.uow.commit()
 
             total_price = sum([item.app.price for item in cart.items])
             cart = CartResponse.model_validate(cart)
@@ -100,14 +102,14 @@ class PurchaseService:
         return purchases
 
     async def add_app_to_cart(
-        self, app_id: UUID, user_id: UUID, uow: UnitOfWork
+        self, app_id: UUID, user_id: UUID, 
     ) -> CartItem:
-        async with uow:
-            user_cart = await self.get_or_create_cart(user_id, uow)
+        async with self.uow:
+            user_cart = await self.get_or_create_cart(user_id, self.uow)
             app = await self.app_service.get_app(app_id)
 
-            purchased = await uow.purchase_repo.get_purchase(app_id, user_id)
-            already_added = await uow.purchase_repo.get_cart_item(
+            purchased = await self.uow.purchase_repo.get_purchase(app_id, user_id)
+            already_added = await self.uow.purchase_repo.get_cart_item(
                 user_cart.id, app_id
                 )
 
@@ -122,10 +124,10 @@ class PurchaseService:
 
             await self.redis.delete(f"cart_cache:{user_id}")
 
-            cart_item = await uow.purchase_repo.add_app_to_cart(
+            cart_item = await self.uow.purchase_repo.add_app_to_cart(
                 user_cart, app_id
             )
-            await uow.commit()
+            await self.uow.commit()
 
         return cart_item
 
@@ -134,15 +136,15 @@ class PurchaseService:
         user_id: UUID,
         user_email: Optional[str],
         bg_tasks: BackgroundTasks,
-        uow: UnitOfWork
+        
     ) -> list[AppDB]:
-        async with uow:
+        async with self.uow:
             logger.info("Start purchasing apps")
             
-            user = await uow.user_repo.get_user_by_id(
+            user = await self.uow.user_repo.get_user_by_id(
                 user_id, for_update=True
                 )
-            cart = await uow.purchase_repo.get_cart(user.id)
+            cart = await self.uow.purchase_repo.get_cart(user.id)
             
             if cart is None or not cart.items:
                 raise empty_cart_exception
@@ -152,7 +154,7 @@ class PurchaseService:
             publisher_earnings = defaultdict(Decimal)
 
             for item in cart.items:
-                purchased = await uow.purchase_repo.get_purchase(
+                purchased = await self.uow.purchase_repo.get_purchase(
                     item.app_id, user.id
                     )
                 if purchased:
@@ -170,7 +172,7 @@ class PurchaseService:
 
             # Если все игры из корзины уже куплены
             if not purchased_apps:
-                await self.delete_cart(user_id, uow)
+                await self.delete_cart(user_id, self.uow)
                 await self.redis.delete(f"cart_cache:{user.id}")
                 return []
 
@@ -182,21 +184,21 @@ class PurchaseService:
             user.balance -= actual_total_price
             
             for item in purchased_apps:
-                await uow.purchase_repo.add_purchase(user.id, item)
+                await self.uow.purchase_repo.add_purchase(user.id, item)
                 item.app.times_purchased += 1
 
             for pub_id, earnings in publisher_earnings.items():
-                publisher = await uow.user_repo.get_user_by_id(
+                publisher = await self.uow.user_repo.get_user_by_id(
                     pub_id, for_update=True
                     )
                 publisher.balance += earnings
 
             # 5. Удаляем корзину и кэш
-            await self.delete_cart(user_id, uow)
+            await self.delete_cart(user_id, self.uow)
             await self.redis.delete(f"cart_cache:{user.id}")
             
             # 6. Фиксируем транзакцию в БД
-            await uow.commit()
+            await self.uow.commit()
             logger.info("Transaction has ended successfully")
 
             # 7. Только ПОСЛЕ успешного коммита планируем отправку Email
@@ -217,16 +219,16 @@ class PurchaseService:
             return [item.app for item in purchased_apps]
     
     async def remove_item_from_cart(
-        self, app_id: UUID, user_id: UUID, uow: UnitOfWork
+        self, app_id: UUID, user_id: UUID, 
     ) -> None:
-        async with uow:
-            app = await uow.app_repo.get_app(app_id)
+        async with self.uow:
+            app = await self.uow.app_repo.get_app(app_id)
 
             if app is None:
                 raise app_not_found_exception
 
-            user_cart = await uow.purchase_repo.get_cart(user_id)
-            cart_item = await uow.purchase_repo.get_cart_item(
+            user_cart = await self.uow.purchase_repo.get_cart(user_id)
+            cart_item = await self.uow.purchase_repo.get_cart_item(
                 user_cart.id, app_id
                 )
 
@@ -234,23 +236,23 @@ class PurchaseService:
                 raise app_not_in_cart_exception
 
             await self.redis.delete(f"cart_cache:{user_id}")
-            await uow.purchase_repo.remove_item_from_cart(cart_item)
-            await uow.commit()
+            await self.uow.purchase_repo.remove_item_from_cart(cart_item)
+            await self.uow.commit()
 
     async def delete_cart(
-        self, user_id: UUID, uow: UnitOfWork
+        self, user_id: UUID, 
     ) -> None:
-        await uow.purchase_repo.delete_cart(user_id)
+        await self.uow.purchase_repo.delete_cart(user_id)
 
     async def delete_cart_by_user(
-        self, user_id: UUID, uow: UnitOfWork
+        self, user_id: UUID, 
     ) -> None:
-        async with uow:
-            cart = await uow.purchase_repo.get_cart(user_id)
+        async with self.uow:
+            cart = await self.uow.purchase_repo.get_cart(user_id)
 
             if cart is None:
                 raise empty_cart_exception
             
             await self.redis.delete(f"cart_cache:{user_id}")
-            await uow.purchase_repo.delete_cart(cart)
-            await uow.commit()
+            await self.uow.purchase_repo.delete_cart(cart)
+            await self.uow.commit()

@@ -49,10 +49,12 @@ class UserService:
     def __init__(
         self, 
         user_repo: UserRepository,
-        app_service: AppService
+        app_service: AppService,
+        uow: UnitOfWork
     ):
         self.user_repo = user_repo
         self.app_service = app_service
+        self.uow = uow
 
     async def username_registered(self, username: str) -> bool:
         return await self.user_repo.username_registered(username)
@@ -61,9 +63,9 @@ class UserService:
         return await self.user_repo.email_registered(email)
 
     async def register_user(
-        self, data: UserRequest, uow: UnitOfWork
+        self, data: UserRequest, 
     ) -> UserDB:
-        async with uow:
+        async with self.uow:
             logger.info("Enter register_user func")
             username_used = await self.username_registered(data.username)
             logger.info(f"Username is being used: {username_used}")
@@ -77,10 +79,10 @@ class UserService:
                     raise email_used_exception
 
             logger.info("Start registering user in the database")
-            user = await uow.user_repo.register_user(data)
+            user = await self.uow.user_repo.register_user(data)
             logger.info("Registered user")
 
-            await uow.commit()
+            await self.uow.commit()
 
         return user
 
@@ -159,16 +161,16 @@ class UserService:
             raise invalid_refresh_token_exception
 
     async def become_publisher(
-        self, user: UserDB, uow: UnitOfWork
+        self, user: UserDB, 
     ) -> dict[str, str]:
-        async with uow:
+        async with self.uow:
             if UserRole.PUBLISHER in user.roles:
                 raise already_has_role_exception
 
-            user = await uow.user_repo.get_user_by_id(user.id)
-            result = await uow.user_repo.become_publisher(user)
+            user = await self.uow.user_repo.get_user_by_id(user.id)
+            result = await self.uow.user_repo.become_publisher(user)
 
-            await uow.commit()
+            await self.uow.commit()
 
         return result
 
@@ -177,9 +179,9 @@ class UserService:
         request: Request,
         file: UploadFile, 
         user_id: UUID,
-        uow: UnitOfWork
+        
     ) -> UserProfilePicture:
-        async with uow:
+        async with self.uow:
             extension = os.path.splitext(file.filename)[1]
 
             if extension not in settings.IMAGE_EXTENSIONS:
@@ -200,28 +202,28 @@ class UserService:
                 str(file_path), (128, 128), 85
                 )
 
-            profile_picture = await uow.user_repo.get_profile_picture(user_id)
+            profile_picture = await self.uow.user_repo.get_profile_picture(user_id)
 
             if profile_picture is None:
                 profile_picture = UserProfilePicture(
                     user_id=user_id,
                     extension=extension
                 )
-                uow.session.add(profile_picture)
+                self.uow.session.add(profile_picture)
 
             profile_picture.extension = extension
 
-            await uow.commit()
+            await self.uow.commit()
 
         return profile_picture
 
     async def remove_profile_picture_by_user(
         self, 
         user_id: UUID, 
-        uow: UnitOfWork
+        
     ) -> None:
-        async with uow:
-            profile_picture = await uow.user_repo.get_profile_picture(
+        async with self.uow:
+            profile_picture = await self.uow.user_repo.get_profile_picture(
                 user_id
                 )
 
@@ -233,16 +235,16 @@ class UserService:
                 settings.PROFILE_PICTURE_PATH / filename
                 )
             os.remove(profile_picture_path)
-            await uow.session.delete(profile_picture)
+            await self.uow.session.delete(profile_picture)
 
-            await uow.commit()
+            await self.uow.commit()
 
     async def remove_profile_picture(
         self, 
         user_id: UUID, 
-        uow: UnitOfWork
+        
     ) -> None:
-        profile_picture = await uow.user_repo.get_profile_picture(
+        profile_picture = await self.uow.user_repo.get_profile_picture(
             user_id
             )
 
@@ -254,12 +256,12 @@ class UserService:
             settings.PROFILE_PICTURE_PATH / filename
             )
         os.remove(profile_picture_path)
-        await uow.session.delete(profile_picture)
+        await self.uow.session.delete(profile_picture)
 
     async def update_user(
-        self, user: UserDB, data: UserUpdate, uow: UnitOfWork
+        self, user: UserDB, data: UserUpdate, 
     ):
-        async with uow:
+        async with self.uow:
             if user.username == data.username or user.email == data.email:
                 raise user_data_used_exception
 
@@ -276,7 +278,7 @@ class UserService:
             if "password" in data:
                 user.hashed_password = get_password_hash(data["password"])
 
-            await uow.commit()
+            await self.uow.commit()
 
         return user
     
@@ -309,22 +311,22 @@ class UserService:
         self, 
         user_id: UUID, 
         redis: Redis, 
-        uow: UnitOfWork
+        
     ) -> None:
-        async with uow:
-            user = await uow.user_repo.get_user_by_id(user_id)
+        async with self.uow:
+            user = await self.uow.user_repo.get_user_by_id(user_id)
 
             if user is None:
                 raise user_not_found_exception
 
-            published_apps = await uow.app_repo.get_publisher_apps(
+            published_apps = await self.uow.app_repo.get_publisher_apps(
                 user_id=user_id, public_only=False
                 )
 
             for app in published_apps:
-                await self.app_service.delete_app(app.id, uow)
+                await self.app_service.delete_app(app.id, self.uow)
 
             await redis.delete(f"user_tokens:{user_id}")
-            await uow.session.delete(user)
+            await self.uow.session.delete(user)
 
-            await uow.commit()
+            await self.uow.commit()

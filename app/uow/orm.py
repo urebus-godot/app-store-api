@@ -12,9 +12,9 @@ from app.repo.discussion_repo import DiscussionRepository
 from app.repo.user_repo import UserRepository
 from app.repo.finance_repo import FinanceRepository
 
-from app.uow.base import AbstractUnitOfWork
+from app.uow.base import UnitOfWork
 
-class UnitOfWork(AbstractUnitOfWork):
+class OrmUnitOfWork(UnitOfWork):
     def __init__(
         self, 
         session_factory: async_sessionmaker[AsyncSession]

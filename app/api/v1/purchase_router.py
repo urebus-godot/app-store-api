@@ -7,7 +7,6 @@ from app.api.dependencies import (
     UserIdDep,
     UserDep,
     SkipLimitParams,
-    UnitOfWorkDep,
     SendEmailDep,
     rate_limit
 )
@@ -30,10 +29,9 @@ router = APIRouter(
 async def add_app_to_cart(
     app_id: UUID,
     user_id: UserIdDep,
-    purchase_service: PurchaseServiceDep,
-    uow: UnitOfWorkDep
+    purchase_service: PurchaseServiceDep
 ) -> CartItemResponse:
-    return await purchase_service.add_app_to_cart(app_id, user_id, uow)
+    return await purchase_service.add_app_to_cart(app_id, user_id)
 
 
 @router.post("/carts/checkout")
@@ -41,25 +39,23 @@ async def purchase_apps_in_cart(
     user: UserDep,
     bg_tasks: BackgroundTasks,
     purchase_service: PurchaseServiceDep,
-    uow: UnitOfWorkDep,
     sends_email: SendEmailDep
 ) -> list[AppResponse]:
     if sends_email:
         return await purchase_service.purchase_apps_in_cart(
-            user_id=user.id, user_email=user.email, bg_tasks=bg_tasks, uow=uow
+            user_id=user.id, user_email=user.email, bg_tasks=bg_tasks
             )
     return await purchase_service.purchase_apps_in_cart(
-        user_id=user.id, user_email=None, bg_tasks=bg_tasks, uow=uow
+        user_id=user.id, user_email=None, bg_tasks=bg_tasks
         )
 
 
 @router.post("/carts/me")
 async def get_cart(
     user_id: UserIdDep,
-    purchase_service: PurchaseServiceDep,
-    uow: UnitOfWorkDep
+    purchase_service: PurchaseServiceDep
 ) -> CartResponse:
-    cart = await purchase_service.get_cart_for_user(user_id, uow)
+    cart = await purchase_service.get_cart_for_user(user_id)
     return cart
 
 
@@ -82,10 +78,9 @@ async def get_purchase_history(
 async def remove_app_from_cart(
     app_id: UUID,
     user_id: UserIdDep,
-    purchase_service: PurchaseServiceDep,
-    uow: UnitOfWorkDep
+    purchase_service: PurchaseServiceDep
 ) -> None:
-    await purchase_service.remove_item_from_cart(app_id, user_id, uow)
+    await purchase_service.remove_item_from_cart(app_id, user_id)
 
 
 @router.delete(
@@ -94,7 +89,6 @@ async def remove_app_from_cart(
     )
 async def clear_cart(
     user_id: UserIdDep,
-    purchase_service: PurchaseServiceDep,
-    uow: UnitOfWorkDep
+    purchase_service: PurchaseServiceDep
 ) -> None:
-    await purchase_service.delete_cart_by_user(user_id, uow)
+    await purchase_service.delete_cart_by_user(user_id)
