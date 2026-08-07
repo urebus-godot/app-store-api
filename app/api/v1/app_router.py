@@ -33,7 +33,6 @@ from app.schemas.app import (
     AppResponseWithPublisher,
     GameResponseWithPublisher,
 )
-from app.models.file import AppCover, AppArchive, AppThumbnail
 from app.core.logging import logger
 from app.core.config import settings
 
@@ -66,115 +65,6 @@ async def upload_game(
 ) -> GameResponse:
     game = await app_service.upload_app(data, user)
     return game
-
-
-@router.post(
-    "/apps/{app_id}/files/archive",
-    status_code=status.HTTP_201_CREATED
-    )
-async def upload_app_archive(
-    user_id: UserIdDep,
-    app_id: UUID,
-    app_service: AppServiceDep,
-    file: UploadFile = File(...)
-) -> AppArchive:
-    result = await app_service.upload_app_archive(
-        file, app_id, user_id
-        )
-    return result
-
-
-@router.post(
-    "/apps/{app_id}/download"
-    )
-async def download_app_archive(
-    user_id: UserIdDep,
-    app_id: UUID,
-    app_service: AppServiceDep
-) -> FileResponse:
-    try:
-        app_archive = await app_service.get_app_archive(app_id, user_id)
-        filename = f"{app_id}{os.path.splitext(app_archive.filename)[1]}"
-        file_path = settings.APP_ARCHIVE_PATH / filename
-        return FileResponse(
-            path=file_path,
-            filename=app_archive.filename
-        )
-    except FileNotFoundError:
-        raise HTTPException(
-            status.HTTP_404_NOT_FOUND,
-            "Application has no archive file"
-        )
-
-
-@router.post(
-    "/apps/{app_id}/files/thumbnail",
-    status_code=status.HTTP_201_CREATED
-    )
-async def upload_app_thumbnail(
-    user_id: UserIdDep,
-    app_id: UUID,
-    app_service: AppServiceDep,
-    file: UploadFile = File(...),
-) -> AppThumbnail:
-    app_cover = await app_service.upload_app_thumbnail(
-        file, app_id, user_id
-        )
-    return app_cover
-
-
-@router.post(
-    "/apps/{app_id}/files/covers",
-    status_code=status.HTTP_201_CREATED
-    )
-async def upload_app_cover(
-    user_id: UserIdDep,
-    app_id: UUID,
-    app_service: AppServiceDep,
-    file: UploadFile = File(...)
-) -> AppCover:
-    app_cover = await app_service.upload_app_cover(
-        file, app_id, user_id
-        )
-    return app_cover
-
-
-@router.get(
-    "/apps/{app_id}/files/covers"
-    )
-async def get_app_covers(
-    app_id: UUID,
-    app_service: AppServiceDep
-) -> list[AppCover]:
-    return await app_service.get_app_covers(app_id)
-
-
-@router.delete(
-    "/apps/files/covers/{cover_id}",
-    status_code=status.HTTP_204_NO_CONTENT
-    )
-async def remove_app_cover(
-    user_id: UserIdDep,
-    cover_id: UUID,
-    app_service: AppServiceDep
-) -> None:
-    await app_service.remove_app_cover(
-        cover_id, user_id
-        )
-
-
-@router.delete(
-    "/apps/{app_id}/files/covers",
-    status_code=status.HTTP_204_NO_CONTENT
-    )
-async def remove_all_app_covers(
-    user_id: UserIdDep,
-    app_id: UUID,
-    app_service: AppServiceDep
-) -> None:
-    await app_service.check_and_remove_all_app_covers(
-        app_id, user_id
-        )
 
 
 @router.patch(
@@ -239,7 +129,6 @@ async def get_apps(
 async def get_games(
     skip_limit: SkipLimitParams,
     app_service: AppServiceDep,
-    review_service: ReviewServiceDep,
     search_query: Optional[SearchQuery] = None,
     genre: Optional[GameGenre] = None,
 ) -> list[GameResponseWithPublisher]:

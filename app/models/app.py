@@ -4,12 +4,12 @@ from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 from sqlalchemy.dialects.postgresql import ARRAY, TIMESTAMP
-from sqlalchemy import String
+from sqlalchemy import String, Index
 from sqlmodel import Field, Relationship
 
 from app.models.purchase import PurchaseDB
 from app.base_models.app import BaseApp, GameGenre, AppCategory
-from app.models.file import AppArchive, AppCover, AppThumbnail
+from app.models.app_cover import AppCover
 
 
 class AppDB(BaseApp, table=True):
@@ -24,7 +24,7 @@ class AppDB(BaseApp, table=True):
     genre: Optional[GameGenre] = Field(default=None, nullable=True)
     category: AppCategory = AppCategory.APPLICATION
     
-    keywords: Optional[set[str]] = Field(
+    keywords: Optional[list[str]] = Field(
         default=None, sa_type=ARRAY(String)
         )
 
@@ -33,6 +33,7 @@ class AppDB(BaseApp, table=True):
         ge=1.0, le=5.0
         )
     times_purchased: int = Field(default=0, ge=0)
+    public: bool
 
     publisher_id: UUID = Field(foreign_key="users.id", ondelete="CASCADE")
     publisher: "UserDB" = Relationship(back_populates="published_apps")
@@ -44,8 +45,8 @@ class AppDB(BaseApp, table=True):
     pending_archive_key: Optional[str] = None
     archive_key: Optional[str] = None
 
-    pending_cover_key: Optional[str] = None
-    cover_keys: list[str] = []
+    pending_icon_key: Optional[str] = None
+    icon_key: Optional[str] = None
 
     reviews: list["ReviewDB"] = Relationship(
         back_populates="app",
@@ -53,15 +54,11 @@ class AppDB(BaseApp, table=True):
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
 
-    archive: "AppArchive" = Relationship(
-        back_populates="app", 
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
-        )
-    covers: list["AppCover"] = Relationship(
-        back_populates="app",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
-        )
-    thumbnails: list["AppThumbnail"] = Relationship(
-        back_populates="app",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
-        )
+    __table_args__ = (
+        Index(
+            "ix_apps_keywords_gin",
+            "keywords",
+            postgresql_using="gin",
+            postgresql_where=("public")
+        ),
+    )

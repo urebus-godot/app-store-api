@@ -31,7 +31,6 @@ from app.schemas.user import (
     UserUpdate,
     CurrentUserResponse
 )
-from app.models.file import UserProfilePicture
 from app.schemas.token import TokenResponse, LoginResponse
 
 router = APIRouter(
@@ -86,7 +85,6 @@ async def login(
 @router.post("/users/logout")
 async def logout(
     request: Request,
-    user_id: UserIdDep,
     secret_key: RefreshSecretKeyDep,
     user_service: UserServiceDep,
     redis: RedisDep,
@@ -119,34 +117,6 @@ async def become_publisher(
 ) -> dict[str, str]:
     """Adds "publisher" role to user roles on success."""
     return await user_service.become_publisher(user)
-
-
-@router.post(
-    "/users/me/profile_picture",
-    status_code=status.HTTP_201_CREATED
-    )
-async def upload_profile_picture(
-    request: Request,
-    file: UploadFile,
-    user: UserDep,
-    user_service: UserServiceDep
-) -> UserProfilePicture:
-    request.headers
-    result = await user_service.upload_profile_picture(
-        request, file, user.id
-        )
-    return result
-
-
-@router.delete(
-    "/users/me/profile_picture",
-    status_code=status.HTTP_204_NO_CONTENT
-    )
-async def remove_profile_picture(
-    user_id: UserIdDep,
-    user_service: UserServiceDep
-) -> None:
-    await user_service.remove_profile_picture_by_user(user_id)
 
 
 @router.patch("/users/me")

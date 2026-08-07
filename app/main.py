@@ -8,7 +8,7 @@ from sqlalchemy import text
 
 import httpx
 
-from app.middleware.log_request import log_request
+from app.middleware.log_request import LogMiddleware
 from app.core.exception_handlers import (
     response_validation_error_handler,
     file_not_found_error_handler,
@@ -20,14 +20,14 @@ from app.core.config import settings
 
 from app.api.dependencies import RedisDep, SessionDep, rate_limit
 from app.api.v1 import (
+    app_archive_router,
     app_router,
+    media_router,
     purchase_router,
     review_router,
     user_router,
     discussion_router,
-    finance_router,
-    app_file_router,
-    user_file_router
+    finance_router
 )
 from app.db.redis import connect_to_redis_client
 
@@ -55,6 +55,8 @@ app = FastAPI(
     }
 )
 
+#app.add_middleware(LogMiddleware)
+
 app.include_router(
     user_router.router, prefix="/api/v1", tags=["User"]
     )
@@ -74,12 +76,14 @@ app.include_router(
     finance_router.router, prefix="/api/v1", tags=["Finance"]
     )
 app.include_router(
-    app_file_router.router, 
+    app_archive_router.router, 
     prefix="/api/v1/files/apps/{app_id}", 
     tags=["Application", "Files"]
     )
 app.include_router(
-    user_file_router.router, prefix="/api/v1/users", tags=["User", "Files"]
+    media_router.router, 
+    prefix="/api/v1/media", 
+    tags=["Media"]
     )
 
 cors = CORSMiddleware(
@@ -117,4 +121,3 @@ if __name__ == "__main__":
         access_log=True,
         proxy_headers=True
     )
-    app.add_middleware(log_request)

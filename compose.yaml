@@ -11,8 +11,7 @@ services:
     restart: unless-stopped
     volumes:
       - db_data:/var/lib/postgresql/data
-    networks: 
-      - app_network
+
   
   redis:
     image: redis:7
@@ -23,8 +22,7 @@ services:
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
-    networks: 
-      - app_network
+
   
   redis-commander:
     image: rediscommander/redis-commander:latest
@@ -32,8 +30,6 @@ services:
       - "8081:8081"
     container_name: redis-com
     restart: unless-stopped
-    networks:
-      - app_network
     environment:
       - REDIS_HOSTS=local:redis:6379
 
@@ -41,8 +37,6 @@ services:
     build:
       context: .
     container_name: worker
-    networks:
-      - app_network
     volumes:
       - type: bind
         source: app
@@ -63,8 +57,6 @@ services:
     build:
       context: .
     container_name: beat
-    networks:
-      - app_network
     restart: unless-stopped
     env_file:
       - .env
@@ -79,8 +71,6 @@ services:
   celery_flower:
     image: mher/flower:2.0
     container_name: flower
-    networks:
-      - app_network
     restart: unless-stopped
     ports:
       - "5555:5555"
@@ -97,8 +87,6 @@ services:
       context: .
     expose:
       - "8000"
-    networks:
-      - app_network
     volumes:
       - type: bind
         source: app
@@ -111,20 +99,19 @@ services:
     depends_on:
       - db
       - redis
-      - nginx
       - minio
     restart: unless-stopped
     env_file:
       - .env
-    command: python -m app.main
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
   nginx:
     container_name: nginx
     image: nginx:alpine
     ports:
       - "80:80"
-    networks: 
-      - app_network
+    depends_on:
+      - web
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     restart: unless-stopped
@@ -133,8 +120,8 @@ services:
     image: minio/minio:latest
     container_name: minio-server
     ports:
-      - "9000:9000" # S3 API Port
-      - "9001:9001" # Web Console UI Port
+      - "9000:9000"
+      - "9001:9001"
     volumes:
       - minio_data:/data
     environment:
@@ -142,10 +129,6 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     command: server --console-address ":9001" /data
     restart: unless-stopped
-
-networks:
-  app_network:
-    driver: bridge
 
 volumes:
   db_data:

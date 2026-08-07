@@ -5,6 +5,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, desc
 from sqlalchemy.orm import selectinload
 
+from app.core.logging import logger
 
 from app.models.app import AppDB
 from app.base_models.app import (
@@ -12,7 +13,7 @@ from app.base_models.app import (
     AppCategory
 )
 from app.schemas.app import AppRequest, GameRequest, AppUpdate
-from app.models.file import AppArchive, AppCover, AppThumbnail
+from app.models.app_cover import AppCover
 from app.models.purchase import PurchaseDB
 
 
@@ -54,36 +55,6 @@ class AppRepository:
 
         return app
 
-    async def get_app_archive(
-        self, app_id: UUID
-    ) -> Optional[AppArchive]:
-        stmt = select(AppArchive).where(AppArchive.app_id == app_id)
-        app_archive = (await self.session.exec(stmt)).one_or_none()
-
-        return app_archive
-
-    async def get_app_thumbnail(
-        self, app_id: UUID
-    ) -> Optional[AppThumbnail]:
-        stmt = select(AppThumbnail).where(AppThumbnail.app_id == app_id)
-        app_thumbnail = (await self.session.exec(stmt)).one_or_none()
-
-        return app_thumbnail
-
-    async def get_app_cover(
-        self, cover_id: UUID
-    ) -> Optional[AppCover]:
-        stmt = select(AppCover).where(AppCover.id == cover_id)
-        app_cover = (await self.session.exec(stmt)).one_or_none()
-        return app_cover
-
-    async def get_app_covers(
-        self, app_id: UUID
-    ) -> list[AppCover]:
-        stmt = select(AppCover).where(AppCover.app_id == app_id)
-        app_covers = (await self.session.exec(stmt)).all()
-        return app_covers
-
     async def get_app(
         self, id: UUID
     ) -> AppDB:
@@ -112,13 +83,13 @@ class AppRepository:
         self,
         skip: int = 0,
         limit: Optional[int] = None,
-        public_only: bool = True,
-        order_by: Optional[str] = "published_at",
+        public_only: bool = True
     ) -> list[AppDB]:
         stmt = (
             select(AppDB)
             .offset(skip)
             .options(*self.load_attrs)
+            .order_by(desc(AppDB.published_at))
         )
 
         if limit is not None:
@@ -127,8 +98,26 @@ class AppRepository:
         if public_only:
             stmt = stmt.where(AppDB.public)
 
-        if order_by is not None:
-            stmt = stmt.order_by(desc(AppDB.published_at))
+        apps = (await self.session.exec(stmt)).all()
+
+        return apps
+
+    async def get_apps_by_keywords(
+        self,
+        keywords: list[str],
+        skip: int = 0,
+        limit: Optional[int] = None
+    ) -> list[AppDB]:
+        stmt = (
+            select(AppDB)
+            .offset(skip)
+            .options(*self.load_attrs)
+            .order_by(AppDB.published_at)
+            .where(AppDB.public, AppDB.keywords.overlap(keywords))
+        )
+
+        if limit is not None:
+            stmt = stmt.limit(limit)
 
         apps = (await self.session.exec(stmt)).all()
 
@@ -162,7 +151,7 @@ class AppRepository:
         )
 
         if public_only:
-            stmt = stmt.where(*self.public_app_conditions)
+            stmt = stmt.where(AppDB.public)
 
         if limit > 0:
             stmt.limit(limit)
@@ -189,7 +178,38 @@ class AppRepository:
         )
 
         if only_public:
-            stmt.where(AppDB.public)
+            stmt = stmt.where(AppDB.public)
+
+        if genre:
+            stmt = stmt.where(AppDB.genre == genre)
+
+        games = (
+            await self.session.exec(stmt.options(*self.load_attrs))
+            ).all()
+
+        return games
+
+    async def get_games_by_keywords(
+        self,
+        genre: Optional[GameGenre],
+        keywords: list[str],
+        skip: int,
+        limit: int
+    ) -> list[AppDB]:
+        stmt = (
+            select(AppDB)
+            .where(
+                AppDB.keywords.overlap(keywords),
+                AppDB.public,
+                AppDB.category == AppCategory.GAME
+                )
+            .order_by(desc(AppDB.published_at))
+            .offset(skip)
+            .limit(limit)
+        )
+
+        if genre is not None:
+            stmt = stmt.where(AppDB.genre == genre)
 
         games = (
             await self.session.exec(stmt.options(*self.load_attrs))

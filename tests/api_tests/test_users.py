@@ -10,7 +10,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 import pytest
 
 from app.models.user import UserDB
-from app.models.file import UserProfilePicture
+from app.models.app_cover import UserProfilePicture
 
 @pytest.fixture(scope="function")
 def test_image(test_user: UserDB):

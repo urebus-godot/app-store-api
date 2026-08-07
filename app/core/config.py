@@ -97,14 +97,16 @@ class Settings(BaseSettings):
     MINIO_INTERNAL_ENDPOINT: str = "http://minio:9000"
     MINIO_PUBLIC_ENDPOINT: str = "http://localhost:9000"
 
-    APP_ARCHIVE_BUCKET: str = "app-archive"
-    APP_COVER_BUCKET: str = "app-cover"
-    APP_THUMBNAIL_BUCKET: str = "app-thumbnail"
+    APP_ARCHIVE_BUCKET: str = "app-archives"
+    APP_COVER_BUCKET: str = "app-covers"
+    APP_ICON_BUCKET: str = "app-icons"
+    USER_AVATAR_BUCKET: str = "user-avatars"
 
-    USER_AVATAR_BUCKET: str = "user-avatar"
-
-    UPLOAD_TTL_SECONDS: int = 300
+    UPLOAD_TTL_SECONDS: int = 600
     DOWNLOAD_TTL_SECONDS: int = 300
+
+    MAX_AVATAR_ICON_SIZE: int = 5 * 1024 * 1024
+    MAX_COVER_SIZE: int = 10 * 1024 * 1024
 
     MAIL_USERNAME: str = "satalovserge"
     MAIL_PASSWORD: str

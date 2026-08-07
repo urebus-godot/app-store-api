@@ -11,6 +11,7 @@ from app.repo.review_repo import ReviewRepository
 from app.repo.discussion_repo import DiscussionRepository
 from app.repo.user_repo import UserRepository
 from app.repo.finance_repo import FinanceRepository
+from app.repo.app_cover_repo import AppCoverRepository
 
 from app.uow.base import UnitOfWork
 
@@ -30,6 +31,7 @@ class OrmUnitOfWork(UnitOfWork):
         self.discussion_repo = DiscussionRepository(self.session)
         self.purchase_repo = PurchaseRepository(self.session)
         self.finance_repo = FinanceRepository(self.session)
+        self.app_cover_repo = AppCoverRepository(self.session)
 
         return self
 

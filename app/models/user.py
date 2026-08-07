@@ -34,6 +34,9 @@ class UserDB(BaseUser, table=True):
     
     balance: Decimal = Field(default=0, ge=0)
 
+    pending_avatar_key: Optional[str] = None
+    avatar_key: Optional[str] = None
+
     cart: Optional["CartDB"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},

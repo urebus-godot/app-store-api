@@ -29,5 +29,23 @@ class ObjectStorage(Protocol):
     async def object_exists(self, bucket: str, key: str) -> bool:
         ...
 
+    async def object_size(self, bucket: str, key: str) -> int | None:
+        """Размер объекта в байтах или None, если объекта нет.
+
+        Используется для валидации лимита на файл ПОСЛЕ загрузки — сам
+        presigned PUT (в отличие от presigned POST с policy) размер
+        не ограничивает, так что проверять приходится постфактум.
+        """
+        ...
+
+    def build_public_url(self, bucket: str, key: str) -> str:
+        """URL для чтения объекта из публично доступного бакета.
+
+        Без подписи — используется только для бакетов с bucket policy
+        "public read" (avatars, app-icons, app-covers), а не для
+        приватных game-builds.
+        """
+        ...
+
     async def delete_object(self, bucket: str, key: str) -> None:
         ...

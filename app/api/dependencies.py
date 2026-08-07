@@ -22,7 +22,7 @@ from app.core.auth import decode_access_token
 from app.core.config import settings
 from app.models.user import UserDB, UserRole
 
-from app.uow.orm import UnitOfWork
+from app.uow.orm import OrmUnitOfWork
 
 from app.repo.user_repo import UserRepository
 from app.repo.finance_repo import FinanceRepository
@@ -37,7 +37,8 @@ from app.service.app_service import AppService
 from app.service.review_service import ReviewService
 from app.service.purchase_service import PurchaseService
 from app.service.discussion_service import DiscussionService
-from app.service.file_service import FileService
+from app.service.app_archive_service import AppArchiveService
+from app.service.media_service import MediaService
 
 from app.core.logging import logger
 
@@ -260,8 +261,8 @@ def get_discussion_service(
 
 async def get_unit_of_work(
     session_factory: SessionFactoryDep
-) -> UnitOfWork:
-    return UnitOfWork(session_factory)
+) -> OrmUnitOfWork:
+    return OrmUnitOfWork(session_factory)
 
 
 @lru_cache
@@ -272,11 +273,18 @@ def get_object_storage() -> ObjectStorage:
     return MinioStorage()
 
 
-def get_file_service(
-    uow: UnitOfWorkDep,  # подставь свой провайдер UoW
+def get_app_archive_service(
+    uow: UnitOfWorkDep,
     storage: Annotated[ObjectStorage, Depends(get_object_storage)]
-) -> FileService:
-    return FileService(storage=storage, uow=uow)
+) -> AppArchiveService:
+    return AppArchiveService(storage=storage, uow=uow)
+
+
+def get_media_service(
+    uow: UnitOfWorkDep, 
+    storage: ObjectStorage = Depends(get_object_storage),
+) -> MediaService:
+    return MediaService(storage=storage, uow=uow)
 
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -305,9 +313,12 @@ ReviewRepoDep = Annotated[ReviewRepository, Depends(get_review_repo)]
 PurchaseServiceDep = Annotated[PurchaseService, Depends(get_purchase_service)]
 PurchaseRepoDep = Annotated[PurchaseRepository, Depends(get_purchase_repo)]
 
-FileServiceDep = Annotated[FileService, Depends(get_file_service)]
+AppArchiveServiceDep = Annotated[
+    AppArchiveService, Depends(get_app_archive_service)
+    ]
+MediaServiceDep = Annotated[MediaService, Depends(get_media_service)]
 
-UnitOfWorkDep = Annotated[UnitOfWork, Depends(get_unit_of_work)]
+UnitOfWorkDep = Annotated[OrmUnitOfWork, Depends(get_unit_of_work)]
 
 DiscussionServiceDep = Annotated[
     DiscussionService, Depends(get_discussion_service)

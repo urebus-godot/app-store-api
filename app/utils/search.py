@@ -19,7 +19,8 @@ def format_keywords(keywords: list[str]) -> list[str]:
     for kw in keywords:
         kw = kw.strip()
         kw = kw.lower()
-        new_keywords.append(kw)
+        if kw:
+            new_keywords.append(kw)
         # translator = kw.maketrans('', '', punctuation)
         # kw = kw.translate(translator)
         # kw = ''.join(char for char in kw if char not in punctuation)

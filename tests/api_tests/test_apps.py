@@ -12,7 +12,7 @@ import pytest
 
 from app.models.app import AppDB
 from app.models.user import UserDB
-from app.models.file import AppArchive, AppCover, AppThumbnail
+from app.models.app_cover import AppArchive, AppCover, AppThumbnail
 from app.models.purchase import PurchaseDB
 from app.models.review import ReviewDB
 

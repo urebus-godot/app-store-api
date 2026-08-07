@@ -9,7 +9,6 @@ from sqlalchemy.orm import selectinload
 
 from app.models.user import UserDB
 from app.schemas.user import UserRequest, UserRole
-from app.models.file import UserProfilePicture
 
 from app.core.security import get_password_hash
 from app.core.logging import logger
@@ -56,15 +55,6 @@ class UserRepository:
 
         return user
 
-    async def get_profile_picture(
-        self, user_id: UUID
-    ) -> Optional[UserProfilePicture]:
-        stmt = (select(UserProfilePicture)
-        .where(UserProfilePicture.user_id == user_id))
-
-        user_profile_picture = (await self.session.exec(stmt)).one_or_none()
-        return user_profile_picture
-
     async def become_publisher(self, user: UserDB) -> dict[str, str]:
         user.roles = user.roles + [UserRole.PUBLISHER]
         self.session.add(user)
@@ -107,30 +97,6 @@ class UserRepository:
             )
         ).all()
         logger.info(f"{users=}")
-
-        return users
-
-    async def get_users_with_birthday(
-        self, 
-        date: date = datetime.now().date(),
-        skip: int = 0, 
-        limit: int = 0
-    ) -> list[UserDB]:
-        stmt = (
-            select(UserDB)
-            .where(
-                extract("month", UserDB.birth_date) == date.month,
-                extract("day", UserDB.birth_date) == date.day
-                )
-            .offset(skip)
-            .order_by(desc(UserDB.registered_at))
-            .options(*self.load_attrs)
-                )
-
-        if limit > 0:
-            stmt.limit(limit)
-
-        users = (await self.session.exec(stmt)).all()
 
         return users
 

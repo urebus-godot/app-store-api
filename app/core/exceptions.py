@@ -1,12 +1,6 @@
 from fastapi import HTTPException, status
 
 
-# ----- Custom -----
-
-class SchemaValidationError(ValueError):
-    pass
-
-
 # ----- General -----
 
 too_many_requests_exception = HTTPException(
@@ -19,6 +13,8 @@ no_rights_exception = HTTPException(
     status.HTTP_403_FORBIDDEN, "You have no rights to perform this action"
 )
 
+# ----- Storage ------
+
 invalid_file_exception = HTTPException(
     status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
     "Invalid type of file"
@@ -27,6 +23,16 @@ invalid_file_exception = HTTPException(
 file_too_large_exception = HTTPException(
     status.HTTP_413_CONTENT_TOO_LARGE,
     "Uploaded file size is too large"
+)
+
+file_not_found_exception = HTTPException(
+    status.HTTP_404_NOT_FOUND,
+    "File not found in storage"
+)
+
+no_load_exception = HTTPException(
+    status.HTTP_404_NOT_FOUND,
+    "No data in storage to confirm"
 )
 
 

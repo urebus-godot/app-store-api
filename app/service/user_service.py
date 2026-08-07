@@ -14,7 +14,6 @@ from app.base_models.user import UserRole
 from app.models.user import UserDB
 from app.schemas.user import UserRequest, UserUpdate
 from app.schemas.token import LoginResponse
-from app.models.file import UserProfilePicture
 
 from app.repo.user_repo import UserRepository
 from app.service.app_service import AppService
@@ -174,90 +173,6 @@ class UserService:
 
         return result
 
-    async def upload_profile_picture(
-        self, 
-        request: Request,
-        file: UploadFile, 
-        user_id: UUID,
-        
-    ) -> UserProfilePicture:
-        async with self.uow:
-            extension = os.path.splitext(file.filename)[1]
-
-            if extension not in settings.IMAGE_EXTENSIONS:
-                raise invalid_file_exception
-
-            file_size_mb = to_megabytes(file.size)
-            if file_size_mb > settings.MAX_PROFILE_PICTURE_SIZE_MB:
-                raise file_too_large_exception
-
-            filename = f"{user_id}{extension}"
-            file_path = settings.PROFILE_PICTURE_PATH / filename
-
-            await asyncio.to_thread(
-                write_file, 
-                file, filename, settings.PROFILE_PICTURE_PATH
-                )
-            process_image.delay(
-                str(file_path), (128, 128), 85
-                )
-
-            profile_picture = await self.uow.user_repo.get_profile_picture(user_id)
-
-            if profile_picture is None:
-                profile_picture = UserProfilePicture(
-                    user_id=user_id,
-                    extension=extension
-                )
-                self.uow.session.add(profile_picture)
-
-            profile_picture.extension = extension
-
-            await self.uow.commit()
-
-        return profile_picture
-
-    async def remove_profile_picture_by_user(
-        self, 
-        user_id: UUID, 
-        
-    ) -> None:
-        async with self.uow:
-            profile_picture = await self.uow.user_repo.get_profile_picture(
-                user_id
-                )
-
-            if profile_picture is None:
-                raise no_profile_pic_exception
-
-            filename = f"{profile_picture.user_id}{profile_picture.extension}"
-            profile_picture_path = (
-                settings.PROFILE_PICTURE_PATH / filename
-                )
-            os.remove(profile_picture_path)
-            await self.uow.session.delete(profile_picture)
-
-            await self.uow.commit()
-
-    async def remove_profile_picture(
-        self, 
-        user_id: UUID, 
-        
-    ) -> None:
-        profile_picture = await self.uow.user_repo.get_profile_picture(
-            user_id
-            )
-
-        if profile_picture is None:
-            return
-
-        filename = f"{profile_picture.user_id}{profile_picture.extension}"
-        profile_picture_path = (
-            settings.PROFILE_PICTURE_PATH / filename
-            )
-        os.remove(profile_picture_path)
-        await self.uow.session.delete(profile_picture)
-
     async def update_user(
         self, user: UserDB, data: UserUpdate, 
     ):
@@ -281,7 +196,6 @@ class UserService:
             await self.uow.commit()
 
         return user
-    
 
     async def get_user_by_username(
         self, username: str
