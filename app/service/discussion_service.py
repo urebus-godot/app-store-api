@@ -15,6 +15,7 @@ from app.models.discussion import (
 )
 from app.schemas.discussion import (
     DiscussionRequest,
+    DiscussionResponse,
     MessageRequest
 )
 
@@ -49,11 +50,20 @@ class DiscussionService:
             
         return discussion
 
-    async def get_discussion(self, id: UUID) -> DiscussionDB:
+    async def get_discussion(
+        self, id: UUID, skip: int = 0, limit: int = 10
+    ) -> DiscussionResponse:
         discussion = await self.discussion_repo.get_discussion(id)
+        
         if discussion is None:
             raise discussion_not_found_exception
-        return discussion
+
+        return DiscussionResponse(
+            id=discussion.id,
+            topic=discussion.topic,
+            created_at=discussion.created_at,
+            messages=discussion.messages[skip : skip + limit]
+        )
 
     async def get_app_discussions(self, app_id: UUID) -> list[DiscussionDB]:
         discussions = await self.discussion_repo.get_app_discussions(app_id)
@@ -85,7 +95,13 @@ class DiscussionService:
     ) -> MessageDB:
         async with self.uow:
             author = await self.uow.user_repo.get_user_by_id(author_id)
-            await self.get_discussion(discussion_id)
+            discussion = await self.uow.discussion_repo.get_discussion(
+                discussion_id
+                )
+
+            if discussion is None:
+                raise discussion_not_found_exception
+
             message = await self.uow.discussion_repo.create_message(
                 data, author, discussion_id
             )

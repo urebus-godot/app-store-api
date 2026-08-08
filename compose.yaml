@@ -11,7 +11,8 @@ services:
     restart: unless-stopped
     volumes:
       - db_data:/var/lib/postgresql/data
-
+    networks:
+      - app_network
   
   redis:
     image: redis:7
@@ -22,7 +23,8 @@ services:
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
-
+    networks:
+      - app_network
   
   redis-commander:
     image: rediscommander/redis-commander:latest
@@ -32,6 +34,8 @@ services:
     restart: unless-stopped
     environment:
       - REDIS_HOSTS=local:redis:6379
+    networks:
+      - app_network
 
   celery_worker:
     build:
@@ -52,6 +56,8 @@ services:
     depends_on:
       - redis
     command: celery -A app.task_queue.celery_app worker --loglevel=info --logfile=app/worker.log
+    networks:
+      - app_network
 
   celery_beat:
     build:
@@ -67,6 +73,8 @@ services:
     depends_on:
       - redis
     command: celery -A app.task_queue.celery_app beat --loglevel=info
+    networks:
+      - app_network
 
   celery_flower:
     image: mher/flower:2.0
@@ -80,6 +88,8 @@ services:
       - redis
       - celery_worker
     command: celery flower ${REDIS_URL} --port=5555
+    networks:
+      - app_network
 
   web:
     container_name: web
@@ -103,18 +113,24 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*
+    networks:
+      - app_network
 
   nginx:
     container_name: nginx
     image: nginx:alpine
     ports:
       - "80:80"
+      - "443:443"
     depends_on:
       - web
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
     restart: unless-stopped
+    networks:
+      - app_network
 
   minio:
     image: minio/minio:latest
@@ -129,6 +145,12 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     command: server --console-address ":9001" /data
     restart: unless-stopped
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
 
 volumes:
   db_data:

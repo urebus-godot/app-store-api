@@ -1,5 +1,15 @@
 from fastapi import HTTPException, status
 
+# ----- Custom -----
+
+class InvalidTokenPayloadError(BaseException):
+    pass
+
+class InvalidTokenError(BaseException):
+    pass
+
+class TokenExpiredError(BaseException):
+    pass
 
 # ----- General -----
 
@@ -94,6 +104,11 @@ invalid_access_token_exception = HTTPException(
 invalid_token_payload_exception = HTTPException(
     status.HTTP_401_UNAUTHORIZED, 
     "Invalid token payload"
+)
+
+token_expired_exception = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="Token has expired",
 )
 
 

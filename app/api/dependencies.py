@@ -11,17 +11,21 @@ from fastapi.security import OAuth2PasswordBearer
 
 from app.db.postgres import get_session, session_factory
 from app.db.redis import get_redis
+
 from app.core.exceptions import (
     no_rights_exception,
     invalid_token_payload_exception,
     too_many_requests_exception,
-    app_not_purchased_exception
+    app_not_purchased_exception,
+    InvalidTokenPayloadError
 )
-from app.dependencies.rate_limiter import RateLimiter
+
 from app.core.auth import decode_access_token
 from app.core.config import settings
-from app.models.user import UserDB, UserRole
+from app.core.logging import logger
 
+from app.models.user import UserDB, UserRole
+from app.dependencies.rate_limiter import RateLimiter
 from app.uow.orm import OrmUnitOfWork
 
 from app.repo.user_repo import UserRepository
@@ -40,10 +44,12 @@ from app.service.discussion_service import DiscussionService
 from app.service.app_archive_service import AppArchiveService
 from app.service.media_service import MediaService
 
-from app.core.logging import logger
-
 from app.storage.minio_repository import MinioStorage
 from app.storage.protocols import ObjectStorage
+
+from app.ws.discussion_manager import (
+    DiscussionWebsocketManager
+    )
 
 oauth_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/login")
 oauth_scheme_2 = OAuth2PasswordBearer(
@@ -66,6 +72,20 @@ def get_access_secret_key() -> str:
     return settings.ACCESS_SECRET_KEY
 
 
+def validate_access_token(
+    token: str, 
+    secret_key: str
+) -> UUID:
+    payload = decode_access_token(token, secret_key)
+    logger.info(payload)
+    user_id = payload.get("sub")
+
+    if user_id is None:
+        raise InvalidTokenPayloadError()
+
+    return user_id
+
+
 def get_current_user_id_optionally(
     token: Annotated[Optional[str], Depends(oauth_scheme_2)], 
     secret_key: AccessSecretKeyDep
@@ -86,14 +106,11 @@ def get_current_user_id_optionally(
 def get_current_user_id(
     token: TokenDep, secret_key: AccessSecretKeyDep
 ) -> UUID:
-    payload = decode_access_token(token, secret_key)
-    logger.info(payload)
-    user_id = payload.get("sub")
-
-    if user_id is None:
+    try:
+        user_id = validate_access_token()
+        return UUID(user_id)
+    except InvalidTokenPayloadError:
         raise invalid_token_payload_exception
-
-    return UUID(user_id)
 
 
 async def get_current_user(
@@ -101,16 +118,11 @@ async def get_current_user(
     user_service: UserServiceDep,
     secret_key: AccessSecretKeyDep
 ) -> UserDB | None:
-    payload = decode_access_token(token, secret_key)
-    logger.info(payload)
-    user_id = payload.get("sub")
-
-    if user_id is None:
+    try:
+        user_id = validate_access_token(token, user_service, secret_key)
+        return await user_service.get_user_by_id(user_id)
+    except InvalidTokenPayloadError:
         raise invalid_token_payload_exception
-
-    user = await user_service.get_user_by_id(UUID(user_id))
-
-    return user
 
 
 async def user_purchased_app(app_id: UUID, user: UserDep) -> None:
@@ -258,6 +270,9 @@ def get_discussion_service(
 ) -> DiscussionService:
     return DiscussionService(discussion_repo, app_service, uow)
 
+def get_discussion_manager(redis: RedisDep) -> DiscussionWebsocketManager:
+    return DiscussionWebsocketManager(redis)
+
 
 async def get_unit_of_work(
     session_factory: SessionFactoryDep
@@ -325,6 +340,10 @@ DiscussionServiceDep = Annotated[
 ]
 DiscussionRepoDep = Annotated[
     DiscussionRepository, Depends(get_discussion_repo)
+]
+
+DiscussionManagerDep = Annotated[
+    DiscussionWebsocketManager, Depends(get_discussion_manager)
 ]
 
 RedisDep = Annotated[Redis, Depends(get_redis)]

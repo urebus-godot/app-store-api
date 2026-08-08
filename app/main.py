@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, status, Depends
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import ResponseValidationError
 
@@ -101,15 +102,21 @@ async def health_check(
     redis: RedisDep,
     session: SessionDep
 ) -> dict[str, str]:
+    unhealthy_response = JSONResponse(
+        {"status": "Unhealthy"},
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+    )
+    
+    try:
         redis_response = await redis.ping()
         db_response = await session.exec(text("SELECT 1"))
-        if not redis_response or not db_response:
-            raise HTTPException(
-                status.HTTP_503_SERVICE_UNAVAILABLE,
-                "Connection to redis or database failed"
-            )
-        return {"status": "Healthy"}
 
+        if not redis_response or not db_response:
+            return unhealthy_response
+        
+        return {"status": "Healthy"}
+    except:
+        return unhealthy_response
 
 if __name__ == "__main__":
     import uvicorn
@@ -119,5 +126,6 @@ if __name__ == "__main__":
         port=settings.API_PORT,
         reload=True,
         access_log=True,
-        proxy_headers=True
+        proxy_headers=True,
+        forwarded_allow_ips="*"
     )

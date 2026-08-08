@@ -11,6 +11,9 @@ from app.core.config import settings
 from app.core.exceptions import (
     invalid_refresh_token_exception,
     invalid_access_token_exception,
+    token_expired_exception,
+    InvalidTokenError,
+    TokenExpiredError
 )
 from app.db.redis import Redis
 
@@ -77,12 +80,9 @@ def decode_access_token(
         return payload
 
     except jwt.ExpiredSignatureError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token has expired",
-        )
+        raise TokenExpiredError()
     except jwt.InvalidTokenError:
-        raise invalid_access_token_exception
+        raise InvalidTokenError()
 
 
 async def revoke_all_user_tokens(user_id: str, redis: Redis) -> None:

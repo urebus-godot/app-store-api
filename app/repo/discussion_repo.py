@@ -26,6 +26,9 @@ class DiscussionRepository:
             selectinload(MessageDB.author),
             selectinload(MessageDB.discussion),
         )
+        self.load_messages_author = selectinload(
+            DiscussionDB.messages
+            ).selectinload(MessageDB.author)
 
     async def create_discussion(
         self, data: DiscussionRequest, user: UserDB, app_id: UUID
@@ -40,18 +43,17 @@ class DiscussionRepository:
 
         return discussion
 
-    async def get_discussion(self, id: UUID) -> DiscussionDB:
-        discussion = (
-            await self.session.exec(
-                select(DiscussionDB)
-                .where(DiscussionDB.id == id)
-                .options(
-                    selectinload(DiscussionDB.messages).selectinload(
-                        MessageDB.author
-                    )
+    async def get_discussion(
+        self, id: UUID
+    ) -> Optional[DiscussionDB]:
+        stmt = (
+            select(DiscussionDB)
+            .where(DiscussionDB.id == id)
+            .options(
+                self.load_messages_author
                 )
-            )
-        ).one_or_none()
+        )
+        discussion = (await self.session.exec(stmt)).one_or_none()
 
         return discussion
 

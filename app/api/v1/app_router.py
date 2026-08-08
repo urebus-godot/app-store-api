@@ -144,13 +144,12 @@ async def get_games(
     )
 async def get_top_games(
     app_service: AppServiceDep,
-    redis: RedisDep,
     genre: Optional[GameGenre] = Query(default=None)
 ) -> list[GameResponseWithPublisher]:
     if genre is None:
-        games = await app_service.get_top_games(redis)
+        games = await app_service.get_top_games()
     else:
-        games = await app_service.get_top_games_genre(genre, redis)
+        games = await app_service.get_top_games_genre(genre)
     return games
 
 

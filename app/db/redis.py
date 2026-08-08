@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 from redis.asyncio import from_url as redis_from_url
 from redis.asyncio import Redis
 from redis import from_url as sync_redis_from_url
@@ -31,6 +33,7 @@ def connect_to_sync_redis_client(
     return SyncRedisClient(url)
 
 
+@lru_cache
 def get_redis() -> Redis:
     from app.main import app
     return app.state.redis_client.redis
