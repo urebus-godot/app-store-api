@@ -1,8 +1,9 @@
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
-from app.api.dependencies import UserIdDep, MediaServiceDep
+from app.api.dependencies import UserIdDep, MediaServiceDep, rate_limit
+
 from app.schemas.media import (
     AppCoverListResponse,
     AppCoverResponse,
@@ -11,7 +12,9 @@ from app.schemas.media import (
 )
 from app.schemas.storage import UploadPresignRequest, UploadPresignResponse
 
-router = APIRouter()
+router = APIRouter(
+    dependencies=[Depends(rate_limit)]
+)
 
 
 # ---------- Аватар пользователя ----------

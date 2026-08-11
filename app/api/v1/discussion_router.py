@@ -1,12 +1,14 @@
 from uuid import UUID
 import asyncio
+import logging
 
 from fastapi import APIRouter, status, Depends, WebSocket
-from fastapi.exceptions import WebSocketException
+from fastapi.websockets import WebSocketDisconnect
+
+from pydantic import ValidationError
 
 from app.core.config import settings
 from app.core.exceptions import InvalidTokenError, InvalidTokenPayloadError
-from app.core.logging import logger
 
 from app.schemas.discussion import (
     DiscussionRequest,
@@ -15,6 +17,11 @@ from app.schemas.discussion import (
     MessageRequest,
     MessageResponse
 )
+from app.schemas.ws_messages import incoming_adapter
+from app.schemas.ws_events import (
+    ErrorEvent
+)
+
 from app.api.dependencies import (
     DiscussionServiceDep, 
     UserIdDep,
@@ -28,37 +35,12 @@ from app.api.dependencies import (
 
 router = APIRouter(
     dependencies=[Depends(rate_limit)]
-    )
+)
+
+logger = logging.getLogger("app.discussion_router")
 
 
 # ------ Discussion routes ------
-
-@router.post(
-    "/discussions/{app_id}", 
-    status_code=status.HTTP_201_CREATED
-)
-async def create_discussion(
-    data: DiscussionRequest,
-    app_id: UUID,
-    user_id: UserIdDep,
-    discussion_service: DiscussionServiceDep
-) -> ShortDiscussionResponse:
-    return await discussion_service.create_discussion(
-        data, user_id, app_id
-    )
-
-
-@router.get("/discussions/{id}")
-async def get_discussion(
-    id: UUID, 
-    skip_limit: SkipLimitParams,
-    discussion_service: DiscussionServiceDep
-) -> DiscussionResponse:
-    skip, limit = skip_limit
-    return await discussion_service.get_discussion(
-        id=id, skip=skip, limit=limit
-        )
-
 
 @router.websocket("/ws/discussions/{id}")
 async def ws_discussion(
@@ -72,11 +54,11 @@ async def ws_discussion(
     await websocket.accept()
     try:
         logger.info("Awaiting data from websocket...")
-        ws_data = asyncio.wait_for(
+        ws_data = await asyncio.wait_for(
             websocket.receive_json(), 
             timeout=settings.AUTH_TIMEOUT
             )
-        user_id = await validate_access_token(ws_data["token"], secret_key)
+        user_id = validate_access_token(ws_data["token"], secret_key)
         user = await user_service.get_user_by_id(user_id)
         logger.info("Validated token from user")
     except asyncio.TimeoutError:
@@ -92,8 +74,9 @@ async def ws_discussion(
         )
         return
 
+    logger.info("Start getting discussion")
     discussion = await discussion_service.get_discussion(id)
-
+    
     if discussion is None:
         await websocket.close(
             code=status.WS_1003_UNSUPPORTED_DATA,
@@ -101,48 +84,81 @@ async def ws_discussion(
         )
         return
 
+    logger.info("Start connecting ws in the manager")
     await websocket.send_json({"type": "auth_ok"})
     await discussion_manager.connect(id, websocket)
-
-    msg = {
-        "message": 
-        f"User {user.username} connected to the discussion"
-    }
-    await discussion_manager.publish(id, msg)
+    logger.info("Connected ws in the manager")
 
     try:
         while True:
+            logger.info("Start message exchange")
             raw_data = await websocket.receive_json()
-            message_data = MessageRequest(**raw_data)
-            message = await discussion_service.create_message(
-                data=message_data, 
-                author_id=user_id, 
+            try:
+                msg = incoming_adapter.validate_python(raw_data)
+            except ValidationError as e:
+                await websocket.send_json(
+                    ErrorEvent(detail=str(e)).model_dump(mode="json")
+                )
+                continue
+            await discussion_service.handle_incoming_message(
+                msg=msg, 
+                discussion_manager=discussion_manager,
+                user_id=user_id,
                 discussion_id=id
             )
-            response = (
-                MessageResponse
-                .model_validate(message)
-                .model_dump_json()
-                )
-            await discussion_manager.publish(id, response)
-    except WebSocketException:
-        msg = {
-            "message": 
-            f"User {user.username} disconnected from the discussion"
-            }
-        await discussion_manager.publish(id, msg)
+            logger.info("Published message")
+            
+    except WebSocketDisconnect:
+        pass
     finally:
         await discussion_manager.disconnect(id, websocket)
 
 
-@router.get("/discussions/app/{app_id}")
+@router.post(
+    "/discussions/{app_id}", 
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(rate_limit)]
+)
+async def create_discussion(
+    data: DiscussionRequest,
+    app_id: UUID,
+    user_id: UserIdDep,
+    discussion_service: DiscussionServiceDep
+) -> ShortDiscussionResponse:
+    return await discussion_service.create_discussion(
+        data, user_id, app_id
+    )
+
+
+@router.get(
+    "/discussions/{id}",
+    dependencies=[Depends(rate_limit)]
+    )
+async def get_discussion(
+    id: UUID, 
+    skip_limit: SkipLimitParams,
+    discussion_service: DiscussionServiceDep
+) -> DiscussionResponse:
+    skip, limit = skip_limit
+    return await discussion_service.get_discussion(
+        id=id, skip=skip, limit=limit
+        )
+
+
+@router.get(
+    "/discussions/app/{app_id}",
+    dependencies=[Depends(rate_limit)]
+)
 async def get_app_discussions(
     app_id: UUID, discussion_service: DiscussionServiceDep
 ) -> list[ShortDiscussionResponse]:
     return await discussion_service.get_app_discussions(app_id)
 
 
-@router.get("/discussions/user/me")
+@router.get(
+    "/discussions/user/me",
+    dependencies=[Depends(rate_limit)]
+)
 async def get_my_discussions(
     user_id: UserIdDep, discussion_service: DiscussionServiceDep
 ) -> list[ShortDiscussionResponse]:
@@ -151,7 +167,8 @@ async def get_my_discussions(
 
 @router.delete(
     "/discussions/{id}", 
-    status_code=status.HTTP_204_NO_CONTENT
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(rate_limit)]
     )
 async def delete_discussion(
     id: UUID,
@@ -166,6 +183,7 @@ async def delete_discussion(
 @router.post(
     "/discussions/{discussion_id}/messages",
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(rate_limit)]
 )
 async def create_message(
     data: MessageRequest,
@@ -180,7 +198,8 @@ async def create_message(
 
 @router.delete(
     "/discussions/messages/{id}", 
-    status_code=status.HTTP_204_NO_CONTENT
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(rate_limit)]
 )
 async def delete_message(
     id: UUID,

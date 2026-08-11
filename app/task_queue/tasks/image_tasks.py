@@ -3,9 +3,7 @@ from typing import Optional
 
 from PIL import Image
 
-from app.core.logging import logger
-
-from app.task_queue.celery_app import celery_app
+from app.task_queue.celery_app import celery_app, logger
 
 
 @celery_app.task(name="tasks.process_image")

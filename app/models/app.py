@@ -33,7 +33,7 @@ class AppDB(BaseApp, table=True):
         ge=1.0, le=5.0
         )
     times_purchased: int = Field(default=0, ge=0)
-    public: bool
+    #public: bool
 
     publisher_id: UUID = Field(foreign_key="users.id", ondelete="CASCADE")
     publisher: "UserDB" = Relationship(back_populates="published_apps")

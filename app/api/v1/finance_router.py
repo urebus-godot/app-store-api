@@ -18,7 +18,7 @@ from app.api.dependencies import (
 
 router = APIRouter(
     dependencies=[Depends(rate_limit)]
-    )
+)
 
 
 @router.post("/transfers/balance")

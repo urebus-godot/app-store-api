@@ -1,12 +1,12 @@
 from uuid import uuid4
 from datetime import datetime, timezone
+import logging
 
 from fastapi import HTTPException, status
 from jwt import PyJWTError
 import jwt
 
 from app.utils.time import get_refresh_token_expire
-from app.core.logging import logger
 from app.core.config import settings
 from app.core.exceptions import (
     invalid_refresh_token_exception,
@@ -16,6 +16,8 @@ from app.core.exceptions import (
     TokenExpiredError
 )
 from app.db.redis import Redis
+
+logger = logging.getLogger("app.auth")
 
 
 def create_access_token(

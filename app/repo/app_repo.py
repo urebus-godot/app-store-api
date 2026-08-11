@@ -5,8 +5,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, desc
 from sqlalchemy.orm import selectinload
 
-from app.core.logging import logger
-
 from app.models.app import AppDB
 from app.base_models.app import (
     GameGenre,
@@ -228,9 +226,11 @@ class AppRepository:
                 AppDB.category == "game",
                 AppDB.genre == genre,
                 AppDB.public
-                ).order_by(
-                    desc(AppDB.times_purchased)
-                    ).limit(5).options(*self.load_attrs)
+                )
+            .order_by(
+                desc(AppDB.times_purchased),
+                desc(AppDB.rating)
+            ).limit(5).options(*self.load_attrs)
         )).all()
 
         return games

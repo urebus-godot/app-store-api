@@ -5,7 +5,6 @@ from fastapi import HTTPException, status
 
 from app.core.exceptions import app_not_purchased_exception, app_not_found_exception
 from app.core.config import settings
-from app.core.logging import logger
 
 from app.schemas.storage import DownloadPresignResponse, UploadPresignResponse
 from app.storage.protocols import ObjectStorage
@@ -43,8 +42,7 @@ class AppArchiveService:
         # filename вида "../../etc/passwd" или пробелы/юникод в имени.
         extension = validate_and_get_extension(
             ALLOWED_ARCHIVE_CONTENT_TYPES, content_type
-            )
-        logger.info(f"{extension = }")
+        )
         object_key = f"{app_id}/{uuid.uuid4()}.{extension}"
 
         async with self._uow:

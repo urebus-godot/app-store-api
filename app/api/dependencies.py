@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Annotated, Optional
 from uuid import UUID
 from functools import lru_cache
+import logging
 
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -17,12 +18,15 @@ from app.core.exceptions import (
     invalid_token_payload_exception,
     too_many_requests_exception,
     app_not_purchased_exception,
-    InvalidTokenPayloadError
+    token_expired_exception,
+    invalid_access_token_exception,
+    InvalidTokenPayloadError,
+    TokenError,
+    TokenExpiredError,
+    InvalidTokenError
 )
-
 from app.core.auth import decode_access_token
 from app.core.config import settings
-from app.core.logging import logger
 
 from app.models.user import UserDB, UserRole
 from app.dependencies.rate_limiter import RateLimiter
@@ -49,12 +53,17 @@ from app.storage.protocols import ObjectStorage
 
 from app.ws.discussion_manager import (
     DiscussionWebsocketManager
-    )
+)
 
 oauth_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/login")
-oauth_scheme_2 = OAuth2PasswordBearer(
-    tokenUrl="/api/v1/users/login", auto_error=False
-    )
+
+token_errors = {
+    InvalidTokenPayloadError: invalid_token_payload_exception,
+    TokenExpiredError: token_expired_exception,
+    InvalidTokenError: invalid_access_token_exception
+}
+
+logger = logging.getLogger("dependencies")
 
 
 def skip_limit_params(
@@ -77,17 +86,16 @@ def validate_access_token(
     secret_key: str
 ) -> UUID:
     payload = decode_access_token(token, secret_key)
-    logger.info(payload)
     user_id = payload.get("sub")
 
     if user_id is None:
         raise InvalidTokenPayloadError()
 
-    return user_id
+    return UUID(user_id)
 
 
 def get_current_user_id_optionally(
-    token: Annotated[Optional[str], Depends(oauth_scheme_2)], 
+    token: Annotated[Optional[str], Depends(oauth_scheme)], 
     secret_key: AccessSecretKeyDep
 ) -> Optional[UUID]:
     try:
@@ -99,7 +107,7 @@ def get_current_user_id_optionally(
 
         return UUID(user_id)
 
-    except Exception:
+    except TokenError:
         return None
 
 
@@ -108,7 +116,7 @@ def get_current_user_id(
 ) -> UUID:
     try:
         user_id = validate_access_token()
-        return UUID(user_id)
+        return user_id
     except InvalidTokenPayloadError:
         raise invalid_token_payload_exception
 
@@ -119,10 +127,10 @@ async def get_current_user(
     secret_key: AccessSecretKeyDep
 ) -> UserDB | None:
     try:
-        user_id = validate_access_token(token, user_service, secret_key)
+        user_id = validate_access_token(token, secret_key)
         return await user_service.get_user_by_id(user_id)
-    except InvalidTokenPayloadError:
-        raise invalid_token_payload_exception
+    except TokenError as e:
+        raise token_errors[type(e)] #invalid_token_payload_exception
 
 
 async def user_purchased_app(app_id: UUID, user: UserDep) -> None:
@@ -137,16 +145,22 @@ def get_rate_limiter(redis: RedisDep) -> RateLimiter:
 
 async def rate_limit(
     rate_limiter: Annotated[RateLimiter, Depends(get_rate_limiter)],
-    user_id: Annotated[
-        Optional[UUID], Depends(get_current_user_id_optionally)
-        ],
+    secret_key: AccessSecretKeyDep,
     request: Request,
     response: Response
 ):
     logger.info("Start checking for limit")
-    if user_id is not None:
-        result = await rate_limiter.check(user_id)
-        logger.info("Checked for authenticated user")
+    bearer = request.headers.get("Authorization")
+
+    if bearer is not None:
+        access_token = bearer[7:]
+        user_id = validate_access_token(access_token, secret_key)
+
+        if user_id is not None:
+            result = await rate_limiter.check(user_id)
+            logger.info("Checked for authenticated user")
+        else:
+            raise invalid_token_payload_exception
     else:
         result = await rate_limiter.check(request.client.host)
         logger.info("Checked for guest")
@@ -157,7 +171,7 @@ async def rate_limit(
         logger.info("Request limit exceeded")
         raise too_many_requests_exception
 
-
+ 
 def get_session_factory() -> async_sessionmaker[AsyncSession]:
     return session_factory
 
@@ -282,9 +296,6 @@ async def get_unit_of_work(
 
 @lru_cache
 def get_object_storage() -> ObjectStorage:
-    # MinioStorage не держит постоянного соединения (клиент создаётся
-    # внутри каждого метода через async with), поэтому его безопасно
-    # переиспользовать как синглтон на всё приложение.
     return MinioStorage()
 
 

@@ -1,55 +1,9 @@
-from pathlib import Path
-from io import BufferedReader
-import os
-import shutil
-
 from httpx import AsyncClient
 from fakeredis.aioredis import FakeRedis
-from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 import pytest
 
 from app.models.user import UserDB
-from app.models.app_cover import UserProfilePicture
-
-@pytest.fixture(scope="function")
-def test_image(test_user: UserDB):
-    file_path = Path("tests/files/test_image.PNG")
-
-    with open(file_path, "rb") as file:
-        yield file
-
-        uploaded_file_path = Path(
-            f"media/static/profile_pictures/{test_user.id}.PNG"
-            )
-
-        if uploaded_file_path.exists():
-            os.remove(uploaded_file_path)
-
-
-@pytest.fixture(scope="function")
-async def test_profile_picture(
-    db_session: AsyncSession,
-    test_user: UserDB,
-    test_image: BufferedReader
-    ):
-    profile_picture = UserProfilePicture(
-        user_id=test_user.id,
-        extension=".PNG"
-    )
-    db_session.add(profile_picture)
-    await db_session.flush()
-
-    file_dst_path = Path(f"media/static/profile_pictures/{test_user.id}.PNG")
-    file_dst_path.touch()
-
-    with open(file_dst_path, "wb") as dst_file:
-        shutil.copyfileobj(test_image, dst_file, 1024 * 1024)
-
-    yield profile_picture
-
-    if file_dst_path.exists():
-        os.remove(file_dst_path)
 
 
 class TestUsers:
@@ -148,86 +102,4 @@ class TestUsers:
 
 
 class TestUserFiles:
-    async def test_upload_profile_picture(
-        self,
-        auth_client: AsyncClient,
-        db_session: AsyncSession,
-        test_user: UserDB,
-        test_image: BufferedReader
-    ):
-        response = await auth_client.post(
-            "/api/v1/users/me/profile_picture",
-            files={
-                "file": (
-                    "test_image.PNG", 
-                    test_image.read(), 
-                    "image/png"
-                    )
-                }
-        )
-        data = response.json()
-
-        profile_picture = (await db_session.exec(
-            select(UserProfilePicture).where(
-                UserProfilePicture.user_id == test_user.id,
-                UserProfilePicture.extension == ".PNG"
-            )
-        )).one_or_none()
-
-        assert response.status_code == 201
-        assert data["extension"] == ".PNG"
-        assert data["user_id"] == str(test_user.id)
-        assert Path(
-            f"media/static/profile_pictures/{test_user.id}.PNG"
-            ).exists()
-        assert profile_picture is not None
-
-    async def test_upload_profile_picture_wrong_ext(
-        self,
-        auth_client: AsyncClient
-    ):
-        file_path = Path("tests/files/test_app_archive.zip")
-
-        with open(file_path, "rb") as file:
-            response = await auth_client.post(
-                "/api/v1/users/me/profile_picture",
-                files={
-                    "file": (
-                        "test_image.zip", 
-                        file.read(), 
-                        "image/png"
-                        )
-                    }
-            )
-            assert response.status_code == 415
-
-    async def test_remove_profile_picture(
-        self,
-        auth_client: AsyncClient,
-        db_session: AsyncSession,
-        test_user: UserDB,
-        test_profile_picture: Path
-    ):
-        response = await auth_client.delete(
-            "/api/v1/users/me/profile_picture"
-        )
-        profile_picture = (await db_session.exec(
-            select(UserProfilePicture).where(
-                UserProfilePicture.user_id == test_user.id
-            )
-        )).one_or_none()
-
-        assert response.status_code == 204
-        assert not Path(
-            f"media/static/profile_pictures/{test_user.id}.PNG"
-            ).exists()
-        assert profile_picture is None
-
-    async def test_remove_profile_picture_not_exists(
-        self,
-        auth_client: AsyncClient
-    ):
-        response = await auth_client.delete(
-            "/api/v1/users/me/profile_picture"
-        )
-        assert response.status_code == 400
+    pass

@@ -30,7 +30,7 @@ class FinanceService:
     ):
         self.finance_repo = finance_repo
         self.user_repo = user_repo
-        self.self.uow = uow
+        self.uow = uow
 
     async def create_promo_code(
         self, 

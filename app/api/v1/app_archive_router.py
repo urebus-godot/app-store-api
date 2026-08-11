@@ -1,16 +1,19 @@
 from app.core.config import settings
 import uuid
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
-from app.api.dependencies import UserIdDep, AppArchiveServiceDep
+from app.api.dependencies import UserIdDep, AppArchiveServiceDep, rate_limit
+
 from app.schemas.storage import (
     DownloadPresignResponse,
     UploadPresignRequest,
     UploadPresignResponse,
 )
 
-router = APIRouter()
+router = APIRouter(
+    dependencies=[Depends(rate_limit)]
+)
 
 
 @router.post(

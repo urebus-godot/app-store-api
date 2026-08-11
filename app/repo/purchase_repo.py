@@ -5,7 +5,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, desc, delete
 from sqlalchemy.orm import selectinload
 
-from app.core.logging import logger
 from app.models.purchase import CartDB, PurchaseDB, CartItem
 
 
@@ -25,11 +24,9 @@ class PurchaseRepository:
             PurchaseDB.app_id == app_id
             )
         purchase = (await self.session.exec(stmt)).one_or_none()
-        logger.info(f"Purchase: {purchase}Purchased: {purchase is not None}")
         return purchase is not None
 
     async def create_cart(self, user_id: UUID) -> CartDB:
-        logger.info("Start creating cart")
         cart = CartDB(
             user_id=user_id
             )

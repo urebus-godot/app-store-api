@@ -63,6 +63,8 @@ class Settings(BaseSettings):
 
     JWT_ALGORITHM: str = "HS256"
 
+    AUTH_TIMEOUT: float = 5.0
+
     MIN_PASSWORD_LEN: int = 8
 
     MIN_TITLE_LEN: int = 3
@@ -153,7 +155,7 @@ class Settings(BaseSettings):
             <p><b>Expiration time: <i>%s</i></b></p>
         </h3>
     </body>
-"""
+    """
 
 
 settings = Settings()

@@ -1,4 +1,5 @@
 from typing import Annotated
+from string import punctuation
 
 from fastapi import Query
 
@@ -19,11 +20,10 @@ def format_keywords(keywords: list[str]) -> list[str]:
     for kw in keywords:
         kw = kw.strip()
         kw = kw.lower()
+        translator = kw.maketrans({"_": " ", "-": " "})
+        kw = kw.translate(translator)
         if kw:
             new_keywords.append(kw)
-        # translator = kw.maketrans('', '', punctuation)
-        # kw = kw.translate(translator)
-        # kw = ''.join(char for char in kw if char not in punctuation)
     return new_keywords
 
 

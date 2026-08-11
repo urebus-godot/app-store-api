@@ -15,7 +15,7 @@ from sqlmodel import SQLModel
 
 from httpx import ASGITransport, AsyncClient
 from fakeredis.aioredis import FakeRedis
-#from fakeredis import FakeServer
+from fakeredis import FakeServer
 import pytest_asyncio
 import jwt
 
@@ -147,7 +147,7 @@ async def db_session(session_factory):
 
 @pytest_asyncio.fixture
 async def fake_redis() -> AsyncGenerator[FakeRedis, None, None]:
-    redis = FakeRedis()
+    redis = FakeRedis(server=FakeServer())
     yield redis
     await redis.flushall()
     await redis.aclose()
@@ -155,7 +155,7 @@ async def fake_redis() -> AsyncGenerator[FakeRedis, None, None]:
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
 def setup_test_celery():
-    from app.task_queue.tasks.celery_app import celery_app
+    from app.task_queue.celery_app import celery_app
     celery_app.conf.update(
         task_always_eager=True,
         task_eager_propagates=True,
@@ -225,22 +225,6 @@ async def auth_client(
     app.dependency_overrides[get_current_user] = lambda: test_user
     app.dependency_overrides[get_current_user_id] = lambda: test_user.id
 
-    # --- ТРЮК ДЛЯ BACKGROUND TASKS ---
-    #running_background_tasks = []
-
-    #def mock_background_tasks_add_task(self, func, *args, **kwargs):
-    #    """Перехватывает фоновые задачи и сохраняет их в список для ожидания."""
-        #async def wrapped():
-            #if asyncio.iscoroutinefunction(func):
-            #    await func(*args, **kwargs)
-            #else:
-            #    func(*args, **kwargs)
-        # Оборачиваем в asyncio.task, чтобы выполнить в рамках текущего Loop теста
-        #running_background_tasks.append(asyncio.create_task(wrapped()))
-
-    # Подменяем метод add_task у стандартного класса FastAPI
-    #old_add_task = BackgroundTasks.add_task
-    #BackgroundTasks.add_task = mock_background_tasks_add_task
 
     transport = ASGITransport(app)
     async with AsyncClient(
@@ -251,11 +235,6 @@ async def auth_client(
     ) as ac:
         yield ac
 
-        # ПЕРЕД тем как закрыть клиент и фикстуру, ЖДЕМ завершения всех фоновых задач FastAPI
-        #if running_background_tasks:
-        #    await asyncio.gather(*running_background_tasks, return_exceptions=True)
-
-    #BackgroundTasks.add_task = old_add_task
     app.dependency_overrides.clear()
 
 

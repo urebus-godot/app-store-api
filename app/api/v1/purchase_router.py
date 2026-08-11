@@ -19,7 +19,7 @@ from app.schemas.app import AppResponse
 
 router = APIRouter(
     dependencies=[Depends(rate_limit)]
-    )
+)
 
 
 @router.post(

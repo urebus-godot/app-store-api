@@ -13,13 +13,4 @@ def setup_logging() -> None:
     )
     formatter = logging.Formatter(
         fmt="%(asctime)s | %(name)s %(levelname)s : %(message)s"
-        )
-
-
-def get_logger() -> Logger:
-    logger = logging.getLogger("app_logger")
-    logger.setLevel(settings.LOGGING_LEVEL)
-    return logger
-
-
-logger = get_logger()
+    )

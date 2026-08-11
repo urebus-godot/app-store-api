@@ -6,7 +6,7 @@ from pydantic import ConfigDict
 from app.base_models.discussion import BaseDiscussion, BaseMessage
 
 
-# ----- Discussion Models -----
+# ----- Discussion Schemas -----
 
 class DiscussionRequest(BaseDiscussion):
     pass
@@ -27,7 +27,7 @@ class ShortDiscussionResponse(BaseDiscussion):
     model_config = ConfigDict(from_attributes=True)
 
 
-# ----- Message Models -----
+# ----- Message Schemas -----
 
 class MessageRequest(BaseMessage):
     pass

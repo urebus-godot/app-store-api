@@ -1,19 +1,12 @@
+import logging
+
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import ResponseValidationError
 
 import httpx
 
-from app.core.logging import logger
-
-
-#def value_error_handler(
-#    request: Request, exception: ValueError
-#) -> JSONResponse:
-#    return JSONResponse(
-#        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-#        content={"message": exception},
-#    )
+logger = logging.getLogger("app.exception_handlers")
 
 
 def file_not_found_error_handler(

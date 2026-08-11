@@ -11,7 +11,6 @@ from app.models.user import UserDB
 from app.schemas.user import UserRequest, UserRole
 
 from app.core.security import get_password_hash
-from app.core.logging import logger
 
 
 class UserRepository:
@@ -96,7 +95,6 @@ class UserRepository:
                 .options(*self.load_attrs)
             )
         ).all()
-        logger.info(f"{users=}")
 
         return users
 

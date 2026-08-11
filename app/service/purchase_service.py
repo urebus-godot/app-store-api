@@ -2,6 +2,7 @@ from uuid import UUID
 from typing import Optional
 from collections import defaultdict
 from decimal import Decimal
+import logging
 
 from redis.asyncio import Redis
 from fastapi import BackgroundTasks
@@ -11,7 +12,6 @@ from app.utils.email_send import send_email
 
 from app.utils.time import get_time_string
 from app.core.config import settings
-from app.core.logging import logger
 from app.core.exceptions import (
     insufficient_funds_exception,
     app_purchased_exception,
@@ -30,6 +30,7 @@ from app.models.app import AppDB
 from app.models.purchase import PurchaseDB, CartItem, CartDB
 from app.schemas.purchase import CartResponse
 
+logger = logging.getLogger("purchase_service")
 
 class PurchaseService:
     def __init__(
@@ -44,7 +45,7 @@ class PurchaseService:
         self.purchase_repo = purchase_repo
         self.app_service = app_service
         self.user_service = user_service
-        self.uow = self.uow
+        self.uow = uow
 
     async def get_or_create_cart(
         self, user_id: UUID, 
@@ -105,7 +106,7 @@ class PurchaseService:
         self, app_id: UUID, user_id: UUID, 
     ) -> CartItem:
         async with self.uow:
-            user_cart = await self.get_or_create_cart(user_id, self.uow)
+            user_cart = await self.get_or_create_cart(user_id)
             app = await self.app_service.get_app(app_id)
 
             purchased = await self.uow.purchase_repo.get_purchase(app_id, user_id)
@@ -194,7 +195,7 @@ class PurchaseService:
                 publisher.balance += earnings
 
             # 5. Удаляем корзину и кэш
-            await self.delete_cart(user_id, self.uow)
+            await self.delete_cart(user_id)
             await self.redis.delete(f"cart_cache:{user.id}")
             
             # 6. Фиксируем транзакцию в БД

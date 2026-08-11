@@ -3,21 +3,12 @@ from collections import defaultdict
 from functools import wraps
 import asyncio
 import json
+import logging
 
 from fastapi import WebSocket
 from redis.asyncio import Redis
 
-from app.core.logging import logger
-
-
-def log_function(func):
-    @wraps(func)
-    async def wrapper(*args, **kwargs):
-        logger.debug(f"Time to call {func.__name__}")
-        result = await func
-        logger.debug(f"Called {func.__name__}")
-        return result
-    return wrapper
+logger = logging.getLogger("ws.discussion_manager")
 
 
 class DiscussionWebsocketManager:
@@ -26,19 +17,11 @@ class DiscussionWebsocketManager:
         self.rooms: dict[UUID, set[WebSocket]] = defaultdict(set)
         self.listeners: dict[UUID, asyncio.Task] = {}
 
-    @log_function
     async def connect(
         self, discussion_id: UUID, ws: WebSocket
     ) -> None:
-        logger.debug(
-            f"""
-            Awaiting ws connect: 
-            App state = {ws.application_state}, 
-            Client state = {ws.client_state}, 
-            User = {ws.user}
-            """
-            )
-        await ws.accept()
+        logger.debug("Adding ws to rooms")
+        #await ws.accept()
         self.rooms[discussion_id].add(ws)
         if discussion_id not in self.listeners:
             self.listeners[discussion_id] = asyncio.create_task(
@@ -46,9 +29,8 @@ class DiscussionWebsocketManager:
             )
             logger.debug(
                 f"Start listen for discussion with id {discussion_id}"
-                )
+            )
 
-    @log_function
     async def disconnect(
         self, discussion_id: UUID, ws: WebSocket
     ) -> None:
@@ -68,30 +50,28 @@ class DiscussionWebsocketManager:
                 task.cancel()
                 logger.debug("Cancelled listen task")
 
-    @log_function
     async def listen(
         self, discussion_id: UUID
     ) -> None:
-        channel = f"discussions:{discussion_id}:messages"
-        pubsub = await self.redis.pubsub()
+        channel = f"discussions:{discussion_id}"
+        pubsub = self.redis.pubsub()
         await pubsub.subscribe(channel)
         logger.debug(
             f"pubsub subscribed to channel of discussion {discussion_id}"
-            )
+        )
         try:
             async for message in pubsub.listen():
                 logger.debug(f"message that pubsub listen to: {message}")
                 if message["type"] != "message":
                     continue
-                data = json.loads(message["type"])
+                data = json.loads(message["data"])
                 await self.broadcast_local(discussion_id, data)
                 logger.debug(
                     f"Broadcast. Data = {data}, Discussion = {discussion_id}"
-                    )
+                )
         finally:
             await pubsub.unsubscribe(channel)
 
-    @log_function
     async def broadcast_local(
         self, discussion_id: UUID, data: dict
     ) -> None:
@@ -103,16 +83,15 @@ class DiscussionWebsocketManager:
                 logger.error(
                     f"Error occurred: {e}" 
                     f"Discard ws of discussion {discussion_id}"
-                    )
+                )
                 self.rooms[discussion_id].discard(ws)
 
-    @log_function
     async def publish(
         self, discussion_id: UUID, data: dict
     ) -> None:
-        channel = f"discussions:{discussion_id}:messages"
+        channel = f"discussions:{discussion_id}"
         await self.redis.publish(channel, json.dumps(data))
         logger.debug(
             f"Published data = {data} to the "
             f"{discussion_id} discussion channel"
-            )
+        )

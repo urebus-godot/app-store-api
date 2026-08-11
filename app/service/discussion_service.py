@@ -1,11 +1,11 @@
 from uuid import UUID
+import logging
 
 from app.core.exceptions import (
     message_not_found_exception,
     discussion_not_found_exception,
     no_rights_exception,
 )
-from app.core.logging import logger
 from app.repo.discussion_repo import DiscussionRepository
 from app.service.app_service import AppService
 
@@ -16,11 +16,28 @@ from app.models.discussion import (
 from app.schemas.discussion import (
     DiscussionRequest,
     DiscussionResponse,
-    MessageRequest
+    MessageRequest,
+    MessageResponse
 )
+from app.schemas.ws_messages import (
+    AuthMessageEvent,
+    SendMessage,
+    TypingMessage,
+    IncomingMessage
+)
+from app.schemas.ws_events import (
+    OutgoingEvent,
+    ErrorEvent,
+    NewMessageEvent,
+    UserJoinedEvent,
+    UserTypingEvent
+)
+
+from app.ws.discussion_manager import DiscussionWebsocketManager
 
 from app.uow.orm import UnitOfWork
 
+logger = logging.getLogger("discussion_service")
 
 class DiscussionService:
     def __init__(
@@ -42,7 +59,6 @@ class DiscussionService:
         async with self.uow:
             user = await self.uow.user_repo.get_user_by_id(user_id)
             app = await self.app_service.get_app(app_id)
-            logger.info(app)
             discussion = await self.uow.discussion_repo.create_discussion(
                 data, user, app_id
             )
@@ -86,6 +102,39 @@ class DiscussionService:
 
             await self.uow.discussion_repo.delete_discussion(discussion)
             await self.uow.commit()
+
+    async def handle_incoming_message(
+        self,
+        msg: IncomingMessage,
+        discussion_manager: DiscussionWebsocketManager,
+        user_id: UUID,
+        discussion_id: UUID
+    ):
+        logger.info(f"Start handling incoming message: {msg}")
+        match msg:
+            case SendMessage(text=text):
+                logger.info(f"Match with SendMessage(text={text})")
+                data = MessageRequest.model_validate(msg)
+                message = await self.create_message(
+                    data, msg.user_id, msg.discussion_id
+                )
+                logger.info("Created message in db")
+                event = NewMessageEvent(
+                    message=MessageResponse.model_validate(message)
+                )
+                await discussion_manager.publish(
+                    discussion_id, event.model_dump(mode="json")
+                )
+            case TypingMessage():
+                logger.info(f"Match with TypingMessage()")
+                event = UserTypingEvent(
+                    user_id=user_id, discussion_id=discussion_id
+                )
+                await discussion_manager.publish(
+                    discussion_id, event.model_dump(mode="json")
+                )
+            case AuthMessageEvent():
+                logger.info(f"Match with AuthMessageEvent()")
 
     async def create_message(
         self,

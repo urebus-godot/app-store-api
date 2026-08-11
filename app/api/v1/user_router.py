@@ -1,4 +1,5 @@
 from typing import Annotated
+import logging
 
 from fastapi import (
     APIRouter,
@@ -21,7 +22,6 @@ from app.api.dependencies import (
     rate_limit,
     RedisDep
 )
-from app.core.logging import logger
 from app.core import auth
 from app.utils.time import get_refresh_token_expire
 
@@ -36,6 +36,8 @@ from app.schemas.token import TokenResponse, LoginResponse
 router = APIRouter(
     dependencies=[Depends(rate_limit)]
 )
+
+logger = logging.getLogger("app.user_router")
 
 
 @router.post(

@@ -3,11 +3,9 @@ from typing import Optional
 import asyncio
 import os
 
-
 from fastapi import UploadFile, HTTPException, status
 from redis.asyncio import Redis
 
-from app.core.logging import logger
 from app.core.exceptions import (
     app_not_found_exception,
     no_rights_exception,

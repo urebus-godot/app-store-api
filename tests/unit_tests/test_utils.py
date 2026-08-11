@@ -17,8 +17,13 @@ class TestSearch:
                     "***",
                     "!123",
                     "  ",
+                    "My--Game--Kws"
                 ],
-                ["test", "keywords", "ju$t_t3$t_w#rds", "***", "!123", ""],
+                [
+                    "test", "keywords", 
+                    "ju$t t3$t w#rds", "***", 
+                    "!123", "my  game  kws"
+                    ],
             ]
         ],
     )

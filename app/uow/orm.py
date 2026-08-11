@@ -1,9 +1,8 @@
 from typing import Self
+import logging
 
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlmodel.ext.asyncio.session import AsyncSession
-
-from app.core.logging import logger
 
 from app.repo.purchase_repo import PurchaseRepository
 from app.repo.app_repo import AppRepository
@@ -14,6 +13,9 @@ from app.repo.finance_repo import FinanceRepository
 from app.repo.app_cover_repo import AppCoverRepository
 
 from app.uow.base import UnitOfWork
+
+logger = logging.getLogger("uow.orm")
+
 
 class OrmUnitOfWork(UnitOfWork):
     def __init__(
@@ -41,8 +43,6 @@ class OrmUnitOfWork(UnitOfWork):
             logger.error(f"Error: {exc_value}")
             logger.error(f"Traceback: {traceback}")
             await self.rollback()
-        #else:
-        #    await self.commit()
             
         await self.session.close()
 

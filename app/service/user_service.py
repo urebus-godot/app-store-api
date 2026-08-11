@@ -18,9 +18,6 @@ from app.schemas.token import LoginResponse
 from app.repo.user_repo import UserRepository
 from app.service.app_service import AppService
 
-from app.task_queue.tasks.image_tasks import process_image
-from app.utils.email_send import send_email
-
 from app.core.exceptions import (
     user_not_found_exception,
     email_used_exception,
@@ -28,20 +25,16 @@ from app.core.exceptions import (
     already_has_role_exception,
     incorrect_creds_exception,
     user_data_used_exception,
-    invalid_refresh_token_exception,
-    invalid_file_exception,
-    file_too_large_exception,
-    no_profile_pic_exception
+    invalid_refresh_token_exception
 )
 from app.core.security import verify_password, get_password_hash
 from app.core.auth import create_token_pair
-from app.core.logging import logger
 from app.core.config import settings
+
 from app.utils.time import get_time_string
+from app.utils.email_send import send_email
 
 from app.uow.orm import UnitOfWork
-
-from app.utils.files import write_file, to_megabytes
 
 
 class UserService:
@@ -65,22 +58,16 @@ class UserService:
         self, data: UserRequest, 
     ) -> UserDB:
         async with self.uow:
-            logger.info("Enter register_user func")
             username_used = await self.username_registered(data.username)
-            logger.info(f"Username is being used: {username_used}")
             if username_used:
                 raise username_used_exception
 
             if data.email is not None:
                 email_used = await self.email_registered(data.email)
-                logger.info(f"Email is being used: {email_used}")
                 if email_used:
                     raise email_used_exception
-
-            logger.info("Start registering user in the database")
+                
             user = await self.uow.user_repo.register_user(data)
-            logger.info("Registered user")
-
             await self.uow.commit()
 
         return user
@@ -91,7 +78,6 @@ class UserService:
         password: str,
     ) -> Union[UserDB, False]:
         user = await self.get_user_by_username(username)
-        logger.info(f"User found: {user.username}")
 
         if not user:
             verify_password(password, get_password_hash("dummypassword"))
@@ -147,8 +133,6 @@ class UserService:
             )
             jti = payload.get("jti")
             ttl = await redis.ttl(f"refresh_token:{jti}")
-            logger.info(f"{payload = }")
-            logger.info(f"{ttl = }")
             if ttl > 0:
                 await redis.set(f"blacklist:{jti}", "1", ex=ttl)
             await redis.delete(f"refresh_token:{jti}")
@@ -156,7 +140,6 @@ class UserService:
             return {"message": "Logout successful"}
 
         except DecodeError as e:
-            logger.info(f"Exception = {e}")
             raise invalid_refresh_token_exception
 
     async def become_publisher(

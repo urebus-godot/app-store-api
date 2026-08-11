@@ -16,7 +16,6 @@ from app.repo.review_repo import ReviewRepository
 from app.service.app_service import AppService
 
 from app.uow.orm import UnitOfWork
-from app.core.logging import logger
 from app.task_queue.tasks.db_tasks import update_app_rating
 
 
@@ -61,8 +60,7 @@ class ReviewService:
                 data, user_id, app_id
             )
             await self.uow.commit()
-            logger.info("Created review!")
-
+ 
         update_app_rating.delay(str(app_id))
  
         return review

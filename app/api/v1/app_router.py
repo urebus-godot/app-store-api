@@ -1,6 +1,7 @@
 from typing import Optional
 from uuid import UUID
 import os
+import logging
 
 from fastapi import (
     APIRouter, status, 
@@ -33,12 +34,12 @@ from app.schemas.app import (
     AppResponseWithPublisher,
     GameResponseWithPublisher,
 )
-from app.core.logging import logger
-from app.core.config import settings
 
 router = APIRouter(
     dependencies=[Depends(rate_limit)]
-    )
+)
+
+logger = logging.getLogger("app.app_router")
 
 
 @router.post(

@@ -1,4 +1,5 @@
 from uuid import UUID, uuid4
+import logging
 
 from botocore.exceptions import EndpointConnectionError
 from fastapi import HTTPException, status
@@ -21,7 +22,6 @@ from app.core.exceptions import (
     no_load_exception
     )
 from app.core.config import settings
-from app.core.logging import logger
 from app.utils.files import validate_and_get_extension
 
 # Ключ = content_type -> расширение. Заодно это единственный источник
@@ -31,6 +31,8 @@ ALLOWED_IMAGE_CONTENT_TYPES = {
     "image/png": "png",
     "image/webp": "webp",
 }
+
+logger = logging.getLogger("media_service")
 
 
 class MediaService:

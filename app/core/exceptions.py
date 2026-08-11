@@ -2,13 +2,16 @@ from fastapi import HTTPException, status
 
 # ----- Custom -----
 
-class InvalidTokenPayloadError(BaseException):
+class TokenError(BaseException):
     pass
 
-class InvalidTokenError(BaseException):
+class InvalidTokenPayloadError(TokenError):
     pass
 
-class TokenExpiredError(BaseException):
+class InvalidTokenError(TokenError):
+    pass
+
+class TokenExpiredError(TokenError):
     pass
 
 # ----- General -----

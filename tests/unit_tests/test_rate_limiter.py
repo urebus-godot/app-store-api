@@ -14,7 +14,6 @@ class TestRateLimiter:
     ):
         logger.info("Start Rate Limit Test")
         request_count = settings.REQUEST_LIMIT
-
         for _ in range(request_count):
             response = await rate_limited_client.get(
                 "/api/v1/apps"
