@@ -19,7 +19,8 @@ from app.core.exceptions import (
     app_published_exception,
     empty_cart_exception,
     app_not_in_cart_exception,
-    app_not_found_exception
+    app_not_found_exception,
+    no_app_archive_exception
 )
 from app.repo.purchase_repo import PurchaseRepository
 
@@ -122,6 +123,9 @@ class PurchaseService:
 
             if app.publisher_id == user_id:
                 raise app_published_exception
+            
+            if app.archive_key is None:
+                raise no_app_archive_exception
 
             await self.redis.delete(f"cart_cache:{user_id}")
 

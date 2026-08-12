@@ -10,7 +10,7 @@ from app.core.config import settings
 class UserRole(StrEnum):
     USER = "user"
     PUBLISHER = "publisher"
-    MODERATOR = "moderator"
+    ADMIN = "admin"
 
 
 class BaseUser(SQLModel):

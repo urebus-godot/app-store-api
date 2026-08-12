@@ -1,12 +1,13 @@
-from fastapi import UploadFile
 
 from app.core.exceptions import invalid_file_exception
 
 
-
-
 def to_megabytes(size_bytes: int) -> float:
     return size_bytes / 1048576
+
+
+def to_bytes(size_megabytes: int) -> float:
+    return size_megabytes * 1048576
 
 
 def validate_and_get_extension(

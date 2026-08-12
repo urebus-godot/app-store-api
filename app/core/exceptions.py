@@ -86,7 +86,6 @@ no_profile_pic_exception = HTTPException(
     "Profile picture is not set"
 )
 
-
 # ----- Authentication -----
 
 incorrect_creds_exception = HTTPException(
@@ -135,6 +134,11 @@ insufficient_funds_exception = HTTPException(
 app_cover_not_found_exception = HTTPException(
     status.HTTP_404_NOT_FOUND,
     "App cover not found"
+)
+
+no_app_archive_exception = HTTPException(
+    status.HTTP_404_NOT_FOUND,
+    "App has no archive"
 )
 
 

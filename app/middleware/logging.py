@@ -10,10 +10,11 @@ logger = logging.getLogger("app.request")
 
 class RequestLoggerMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
-        request_id = request.headers.get("X-Request-ID")
-        request_id = request_id or str(uuid4())
-        start_time = perf_counter()
         try:
+            request_id = request.headers.get("X-Request-ID")
+            request_id = request_id or str(uuid4())
+            start_time = perf_counter()
+
             response = await call_next(request)
             duration_ms = (perf_counter() - start_time) * 1000
         except Exception:
@@ -26,7 +27,7 @@ class RequestLoggerMiddleware(BaseHTTPMiddleware):
             )
             raise
         logger.info(
-            f"Request completed",
+            "Request completed",
             extra={
                 "method": request.method,
                 "path": request.url.path,

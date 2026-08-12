@@ -14,7 +14,6 @@ class ConfirmCoverRequest(BaseModel):
 class AppCoverResponse(BaseModel):
     id: uuid.UUID
     url: str
-    position: int
 
 
 class AppCoverListResponse(BaseModel):

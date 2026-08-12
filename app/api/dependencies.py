@@ -87,8 +87,9 @@ def validate_access_token(
 ) -> UUID:
     payload = decode_access_token(token, secret_key)
     user_id = payload.get("sub")
+    roles = payload.get("roles")
 
-    if user_id is None:
+    if user_id is None or not roles:
         raise InvalidTokenPayloadError()
 
     return UUID(user_id)
@@ -115,7 +116,7 @@ def get_current_user_id(
     token: TokenDep, secret_key: AccessSecretKeyDep
 ) -> UUID:
     try:
-        user_id = validate_access_token()
+        user_id = validate_access_token(token, secret_key)
         return user_id
     except InvalidTokenPayloadError:
         raise invalid_token_payload_exception
@@ -149,27 +150,28 @@ async def rate_limit(
     request: Request,
     response: Response
 ):
-    logger.info("Start checking for limit")
-    bearer = request.headers.get("Authorization")
+    try:
+        logger.info("Start checking for limit")
+        bearer = request.headers.get("Authorization")
+        logger.info(f"Getting bearer {bearer}")
 
-    if bearer is not None:
-        access_token = bearer[7:]
-        user_id = validate_access_token(access_token, secret_key)
-
-        if user_id is not None:
+        if bearer and bearer.startswith("Bearer"):
+            access_token = bearer[7:]
+            user_id = validate_access_token(access_token, secret_key)
             result = await rate_limiter.check(user_id)
             logger.info("Checked for authenticated user")
         else:
-            raise invalid_token_payload_exception
-    else:
-        result = await rate_limiter.check(request.client.host)
-        logger.info("Checked for guest")
+            result = await rate_limiter.check(request.client.host)
+            logger.info("Checked for guest")
 
-    response.headers["X-RateLimit-Remaining"] = str(result.remaining_requests)
+        response.headers["X-RateLimit-Remaining"] = str(
+            result.remaining_requests)
 
-    if not result.allowed:
-        logger.info("Request limit exceeded")
-        raise too_many_requests_exception
+        if not result.allowed:
+            logger.info("Request limit exceeded")
+            raise too_many_requests_exception
+    except TokenError as e:
+        raise token_errors[type(e)]
 
  
 def get_session_factory() -> async_sessionmaker[AsyncSession]:
@@ -177,19 +179,8 @@ def get_session_factory() -> async_sessionmaker[AsyncSession]:
 
 
 def require_role(role: UserRole) -> UserDB:
-    def wrapper(user: UserDep) -> UserDB:
-        if role not in user.roles:
-            exception = no_rights_exception
-            exception.detail = f"{exception.detail}. Role '{role}' required"
-            raise no_rights_exception
-        return user
-
-    return wrapper
-
-
-def _require_role(role: UserRole) -> UserDB:
     def wrapper(
-        token: TokenDep, redis: RedisDep, secret_key: AccessSecretKeyDep
+        token: TokenDep, secret_key: AccessSecretKeyDep
         ) -> UserDB:
         payload = decode_access_token(token, secret_key)
         user_roles = payload.get("role")

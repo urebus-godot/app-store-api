@@ -1,11 +1,11 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from app.core.config import settings
 
 
 def get_refresh_token_expire() -> datetime:
     now = datetime.now(timezone.utc)
-    return now + settings.REFRESH_TOKEN_EXPIRE_DAYS
+    return now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
 
 
 def get_time_string(

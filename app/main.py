@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, status, Depends
+from fastapi import FastAPI, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import ResponseValidationError
@@ -19,7 +19,7 @@ from app.core.exception_handlers import (
 from app.core.logging import setup_logging
 from app.core.config import settings
 
-from app.api.dependencies import RedisDep, SessionDep, rate_limit
+from app.api.dependencies import RedisDep, SessionDep
 from app.api.v1 import (
     app_archive_router,
     app_router,

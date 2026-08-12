@@ -1,5 +1,4 @@
 from typing import Annotated
-from string import punctuation
 
 from fastapi import Query
 

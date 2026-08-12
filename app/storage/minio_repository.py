@@ -4,7 +4,6 @@ from botocore.exceptions import ClientError
 
 from app.core.config import settings
 
-
 class MinioStorage:
     def __init__(self) -> None:
         self._session = aioboto3.Session()

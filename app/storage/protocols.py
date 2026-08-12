@@ -29,6 +29,9 @@ class ObjectStorage(Protocol):
     async def object_exists(self, bucket: str, key: str) -> bool:
         ...
 
+    async def get_object(self, bucket: str, key: str) -> None:
+        ...
+
     async def object_size(self, bucket: str, key: str) -> int | None:
         """Размер объекта в байтах или None, если объекта нет.
 

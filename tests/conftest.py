@@ -4,7 +4,7 @@ settings.WORKER_DB_URL = settings.TEST_WORKER_DB_URL
 
 from collections.abc import AsyncGenerator
 from uuid import UUID, uuid4
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone, date, timedelta
 import asyncio
 
 from sqlalchemy.ext.asyncio import (
@@ -33,9 +33,11 @@ from app.api.dependencies import (
     rate_limit,
     get_session_factory
     )
+from app.core.auth import create_access_token
 
 from app.core.security import get_password_hash
 from app.core.logging import logger
+
 from app.main import app
 
 
@@ -48,30 +50,12 @@ test_user_data = {
 
 # ----- Tokens -----
 
-def create_access_token(
-    user_id: UUID,
-    expires_delta: datetime = settings.ACCESS_TOKEN_EXPIRE_MINUTES,
-    #extra_claims: Optional[dict[str, str]] = None,
-) -> str:
-    expire = datetime.now(timezone.utc) + expires_delta
-    payload = {
-        "sub": str(user_id),
-        "exp": int(expire.timestamp()),
-        "type": "access"
-    }
-
-    return jwt.encode(
-        payload, 
-        settings.TEST_ACCESS_SECRET_KEY, 
-        algorithm=settings.JWT_ALGORITHM
-    )
-
-
 def create_refresh_token(
     user_id: UUID,
     jti: UUID = uuid4(),
     family_id: UUID = uuid4(),
-    expires_delta: datetime = settings.REFRESH_TOKEN_EXPIRE_DAYS,
+    expires_delta: timedelta = timedelta(
+        days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
 ) -> tuple[str, str, str]:
     """Returns refresh token, jti, family_id"""
     expire = datetime.now(timezone.utc) + expires_delta
@@ -245,9 +229,10 @@ async def auth_client_2(
 ):
     app.dependency_overrides[get_current_user] = lambda: test_user_2
     app.dependency_overrides[get_current_user_id] = lambda: test_user_2.id
+    data = {"sub": test_user_2.id, "roles": ["user"]}
     auth_client.headers = {
         "Authorization": 
-        f"Bearer {create_access_token(test_user_2.id)}"
+        f"Bearer {create_access_token(data)}"
         }
     yield auth_client
 
@@ -356,13 +341,16 @@ async def rate_limited_auth_client(
 
 @pytest_asyncio.fixture
 def access_token(test_user: UserDB) -> str:
-    return create_access_token(test_user.id)
+    return create_access_token(
+        {"sub": test_user.id, "roles": ["user"]}
+    )
 
 
 @pytest_asyncio.fixture
 async def refresh_token_data(test_user: UserDB, fake_redis: FakeRedis) -> dict:
     token, jti, family_id = create_refresh_token(test_user.id)
-    ttl_seconds = int(settings.REFRESH_TOKEN_EXPIRE_DAYS.total_seconds())
+    days = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    ttl_seconds = int(days.total_seconds())
 
     await fake_redis.set(f"refresh_token:{jti}", family_id, ex=ttl_seconds)
     await fake_redis.sadd(f"user_tokens:{test_user.id}", jti)

@@ -1,5 +1,5 @@
 from uuid import uuid4
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import logging
 
 from fastapi import HTTPException, status
@@ -10,8 +10,6 @@ from app.utils.time import get_refresh_token_expire
 from app.core.config import settings
 from app.core.exceptions import (
     invalid_refresh_token_exception,
-    invalid_access_token_exception,
-    token_expired_exception,
     InvalidTokenError,
     TokenExpiredError
 )
@@ -21,17 +19,16 @@ logger = logging.getLogger("app.auth")
 
 
 def create_access_token(
-    user_id: str
+    data: dict, 
+    expires_delta: timedelta = timedelta(
+        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 ) -> str:
     """Create a JWT access token for the user."""
-    expire = datetime.now(timezone.utc) + settings.ACCESS_TOKEN_EXPIRE_MINUTES
-
-    payload = {
-        "sub": user_id,
-        "exp": int(expire.timestamp()),
-        "type": "access",
-    }
-
+    payload = data.copy()
+    expire = datetime.now(timezone.utc) + expires_delta
+    payload.update(
+        {"exp": int(expire.timestamp()), "type": "access"}
+    )
     return jwt.encode(
         payload, settings.ACCESS_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
     )
@@ -54,8 +51,8 @@ async def create_refresh_token(user_id: str, redis: Redis) -> str:
     refresh_token = jwt.encode(
         payload, settings.REFRESH_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
     )
-
-    refresh_ttl = int(settings.REFRESH_TOKEN_EXPIRE_DAYS.total_seconds())
+    days = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    refresh_ttl = int(days.total_seconds())
 
     await redis.set(
         name=f"refresh_token:{jti}", value=family_id, ex=refresh_ttl
@@ -66,10 +63,10 @@ async def create_refresh_token(user_id: str, redis: Redis) -> str:
     return refresh_token
 
 
-async def create_token_pair(user_id: str, redis: Redis) -> dict[str, str]:
+async def create_token_pair(data: dict, redis: Redis) -> dict[str, str]:
     """Create both access and refresh tokens for the user."""
-    access_token = create_access_token(user_id)
-    refresh_token = await create_refresh_token(user_id, redis)
+    access_token = create_access_token(data)
+    refresh_token = await create_refresh_token(data["sub"], redis)
     return {"access_token": access_token, "refresh_token": refresh_token}
 
 
@@ -80,7 +77,6 @@ def decode_access_token(
     try:
         payload = jwt.decode(token, secret_key, algorithms=["HS256"])
         return payload
-
     except jwt.ExpiredSignatureError:
         raise TokenExpiredError()
     except jwt.InvalidTokenError:

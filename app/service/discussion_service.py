@@ -26,10 +26,7 @@ from app.schemas.ws_messages import (
     IncomingMessage
 )
 from app.schemas.ws_events import (
-    OutgoingEvent,
-    ErrorEvent,
     NewMessageEvent,
-    UserJoinedEvent,
     UserTypingEvent
 )
 
@@ -126,7 +123,7 @@ class DiscussionService:
                     discussion_id, event.model_dump(mode="json")
                 )
             case TypingMessage():
-                logger.info(f"Match with TypingMessage()")
+                logger.info("Match with TypingMessage()")
                 event = UserTypingEvent(
                     user_id=user_id, discussion_id=discussion_id
                 )
@@ -134,7 +131,7 @@ class DiscussionService:
                     discussion_id, event.model_dump(mode="json")
                 )
             case AuthMessageEvent():
-                logger.info(f"Match with AuthMessageEvent()")
+                logger.info("Match with AuthMessageEvent()")
 
     async def create_message(
         self,

@@ -1,15 +1,11 @@
 from typing import Optional
 from uuid import UUID
-import os
 import logging
 
 from fastapi import (
     APIRouter, status, 
-    Depends, Query,
-    UploadFile, File,
-    HTTPException
+    Depends, Query
     )
-from fastapi.responses import FileResponse
 
 from app.api.dependencies import (
     UserIdDep,
@@ -17,8 +13,7 @@ from app.api.dependencies import (
     PublisherDep,
     AppServiceDep,
     ReviewServiceDep,
-    rate_limit,
-    RedisDep
+    rate_limit
 )
 from app.utils.search import SearchQuery
 from app.base_models.app import (

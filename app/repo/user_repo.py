@@ -1,10 +1,9 @@
-from datetime import date, datetime
 from typing import Optional
 from uuid import UUID
 
 from pydantic import EmailStr
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select, desc, extract
+from sqlmodel import select, desc
 from sqlalchemy.orm import selectinload
 
 from app.models.user import UserDB

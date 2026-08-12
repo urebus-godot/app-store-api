@@ -1,10 +1,8 @@
-from uuid import UUID
 from typing import Literal, Annotated, Union
 
 from sqlmodel import SQLModel, Field
 from pydantic import TypeAdapter
 
-from app.schemas.discussion import MessageResponse
 
 
 class AuthMessageEvent(SQLModel):

@@ -1,9 +1,7 @@
 from typing import Optional, Union
 from uuid import UUID
-import asyncio
-import os
 
-from fastapi import BackgroundTasks, Request, UploadFile
+from fastapi import BackgroundTasks, Request
 from pydantic import EmailStr
 from jwt.exceptions import DecodeError
 import jwt
@@ -114,7 +112,10 @@ class UserService:
                 email_body
             )
 
-        tokens = await create_token_pair(str(user.id), redis)
+        tokens = await create_token_pair(
+            {"sub": user.id, "roles": user.roles}, 
+            redis
+        )
 
         return LoginResponse(
             access_token=tokens["access_token"],

@@ -11,7 +11,6 @@ from app.base_models.app import (
     AppCategory
 )
 from app.schemas.app import AppRequest, GameRequest, AppUpdate
-from app.models.app_cover import AppCover
 from app.models.purchase import PurchaseDB
 
 

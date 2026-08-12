@@ -1,9 +1,8 @@
 import uuid
-from pathlib import Path
 
 from fastapi import HTTPException, status
 
-from app.core.exceptions import app_not_purchased_exception, app_not_found_exception
+from app.core.exceptions import app_not_purchased_exception
 from app.core.config import settings
 
 from app.schemas.storage import DownloadPresignResponse, UploadPresignResponse
@@ -31,10 +30,8 @@ class AppArchiveService:
 
     async def presign_app_archive_upload(
         self,
-        *,
         app_id: uuid.UUID,
         publisher_id: uuid.UUID,
-        filename: str,
         content_type: str
     ) -> UploadPresignResponse:
         # Ключ = uuid + расширение, оригинальное имя файла НЕ используем.
@@ -75,13 +72,13 @@ class AppArchiveService:
 
     async def confirm_app_archive_upload(
         self, 
-        *, 
         app_id: uuid.UUID, 
         publisher_id: uuid.UUID
     ) -> None:
         async with self._uow:
             app = await self._uow.app_repo.get_app(app_id)
-            if app.publisher_id != publisher_id or app.pending_archive_key is None:
+            if (app.publisher_id != publisher_id 
+            or app.pending_archive_key is None):
                 raise HTTPException(
                     status.HTTP_404_NOT_FOUND, 
                     "Нет ожидающей загрузки"
@@ -104,10 +101,12 @@ class AppArchiveService:
             await self._uow.commit()
 
             if old_key is not None:
-                await self._storage.delete_object(settings.APP_ARCHIVE_BUCKET, old_key)
+                await self._storage.delete_object(
+                    settings.APP_ARCHIVE_BUCKET, old_key
+                )
 
     async def presign_app_archive_download(
-        self, *, app_id: uuid.UUID, user_id: uuid.UUID
+        self, app_id: uuid.UUID, user_id: uuid.UUID
     ) -> DownloadPresignResponse:
         async with self._uow:
             app = await self._uow.app_repo.get_app(app_id)

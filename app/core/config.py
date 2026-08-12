@@ -1,5 +1,4 @@
 from typing import Optional
-from datetime import timedelta
 from pathlib import Path
 import logging
 
@@ -48,8 +47,8 @@ class Settings(BaseSettings):
     DB_OUTPUT: bool = False
     DEBUG: bool = True
 
-    ACCESS_TOKEN_EXPIRE_MINUTES: timedelta = timedelta(minutes=120)
-    REFRESH_TOKEN_EXPIRE_DAYS: timedelta = timedelta(days=7)
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 120
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     ACCESS_SECRET_KEY: str
     REFRESH_SECRET_KEY: str
@@ -90,10 +89,6 @@ class Settings(BaseSettings):
     ARCHIVE_EXTENSIONS: list[str] = [".rar", ".zip", ".7z"]
     IMAGE_EXTENSIONS: list[str] = [".PNG", ".jpg", ".jpeg", ".webp"]
 
-    MAX_APP_ARCHIVE_SIZE_MB: int = 1024
-    MAX_APP_COVER_SIZE_MB: int = 5
-    MAX_PROFILE_PICTURE_SIZE_MB: int = 1
-
     MINIO_ACCESS_KEY: str
     MINIO_SECRET_KEY: str
     MINIO_INTERNAL_ENDPOINT: str = "http://minio:9000"
@@ -107,8 +102,8 @@ class Settings(BaseSettings):
     UPLOAD_TTL_SECONDS: int = 600
     DOWNLOAD_TTL_SECONDS: int = 300
 
-    MAX_AVATAR_ICON_SIZE: int = 5 * 1024 * 1024
-    MAX_COVER_SIZE: int = 10 * 1024 * 1024
+    MAX_AVATAR_ICON_SIZE_MB: int = 5
+    MAX_COVER_SIZE_MB: int = 10
 
     MAIL_USERNAME: str = "satalovserge"
     MAIL_PASSWORD: str
@@ -149,8 +144,9 @@ class Settings(BaseSettings):
     <body>
         <h3>
             Happy birthday, %s! You receive a promo code as a gift. 
-            Enter it to receive %s rubles on the balance.
+            Enter it to top up your balance.
             <p><b>Promo code: <i>%s</i></b></p>
+            <p><b>Amount: <i>%s</i></b></p>
             <p><b>Time of issue: <i>%s</i></b></p>
             <p><b>Expiration time: <i>%s</i></b></p>
         </h3>

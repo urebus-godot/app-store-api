@@ -12,14 +12,12 @@ import httpx
 
 from fakeredis import FakeRedis
 
-from fastapi.testclient import TestClient
 import pytest_asyncio
-import pytest
 
 from app.core.config import settings
 
 from app.main import app
-from app.api.dependencies import get_redis, get_access_secret_key, get_session, get_session_factory, get_user_service, rate_limit
+from app.api.dependencies import get_redis, get_access_secret_key, get_session, get_session_factory, rate_limit
 
 from app.models.discussion import DiscussionDB, MessageDB
 from app.models.user import UserDB

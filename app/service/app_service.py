@@ -1,22 +1,13 @@
-from uuid import UUID, uuid4
+from uuid import UUID
 from typing import Optional
-import asyncio
-import os
 
-from fastapi import UploadFile, HTTPException, status
-from redis.asyncio import Redis
+from fastapi import HTTPException, status
 
 from app.core.exceptions import (
     app_not_found_exception,
     no_rights_exception,
-    app_not_purchased_exception,
-    invalid_file_exception,
-    file_too_large_exception,
-    app_cover_not_found_exception,
     user_not_found_exception
 )
-from app.core.config import settings
-from app.task_queue.tasks import image_tasks
 
 from app.repo.user_repo import UserRepository
 
@@ -29,7 +20,7 @@ from app.models.user import UserDB
 from app.repo.app_repo import AppRepository
 from app.repo.purchase_repo import PurchaseRepository
 
-from app.utils.search import filter_apps, format_keywords
+from app.utils.search import format_keywords
 
 from app.uow.orm import UnitOfWork
 

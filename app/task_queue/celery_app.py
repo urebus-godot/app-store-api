@@ -14,7 +14,7 @@ celery_app = Celery(
 celery_app.autodiscover_tasks(
     [
         f"{BASE_TASK_PATH}.db_tasks", 
-        f"{BASE_TASK_PATH}.image_tasks"
+        f"{BASE_TASK_PATH}.media_tasks"
     ]
 )
 
@@ -33,4 +33,4 @@ celery_app.conf.beat_schedule = {
     }
 }
 
-logger = get_task_logger(__name__)
+#logger = get_task_logger(__name__)

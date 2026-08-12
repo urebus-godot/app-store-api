@@ -7,8 +7,7 @@ from fastapi import (
     status,
     Response,
     Request,
-    BackgroundTasks,
-    UploadFile
+    BackgroundTasks
 )
 from fastapi.security import OAuth2PasswordRequestForm
 

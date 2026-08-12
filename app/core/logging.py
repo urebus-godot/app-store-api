@@ -1,5 +1,4 @@
 import logging
-from logging import Logger
 
 from app.core.config import settings
 
