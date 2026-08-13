@@ -47,15 +47,17 @@ class Settings(BaseSettings):
     DB_OUTPUT: bool = False
     DEBUG: bool = True
 
+    ADMIN_PASSWORD: str
+
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 120
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     ACCESS_SECRET_KEY: str
     REFRESH_SECRET_KEY: str
+
     TEST_ACCESS_SECRET_KEY: str = (
         "4a834639b4bee7011b42f243748c17f13c7aa211a86a06843b5683376e8f35d8"
         )
-
     TEST_REFRESH_SECRET_KEY: str = (
         "5ab55156e7460135f49653aa4ad50f768d0771201e236cfa986542c6b48f4b2c"
         )

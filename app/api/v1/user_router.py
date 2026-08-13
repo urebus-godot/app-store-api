@@ -1,4 +1,5 @@
 from typing import Annotated
+from uuid import UUID
 import logging
 
 from fastapi import (
@@ -19,7 +20,9 @@ from app.api.dependencies import (
     SendEmailDep,
     RefreshSecretKeyDep,
     rate_limit,
-    RedisDep
+    RedisDep,
+    check_admin_password,
+    require_role
 )
 from app.core import auth
 from app.utils.time import get_refresh_token_expire
@@ -28,7 +31,10 @@ from app.schemas.user import (
     UserRequest,
     UserResponse,
     UserUpdate,
-    CurrentUserResponse
+    CurrentUserResponse,
+    UserRole,
+    UserRoleRequest,
+    UserRoleResponse
 )
 from app.schemas.token import TokenResponse, LoginResponse
 
@@ -91,7 +97,7 @@ async def logout(
     redis: RedisDep,
 ) -> dict[str, str]:
     """Adds user's refresh token to the blacklist or deletes it from Redis."""
-    refresh_token = request.cookies.get("refresh_token")
+    refresh_token = request.cookies.pop("refresh_token", None)
     return await user_service.logout(refresh_token, redis, secret_key)
 
 
@@ -100,24 +106,52 @@ async def refresh_tokens(
     request: Request,
     secret_key: RefreshSecretKeyDep,
     redis: RedisDep,
+    user_service: UserServiceDep
 ) -> TokenResponse:
     """Creates refresh and access tokens on success."""
     refresh_token = request.cookies.get("refresh_token")
     logger.info(f"Start refreshing token: \n{refresh_token=}")
-    tokens = await auth.refresh_tokens(refresh_token, redis, secret_key)
+    tokens = await auth.refresh_tokens(
+        refresh_token=refresh_token, 
+        redis=redis, 
+        secret_key=secret_key,
+        user_service=user_service
+    )
     return TokenResponse(
         access_token=tokens["access_token"],
         refresh_token=tokens["refresh_token"],
     )
 
 
-@router.post("/users/me/publisher")
-async def become_publisher(
-    user: UserDep, 
+@router.post("/users/me/roles/publisher")
+async def set_publisher_role(
+    user_id: UserIdDep,
     user_service: UserServiceDep
-) -> dict[str, str]:
-    """Adds "publisher" role to user roles on success."""
-    return await user_service.become_publisher(user)
+) -> UserRoleResponse:
+    return await user_service.set_role(user_id, UserRole.PUBLISHER)
+
+
+@router.post(
+    "/users/me/roles/admin",
+    dependencies=[Depends(check_admin_password)]
+)
+async def set_admin_role(
+    user_id: UserIdDep,
+    user_service: UserServiceDep
+) -> UserRoleResponse:
+    return await user_service.set_role(user_id, UserRole.ADMIN)
+
+
+@router.post(
+    "/users/{user_id}/roles",
+    dependencies=[Depends(require_role(UserRole.ADMIN))]
+)
+async def set_role_to_user(
+    user_id: UUID,
+    data: UserRoleRequest,
+    user_service: UserServiceDep
+) -> UserRoleResponse:
+    return await user_service.set_role(user_id, data.role)
 
 
 @router.patch("/users/me")

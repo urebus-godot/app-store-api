@@ -31,7 +31,10 @@ async def request_app_archive_upload_url(
     )
 
 
-@router.post("/archive/confirm", status_code=status.HTTP_204_NO_CONTENT)
+@router.post(
+    "/archive/confirm", 
+    status_code=status.HTTP_204_NO_CONTENT
+)
 async def confirm_app_archive_upload(
     app_id: uuid.UUID,
     user_id: UserIdDep,

@@ -1,5 +1,6 @@
 from typing import Optional, Union
 from uuid import UUID
+import json
 
 from fastapi import BackgroundTasks, Request
 from pydantic import EmailStr
@@ -10,7 +11,7 @@ from app.db.redis import Redis
 
 from app.base_models.user import UserRole
 from app.models.user import UserDB
-from app.schemas.user import UserRequest, UserUpdate
+from app.schemas.user import UserRequest, UserUpdate, UserRoleResponse
 from app.schemas.token import LoginResponse
 
 from app.repo.user_repo import UserRepository
@@ -26,7 +27,7 @@ from app.core.exceptions import (
     invalid_refresh_token_exception
 )
 from app.core.security import verify_password, get_password_hash
-from app.core.auth import create_token_pair
+from app.core.auth import create_token_pair, create_access_token
 from app.core.config import settings
 
 from app.utils.time import get_time_string
@@ -104,19 +105,17 @@ class UserService:
             request.client.host, get_time_string()
         )
 
+        tokens = await create_token_pair(
+            {"sub": str(user.id), "roles": json.dumps(user.roles)}, 
+            redis
+        )
         if user.email is not None and sends_email:
             bg_tasks.add_task(
                 send_email,
                 [str(user.email)],
                 "Someone has logged into your account",
                 email_body
-            )
-
-        tokens = await create_token_pair(
-            {"sub": user.id, "roles": user.roles}, 
-            redis
         )
-
         return LoginResponse(
             access_token=tokens["access_token"],
             refresh_token=tokens["refresh_token"],
@@ -140,22 +139,31 @@ class UserService:
 
             return {"message": "Logout successful"}
 
-        except DecodeError as e:
+        except DecodeError:
             raise invalid_refresh_token_exception
 
-    async def become_publisher(
-        self, user: UserDB, 
-    ) -> dict[str, str]:
+    async def set_role(
+        self, user_id: UUID, role: UserRole
+    ) -> UserRoleResponse:
         async with self.uow:
-            if UserRole.PUBLISHER in user.roles:
+            user = await self.uow.user_repo.get_user_by_id(user_id)
+
+            if not user:
+                raise user_not_found_exception
+
+            if role.value in user.roles:
                 raise already_has_role_exception
 
-            user = await self.uow.user_repo.get_user_by_id(user.id)
-            result = await self.uow.user_repo.become_publisher(user)
-
+            user.roles = user.roles + [role.value]
             await self.uow.commit()
 
-        return result
+        return UserRoleResponse(
+            acquired_role=role.value,
+            username=user.username,
+            new_access_token=create_access_token(
+                {"sub": str(user_id), "roles": json.dumps(user.roles)}
+            )
+        )
 
     async def update_user(
         self, user: UserDB, data: UserUpdate, 
@@ -208,8 +216,7 @@ class UserService:
     async def delete_user(
         self, 
         user_id: UUID, 
-        redis: Redis, 
-        
+        redis: Redis
     ) -> None:
         async with self.uow:
             user = await self.uow.user_repo.get_user_by_id(user_id)

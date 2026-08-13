@@ -1,9 +1,0 @@
-[2026-08-12 10:47:35,028: INFO/MainProcess] Connected to redis://redis:6379/0
-[2026-08-12 10:47:35,035: INFO/MainProcess] mingle: searching for neighbors
-[2026-08-12 10:47:43,066: INFO/MainProcess] Connected to redis://redis:6379/0
-[2026-08-12 10:47:43,073: INFO/MainProcess] mingle: searching for neighbors
-[2026-08-12 10:47:44,086: INFO/MainProcess] mingle: all alone
-[2026-08-12 10:47:44,108: INFO/MainProcess] celery@da908b3848ea ready.
-[2026-08-12 10:47:46,959: INFO/MainProcess] Events of group {task} enabled by remote.
-[2026-08-12 10:49:28,751: INFO/MainProcess] Task media.generate_image_variants[737d5fbc-8196-4dab-9226-a9c7703bd377] received
-[2026-08-12 10:49:29,071: INFO/ForkPoolWorker-14] Task media.generate_image_variants[737d5fbc-8196-4dab-9226-a9c7703bd377] succeeded in 0.31709061000037764s: None

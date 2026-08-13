@@ -3,9 +3,7 @@ from typing import Optional
 
 from sqlmodel import SQLModel
 
-
-class RefreshTokenRequest(SQLModel):
-    refresh_token: str
+from app.schemas.user import UserRole
 
 
 class TokenResponse(SQLModel):
@@ -19,3 +17,8 @@ class LoginResponse(SQLModel):
     refresh_token: str
     token_type: str = "bearer"
     user_id: UUID
+
+
+class TokenData(SQLModel):
+    user_id: UUID
+    roles: list[UserRole]

@@ -3,6 +3,7 @@ from typing import Annotated, Optional
 from uuid import UUID
 from functools import lru_cache
 import logging
+import json
 
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -20,6 +21,7 @@ from app.core.exceptions import (
     app_not_purchased_exception,
     token_expired_exception,
     invalid_access_token_exception,
+    incorrect_password_exception,
     InvalidTokenPayloadError,
     TokenError,
     TokenExpiredError,
@@ -28,7 +30,9 @@ from app.core.exceptions import (
 from app.core.auth import decode_access_token
 from app.core.config import settings
 
+from app.schemas.token import TokenData
 from app.models.user import UserDB, UserRole
+
 from app.dependencies.rate_limiter import RateLimiter
 from app.uow.orm import OrmUnitOfWork
 
@@ -74,7 +78,7 @@ def skip_limit_params(
 
 
 def get_refresh_secret_key() -> str:
-    return settings.REFREH_SECRET_KEY
+    return settings.REFRESH_SECRET_KEY
 
 
 def get_access_secret_key() -> str:
@@ -84,15 +88,18 @@ def get_access_secret_key() -> str:
 def validate_access_token(
     token: str, 
     secret_key: str
-) -> UUID:
+) -> TokenData:
     payload = decode_access_token(token, secret_key)
     user_id = payload.get("sub")
     roles = payload.get("roles")
+    logger.info(f"{type(roles)}; roles={roles}")
 
     if user_id is None or not roles:
         raise InvalidTokenPayloadError()
 
-    return UUID(user_id)
+    return TokenData(
+        user_id=UUID(user_id), roles=json.loads(roles)
+    )
 
 
 def get_current_user_id_optionally(
@@ -116,10 +123,10 @@ def get_current_user_id(
     token: TokenDep, secret_key: AccessSecretKeyDep
 ) -> UUID:
     try:
-        user_id = validate_access_token(token, secret_key)
-        return user_id
-    except InvalidTokenPayloadError:
-        raise invalid_token_payload_exception
+        token_data = validate_access_token(token, secret_key)
+        return token_data.user_id
+    except TokenError as e:
+        raise token_errors[type(e)]
 
 
 async def get_current_user(
@@ -128,8 +135,8 @@ async def get_current_user(
     secret_key: AccessSecretKeyDep
 ) -> UserDB | None:
     try:
-        user_id = validate_access_token(token, secret_key)
-        return await user_service.get_user_by_id(user_id)
+        token_data = validate_access_token(token, secret_key)
+        return await user_service.get_user_by_id(token_data.user_id)
     except TokenError as e:
         raise token_errors[type(e)] #invalid_token_payload_exception
 
@@ -157,8 +164,8 @@ async def rate_limit(
 
         if bearer and bearer.startswith("Bearer"):
             access_token = bearer[7:]
-            user_id = validate_access_token(access_token, secret_key)
-            result = await rate_limiter.check(user_id)
+            token_data = validate_access_token(access_token, secret_key)
+            result = await rate_limiter.check(token_data.user_id)
             logger.info("Checked for authenticated user")
         else:
             result = await rate_limiter.check(request.client.host)
@@ -182,19 +189,22 @@ def require_role(role: UserRole) -> UserDB:
     def wrapper(
         token: TokenDep, secret_key: AccessSecretKeyDep
         ) -> UserDB:
-        payload = decode_access_token(token, secret_key)
-        user_roles = payload.get("role")
-        user_id = payload.get("sub")
+        try:
+            token_data = validate_access_token(token, secret_key)
+            user_roles = token_data.roles
+            user_id = token_data.user_id
 
-        if user_roles is None or user_id is None:
-            raise invalid_token_payload_exception
-
-        if role not in user_roles:
-            raise no_rights_exception
-
+            if role.value not in user_roles:
+                raise no_rights_exception
+        except TokenError as e:
+            raise token_errors[type(e)]
         return user_id
-
     return wrapper
+
+
+def check_admin_password(password: str) -> None:
+    if password != settings.ADMIN_PASSWORD:
+        raise incorrect_password_exception
 
 
 def can_send_email() -> bool:
@@ -310,6 +320,7 @@ SessionFactoryDep = Annotated[AsyncSession, Depends(get_session_factory)]
 UserIdDep = Annotated[UUID, Depends(get_current_user_id)]
 UserDep = Annotated[UserDB, Depends(get_current_user)]
 PublisherDep = Annotated[UserDB, Depends(require_role(UserRole.PUBLISHER))]
+AdminDep = Annotated[UserDB, Depends(require_role(UserRole.ADMIN))]
 
 TokenDep = Annotated[str, Depends(oauth_scheme)]
 

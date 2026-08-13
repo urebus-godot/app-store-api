@@ -1,12 +1,15 @@
 from uuid import uuid4
 from datetime import datetime, timezone, timedelta
+from typing import Optional
 import logging
+import json
 
 from fastapi import HTTPException, status
 from jwt import PyJWTError
 import jwt
 
 from app.utils.time import get_refresh_token_expire
+
 from app.core.config import settings
 from app.core.exceptions import (
     invalid_refresh_token_exception,
@@ -20,11 +23,13 @@ logger = logging.getLogger("app.auth")
 
 def create_access_token(
     data: dict, 
-    expires_delta: timedelta = timedelta(
-        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    expires_delta: Optional[timedelta] = None
 ) -> str:
     """Create a JWT access token for the user."""
     payload = data.copy()
+    expires_delta = expires_delta or timedelta(
+        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    
     expire = datetime.now(timezone.utc) + expires_delta
     payload.update(
         {"exp": int(expire.timestamp()), "type": "access"}
@@ -100,7 +105,8 @@ async def revoke_all_user_tokens(user_id: str, redis: Redis) -> None:
 async def refresh_tokens(
     refresh_token: str, 
     redis: Redis,
-    secret_key: str
+    secret_key: str,
+    user_service
 ) -> dict[str, str]:
     """Creates new refresh and access tokens
     if the refresh token is **not** blacklisted."""
@@ -143,5 +149,9 @@ async def refresh_tokens(
     await redis.set(f"blacklist:{jti}", "1", ex=max(remaining_ttl, 1))
     await redis.delete(f"refresh_token:{jti}")
 
-    new_tokens = await create_token_pair(user_id, redis)
+    user = await user_service.get_user_by_id(user_id)
+    new_tokens = await create_token_pair({
+        "sub": user_id, "roles": json.dumps(user.roles)}, 
+        redis
+    )
     return new_tokens

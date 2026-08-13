@@ -12,11 +12,6 @@ MEDIUM_SIZE = (640, 640)
 
 
 def sync_s3_client():
-    # ОБЫЧНЫЙ (не aioboto3) клиент. Celery worker по умолчанию работает
-    # в sync prefork-пуле — своего event loop у него нет. Поднимать
-    # asyncio.run() ради одного aioboto3-клиента на каждую таску не даёт
-    # выигрыша: внутри задачи всё равно нет параллельных I/O операций,
-    # которые имело бы смысл перекрывать через async.
     return boto3.client(
         "s3",
         endpoint_url=settings.MINIO_INTERNAL_ENDPOINT,
@@ -36,7 +31,7 @@ def variant_key(object_key: str, suffix: str) -> str:
 
 
 @celery_app.task(
-    name="media.generate_image_variants",
+    name="tasks.generate_image_variants",
     bind=True,
     max_retries=3,
     default_retry_delay=10,

@@ -73,7 +73,7 @@ user_data_used_exception = HTTPException(
 
 already_has_role_exception = HTTPException(
     status.HTTP_409_CONFLICT, 
-    "You already have the requested role"
+    "Role is already acquired"
 )
 
 not_positive_amount_exception = HTTPException(
@@ -111,6 +111,11 @@ invalid_token_payload_exception = HTTPException(
 token_expired_exception = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
     detail="Token has expired",
+)
+
+incorrect_password_exception = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="Password is incorrect",
 )
 
 

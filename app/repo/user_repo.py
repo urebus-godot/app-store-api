@@ -53,11 +53,6 @@ class UserRepository:
 
         return user
 
-    async def become_publisher(self, user: UserDB) -> dict[str, str]:
-        user.roles = user.roles + [UserRole.PUBLISHER]
-        self.session.add(user)
-        return {"message": "You have become a publisher"}
-
     async def get_user_by_username(self, username: str) -> Optional[UserDB]:
         user = (
             await self.session.exec(

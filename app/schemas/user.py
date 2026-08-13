@@ -30,7 +30,6 @@ class UserRequest(BaseUser):
             raise ValueError("Username can't contain spaces")
         return value
 
-    
     @field_validator("birth_date")
     @classmethod
     def validate_birth_date(cls, value: date) -> date:
@@ -44,35 +43,14 @@ class UserRequest(BaseUser):
         return value
 
 
-class UserResponse(BaseUser):
-    id: UUID
-    registered_at: datetime
-
-    roles: set[UserRole]
-
-    model_config = ConfigDict(from_attributes=True)
+class UserRoleRequest(SQLModel):
+    role: UserRole
 
 
-class PublisherResponse(BaseUser):
-    id: UUID
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class CurrentUserResponse(UserResponse):
-    balance: Decimal
-    birth_date: date
-
-
-class UserResponseWithReviewsAndApps(UserResponse):
-    reviews: list["ReviewResponse"]
-    cart: list["AppResponse"]
-    purchased_apps: list["AppResponse"]
-    published_apps: list["AppResponse"]
-
-
-class UserBaseResponse(BaseUser):
-    model_config = ConfigDict(from_attributes=True)
+class UserRoleResponse(SQLModel):
+    acquired_role: UserRole
+    username: str
+    new_access_token: str
 
 
 class UserUpdate(SQLModel):
@@ -100,3 +78,36 @@ class UserUpdate(SQLModel):
         if " " in value:
             raise ValueError("Username can't contain spaces")
         return value
+
+
+class UserResponse(BaseUser):
+    id: UUID
+    registered_at: datetime
+
+    roles: set[UserRole]
+
+    model_config = ConfigDict(from_attributes=True)
+    pending_avatar_key: Optional[str] = None
+    avatar_key: Optional[str] = None
+
+
+class PublisherResponse(BaseUser):
+    id: UUID
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CurrentUserResponse(UserResponse):
+    balance: Decimal
+    birth_date: date
+
+
+class UserResponseWithReviewsAndApps(UserResponse):
+    reviews: list["ReviewResponse"]
+    cart: list["AppResponse"]
+    purchased_apps: list["AppResponse"]
+    published_apps: list["AppResponse"]
+
+
+class UserBaseResponse(BaseUser):
+    model_config = ConfigDict(from_attributes=True)

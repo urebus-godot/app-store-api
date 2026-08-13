@@ -26,8 +26,6 @@ from app.utils.files import validate_and_get_extension, to_megabytes
 
 from app.task_queue.tasks.media_tasks import generate_image_variants
 
-# Ключ = content_type -> расширение. Заодно это единственный источник
-# правды о том, какие типы файлов вообще разрешены к загрузке.
 ALLOWED_IMAGE_CONTENT_TYPES = {
     "image/jpeg": "jpg",
     "image/png": "png",
@@ -47,7 +45,7 @@ class MediaService:
     ) -> UploadPresignResponse:
         extension = validate_and_get_extension(
             ALLOWED_IMAGE_CONTENT_TYPES, content_type
-            )
+        )
         object_key = f"users/{user_id}/{uuid4()}.{extension}"
 
         async with self.uow:
@@ -76,7 +74,11 @@ class MediaService:
         try:
             async with self.uow:
                 user = await self.uow.user_repo.get_user_by_id(user_id)
-                if user is None or user.pending_avatar_key is None:
+
+                if user is None:
+                    raise user_not_found_exception
+
+                if user.pending_avatar_key is None:
                     raise no_load_exception
 
                 size = await self.storage.object_size(
@@ -84,6 +86,7 @@ class MediaService:
                 )
                 if size is None:
                     raise file_not_found_exception
+                
                 if to_megabytes(size) > settings.MAX_AVATAR_ICON_SIZE_MB:
                     await self.storage.delete_object(
                         settings.USER_AVATAR_BUCKET, user.pending_avatar_key
@@ -109,14 +112,13 @@ class MediaService:
             generate_image_variants.delay(
                 settings.USER_AVATAR_BUCKET, new_key
             )
-
             return MediaConfirmResponse(url=self.storage.build_public_url(
                 settings.USER_AVATAR_BUCKET, new_key
                 )
             )
         except EndpointConnectionError:
             raise HTTPException(
-                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status.HTTP_504_GATEWAY_TIMEOUT,
                 "Could not connect to the endpoint URL"
             )
 
@@ -211,6 +213,7 @@ class MediaService:
 
         async with self.uow:
             app = await self.uow.app_repo.get_app(app_id)
+
             if app is None:
                 raise app_not_found_exception
 
@@ -255,18 +258,13 @@ class MediaService:
                 settings.APP_COVER_BUCKET, object_key
             )
             if size is None:
-                raise HTTPException(
-                    status.HTTP_409_CONFLICT, 
-                    "Файл не найден в хранилище"
-                )
+                raise file_not_found_exception
+            
             if to_megabytes(size) > settings.MAX_COVER_SIZE_MB:
                 await self.storage.delete_object(
                     settings.APP_COVER_BUCKET, object_key
                 )
-                raise HTTPException(
-                    status.HTTP_400_BAD_REQUEST, 
-                    "Файл больше 10 МБ"
-                )
+                raise file_too_large_exception
 
             cover = AppCover(
                 app_id=app_id, object_key=object_key
@@ -288,6 +286,11 @@ class MediaService:
 
     async def list_covers(self, app_id: UUID) -> AppCoverListResponse:
         async with self.uow:
+            app = await self.uow.app_repo.get_app(app_id)
+
+            if app is None:
+                raise app_not_found_exception
+
             covers = await self.uow.app_cover_repo.get_app_covers(app_id)
 
         return AppCoverListResponse(
