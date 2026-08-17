@@ -43,10 +43,10 @@ logger = logging.getLogger("app.app_router")
     )
 async def upload_app(
     data: AppRequest,
-    user: PublisherDep,
+    publisher_id: PublisherDep,
     app_service: AppServiceDep
 ) -> AppResponse:
-    app = await app_service.upload_app(data, user)
+    app = await app_service.upload_app(data, publisher_id)
     return app
 
 
@@ -56,10 +56,10 @@ async def upload_app(
     )
 async def upload_game(
     data: GameRequest,
-    user: PublisherDep,
+    publisher_id: PublisherDep,
     app_service: AppServiceDep
 ) -> GameResponse:
-    game = await app_service.upload_app(data, user)
+    game = await app_service.upload_app(data, publisher_id)
     return game
 
 
@@ -167,7 +167,6 @@ async def get_purchased_apps(
 async def get_own_published_apps(
     user_id: UserIdDep,
     skip_limit: SkipLimitParams,
-    review_service: ReviewServiceDep,
     app_service: AppServiceDep,
 ) -> list[AppResponse | GameResponse]:
     logger.info("get_own_published_apps")

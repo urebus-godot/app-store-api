@@ -20,7 +20,7 @@ from app.schemas.discussion import (
     MessageResponse
 )
 from app.schemas.ws_messages import (
-    AuthMessageEvent,
+    AuthMessage,
     SendMessage,
     TypingMessage,
     IncomingMessage
@@ -113,7 +113,7 @@ class DiscussionService:
                 logger.info(f"Match with SendMessage(text={text})")
                 data = MessageRequest.model_validate(msg)
                 message = await self.create_message(
-                    data, msg.user_id, msg.discussion_id
+                    data, user_id, discussion_id
                 )
                 logger.info("Created message in db")
                 event = NewMessageEvent(
@@ -130,8 +130,8 @@ class DiscussionService:
                 await discussion_manager.publish(
                     discussion_id, event.model_dump(mode="json")
                 )
-            case AuthMessageEvent():
-                logger.info("Match with AuthMessageEvent()")
+            case AuthMessage():
+                logger.info("Match with AuthMessage()")
 
     async def create_message(
         self,

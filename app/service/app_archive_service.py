@@ -11,7 +11,7 @@ from app.core.exceptions import (
 )
 from app.core.config import settings
 
-from app.schemas.storage import DownloadPresignResponse, UploadPresignResponse
+from app.schemas.file import DownloadPresignResponse, UploadPresignResponse
 from app.storage.protocols import ObjectStorage
 
 from app.uow.base import UnitOfWork

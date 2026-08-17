@@ -6,6 +6,8 @@ from collections.abc import AsyncGenerator
 from uuid import UUID, uuid4
 from datetime import datetime, timezone, date, timedelta
 import asyncio
+import logging
+import json
 
 from sqlalchemy.ext.asyncio import (
     create_async_engine, async_sessionmaker
@@ -31,12 +33,11 @@ from app.api.dependencies import (
     get_refresh_secret_key,
     get_access_secret_key,
     rate_limit,
-    get_session_factory
+    get_session_factory,
+    get_admin_password
     )
 from app.core.auth import create_access_token
-
 from app.core.security import get_password_hash
-from app.core.logging import logger
 
 from app.main import app
 
@@ -44,9 +45,23 @@ from app.main import app
 test_user_data = {
     "username": "testUser",
     "hashed_password": get_password_hash("testPassword"),
-    "email": "user@example.com",
+    #"email": "user@example.com",
     "birth_date": date(year=1980, month=4, day=1)
 }
+
+
+# ----- General fixtures -----
+
+@pytest_asyncio.fixture(scope="session")
+async def event_loop():
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest_asyncio.fixture(name="logger")
+def get_logger():
+    return logging.getLogger("tests")
 
 # ----- Tokens -----
 
@@ -72,18 +87,6 @@ def create_refresh_token(
         algorithm=settings.JWT_ALGORITHM
     )
     return str(token), str(jti), str(family_id)
-
-
-@pytest_asyncio.fixture(scope="session")
-async def event_loop():
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
-
-
-@pytest_asyncio.fixture(name="logger")
-def get_logger():
-    return logger
 
 
 # ----- Database fixtures -----
@@ -198,8 +201,8 @@ async def auth_client(
     session_factory: async_sessionmaker[AsyncSession],
     fake_redis: FakeRedis,
     test_user: UserDB,
-    access_token: str,
     refresh_token_data: dict[str, str],
+    access_token: str
 ):
     override_general_deps(
         db_session,
@@ -208,7 +211,7 @@ async def auth_client(
     )
     app.dependency_overrides[get_current_user] = lambda: test_user
     app.dependency_overrides[get_current_user_id] = lambda: test_user.id
-
+    app.dependency_overrides[get_admin_password] = lambda: "adminpass"
 
     transport = ASGITransport(app)
     async with AsyncClient(
@@ -229,11 +232,15 @@ async def auth_client_2(
 ):
     app.dependency_overrides[get_current_user] = lambda: test_user_2
     app.dependency_overrides[get_current_user_id] = lambda: test_user_2.id
-    data = {"sub": test_user_2.id, "roles": ["user"]}
+    data = {"sub": str(test_user_2.id), "roles": json.dumps(["user"])}
+    token = create_access_token(
+        data=data, 
+        secret_key=settings.TEST_ACCESS_SECRET_KEY
+    )
     auth_client.headers = {
         "Authorization": 
-        f"Bearer {create_access_token(data)}"
-        }
+        f"Bearer {token}"
+    }
     yield auth_client
 
 
@@ -269,17 +276,25 @@ async def publisher_client(
     session_factory: async_sessionmaker[AsyncSession],
     fake_redis: FakeRedis,
     test_publisher: UserDB,
-    access_token: str,
 ):
     override_general_deps(db_session, session_factory, fake_redis)
     app.dependency_overrides[get_current_user] = lambda: test_publisher
     app.dependency_overrides[get_current_user_id] = lambda: test_publisher.id
 
     transport = ASGITransport(app)
+    token = create_access_token(
+        data={
+            "sub": str(test_publisher.id), 
+            "roles": json.dumps(["publisher"])
+            },
+        secret_key=settings.TEST_ACCESS_SECRET_KEY
+    )
     async with AsyncClient(
         transport=transport,
         base_url="http://tests",
-        headers={"Authorization": f"Bearer {access_token}"},
+        headers={"Authorization": 
+            f"Bearer {token}"
+    },
     ) as ac:
         yield ac
 
@@ -342,7 +357,11 @@ async def rate_limited_auth_client(
 @pytest_asyncio.fixture
 def access_token(test_user: UserDB) -> str:
     return create_access_token(
-        {"sub": test_user.id, "roles": ["user"]}
+        data={
+            "sub": str(test_user.id), 
+            "roles": json.dumps(["user"])
+        },
+        secret_key=settings.TEST_ACCESS_SECRET_KEY
     )
 
 
@@ -363,12 +382,12 @@ async def refresh_token_data(test_user: UserDB, fake_redis: FakeRedis) -> dict:
     }
 
 
+# ----- Test user fixtures -----
+
 @pytest_asyncio.fixture
 async def user_data() -> dict[str, str]:
     return test_user_data
 
-
-# ----- Test user fixtures -----
 
 @pytest_asyncio.fixture(scope="function")
 async def test_user(
@@ -420,6 +439,7 @@ async def test_app(db_session: AsyncSession, test_publisher: UserDB) -> AppDB:
         price=300,
         publisher_id=test_publisher.id,
         keywords=["paid", "test", "app"],
+        archive_key="test-archive-key"
     )
     db_session.add(app)
     await db_session.flush()
@@ -436,6 +456,7 @@ async def test_app_2(db_session: AsyncSession, test_user_2: UserDB) -> AppDB:
         price=0,
         publisher_id=test_user_2.id,
         keywords=["free", "app", "test"],
+        archive_key="test-archive-key"
     )
     db_session.add(app)
     await db_session.flush()
@@ -454,6 +475,7 @@ async def test_app_2_paid(
         price=1000,
         publisher_id=test_user_2.id,
         keywords=["paid", "app", "test"],
+        archive_key="test-archive-key"
     )
     db_session.add(app)
     await db_session.flush()
@@ -473,6 +495,7 @@ async def test_app_private(
         publisher_id=test_user_2.id,
         keywords=["free", "app", "test"],
         public=False,
+        archive_key="test-archive-key"
     )
     db_session.add(app)
     await db_session.flush()
@@ -505,28 +528,33 @@ async def test_apps(db_session: AsyncSession, test_user_2: UserDB):
         AppDB(
             title="test", 
             keywords=[" KEY ", " key 2"], 
-            publisher_id=test_user_2.id
+            publisher_id=test_user_2.id,
+            archive_key="test-archive-key"
             ),
         AppDB(
             title="test", 
             keywords=["kEy"],
-            publisher_id=test_user_2.id
+            publisher_id=test_user_2.id,
+            archive_key="test-archive-key"
             ),
         AppDB(
             title="test", 
             keywords=["  key  "],
-            publisher_id=test_user_2.id
+            publisher_id=test_user_2.id,
+            archive_key="test-archive-key"
             ),
         AppDB(
             title="test", 
             keywords=[" Newkey "],
-            publisher_id=test_user_2.id
+            publisher_id=test_user_2.id,
+            archive_key="test-archive-key"
             ),
         AppDB(
             title="hidden test", 
             keywords=[" Newkey "],
             publisher_id=test_user_2.id,
-            public=False
+            public=False,
+            archive_key="test-archive-key"
             )
         ]
     db_session.add_all(apps)

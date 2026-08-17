@@ -94,7 +94,9 @@ class UserService:
         bg_tasks: BackgroundTasks,
         request: Request,
         redis: Redis,
-        sends_email: bool
+        sends_email: bool,
+        access_secret_key: str,
+        refresh_secret_key: str
     ) -> LoginResponse:
         user = await self.authenticate_user(username, password)
 
@@ -106,8 +108,12 @@ class UserService:
         )
 
         tokens = await create_token_pair(
-            {"sub": str(user.id), "roles": json.dumps(user.roles)}, 
-            redis
+            data={
+                "sub": str(user.id), "roles": json.dumps(user.roles)
+            }, 
+            redis=redis,
+            access_secret_key=access_secret_key,
+            refresh_secret_key=refresh_secret_key
         )
         if user.email is not None and sends_email:
             bg_tasks.add_task(
@@ -143,7 +149,7 @@ class UserService:
             raise invalid_refresh_token_exception
 
     async def set_role(
-        self, user_id: UUID, role: UserRole
+        self, user_id: UUID, role: UserRole, secret_key: str
     ) -> UserRoleResponse:
         async with self.uow:
             user = await self.uow.user_repo.get_user_by_id(user_id)
@@ -157,27 +163,27 @@ class UserService:
             user.roles = user.roles + [role.value]
             await self.uow.commit()
 
+        access_token = create_access_token(
+            data={
+                "sub": str(user_id), "roles": json.dumps(user.roles)
+            },
+            secret_key=secret_key
+        )
         return UserRoleResponse(
             acquired_role=role.value,
             username=user.username,
-            new_access_token=create_access_token(
-                {"sub": str(user_id), "roles": json.dumps(user.roles)}
-            )
+            new_access_token=access_token
         )
 
     async def update_user(
         self, user: UserDB, data: UserUpdate, 
     ):
         async with self.uow:
-            if user.username == data.username or user.email == data.email:
+            if user.username == data.username:
                 raise user_data_used_exception
 
             if await self.username_registered(data.username):
                 raise username_used_exception
-
-            if data.email is not None:
-                if await self.email_registered(data.email):
-                    raise email_used_exception
                 
             data = data.model_dump(exclude_unset=True, exclude_none=True)
             user.sqlmodel_update(data)

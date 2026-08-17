@@ -39,10 +39,10 @@ class AppService:
         self.uow = uow
 
     async def upload_app(
-        self, data: AppRequest, user: UserDB
+        self, data: AppRequest, publisher_id: UUID
     ) -> AppDB:
         async with self.uow:
-            app = await self.uow.app_repo.upload_app(data, user.id)
+            app = await self.uow.app_repo.upload_app(data, publisher_id)
             await self.uow.commit()
 
         return app

@@ -1,8 +1,14 @@
 from fastapi import HTTPException, status
 
-# ----- Custom -----
+# ----- Base ------
 
-class TokenError(BaseException):
+class NotFoundError(Exception):
+    pass
+
+
+# ----- Token -----
+
+class TokenError(Exception):
     pass
 
 class InvalidTokenPayloadError(TokenError):
@@ -13,6 +19,13 @@ class InvalidTokenError(TokenError):
 
 class TokenExpiredError(TokenError):
     pass
+
+
+# ----- User -----
+
+class UserNotFoundError(NotFoundError):
+    pass
+
 
 # ----- General -----
 
@@ -68,7 +81,7 @@ username_used_exception = HTTPException(
 
 user_data_used_exception = HTTPException(
     status.HTTP_409_CONFLICT, 
-    "Username or email is already used"
+    "Username is already used"
 )
 
 already_has_role_exception = HTTPException(

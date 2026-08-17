@@ -1,6 +1,7 @@
 from uuid import UUID
 import asyncio
 import logging
+import json
 
 from fastapi import APIRouter, status, Depends, WebSocket
 from fastapi.websockets import WebSocketDisconnect
@@ -8,8 +9,11 @@ from fastapi.websockets import WebSocketDisconnect
 from pydantic import ValidationError
 
 from app.core.config import settings
-from app.core.exceptions import InvalidTokenError, InvalidTokenPayloadError
-
+from app.core.exceptions import (
+    InvalidTokenError, 
+    InvalidTokenPayloadError, 
+    UserNotFoundError
+)
 from app.schemas.discussion import (
     DiscussionRequest,
     DiscussionResponse,
@@ -17,7 +21,7 @@ from app.schemas.discussion import (
     MessageRequest,
     MessageResponse
 )
-from app.schemas.ws_messages import incoming_adapter
+from app.schemas.ws_messages import incoming_adapter, AuthMessage
 from app.schemas.ws_events import (
     ErrorEvent
 )
@@ -30,7 +34,8 @@ from app.api.dependencies import (
     DiscussionManagerDep,
     validate_access_token,
     AccessSecretKeyDep,
-    UserServiceDep
+    UserRepoDep,
+    DiscussionRepoDep
 )
 
 router = APIRouter(
@@ -46,8 +51,9 @@ logger = logging.getLogger("app.discussion_router")
 async def ws_discussion(
     id: UUID,
     websocket: WebSocket, 
+    discussion_repo: DiscussionRepoDep,
     discussion_service: DiscussionServiceDep,
-    user_service: UserServiceDep,
+    user_repo: UserRepoDep,
     discussion_manager: DiscussionManagerDep,
     secret_key: AccessSecretKeyDep
 ):
@@ -57,9 +63,21 @@ async def ws_discussion(
         ws_data = await asyncio.wait_for(
             websocket.receive_json(), 
             timeout=settings.AUTH_TIMEOUT
+        )
+        msg_type = ws_data.get("type", None)
+
+        if msg_type is None or msg_type != "auth":
+            await websocket.send_json(
+                ErrorEvent(detail="Invalid message").model_dump(mode="json")
             )
-        user_id = validate_access_token(ws_data["token"], secret_key)
-        user = await user_service.get_user_by_id(user_id)
+            return
+        
+        user_id = validate_access_token(ws_data["token"], secret_key).user_id
+        user = await user_repo.get_user_by_id(user_id)
+
+        if not user:
+            raise UserNotFoundError()
+
         logger.info("Validated token from user")
     except asyncio.TimeoutError:
         await websocket.close(
@@ -73,17 +91,27 @@ async def ws_discussion(
             reason="Invalid token"
         )
         return
+    except UserNotFoundError:
+        await websocket.close(
+            code=status.WS_1008_POLICY_VIOLATION,
+            reason="User not found"
+        )
+        return
+    except ValidationError as e:
+        await websocket.send_json(
+            ErrorEvent(detail=str(e)).model_dump(mode="json")
+        )
 
     logger.info("Start getting discussion")
-    discussion = await discussion_service.get_discussion(id)
+    discussion = await discussion_repo.get_discussion(id)
     
     if discussion is None:
         await websocket.close(
-            code=status.WS_1003_UNSUPPORTED_DATA,
+            code=status.WS_1008_POLICY_VIOLATION,
             reason="Discussion not found"
         )
         return
-
+    
     logger.info("Start connecting ws in the manager")
     await websocket.send_json({"type": "auth_ok"})
     await discussion_manager.connect(id, websocket)
@@ -142,7 +170,7 @@ async def get_discussion(
     skip, limit = skip_limit
     return await discussion_service.get_discussion(
         id=id, skip=skip, limit=limit
-        )
+    )
 
 
 @router.get(

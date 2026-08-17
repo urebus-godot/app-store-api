@@ -10,7 +10,7 @@ from app.schemas.media import (
     ConfirmCoverRequest,
     MediaConfirmResponse,
 )
-from app.schemas.storage import UploadPresignRequest, UploadPresignResponse
+from app.schemas.file import UploadPresignRequest, UploadPresignResponse
 
 router = APIRouter(
     dependencies=[Depends(rate_limit)]

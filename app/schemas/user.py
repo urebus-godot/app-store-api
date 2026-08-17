@@ -59,7 +59,6 @@ class UserUpdate(SQLModel):
         min_length=settings.MIN_NAME_LEN,
         max_length=settings.MAX_NAME_LEN
         )
-    email: Optional[EmailStr] = None
     password: Optional[str] = Field(
         default=None,
         min_length=settings.MIN_PASSWORD_LEN
@@ -87,8 +86,6 @@ class UserResponse(BaseUser):
     roles: set[UserRole]
 
     model_config = ConfigDict(from_attributes=True)
-    pending_avatar_key: Optional[str] = None
-    avatar_key: Optional[str] = None
 
 
 class PublisherResponse(BaseUser):

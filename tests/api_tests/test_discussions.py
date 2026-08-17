@@ -1,23 +1,33 @@
 import asyncio
 from logging import Logger
-
-from httpx import AsyncClient
+import json
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from fastapi import status
+
 from httpx_ws.transport import ASGIWebSocketTransport
-from httpx_ws import aconnect_ws
+from httpx_ws import aconnect_ws, AsyncWebSocketSession, WebSocketDisconnect
+from httpx import AsyncClient
 import httpx
 
 from fakeredis import FakeRedis
 
 import pytest_asyncio
+import pytest
 
 from app.core.config import settings
+from app.core.auth import create_access_token
 
 from app.main import app
-from app.api.dependencies import get_redis, get_access_secret_key, get_session, get_session_factory, rate_limit
+from app.api.dependencies import (
+    get_redis, 
+    get_access_secret_key, 
+    get_session, 
+    get_session_factory, 
+    rate_limit
+    )
 
 from app.models.discussion import DiscussionDB, MessageDB
 from app.models.user import UserDB
@@ -25,7 +35,7 @@ from app.models.app import AppDB
 
 
 @pytest_asyncio.fixture(scope="function")
-async def ws_client(
+async def websocket(
     fake_redis: FakeRedis, 
     test_discussion_2: DiscussionDB, 
     test_user: UserDB,
@@ -47,10 +57,13 @@ async def ws_client(
             transport=transport,
             base_url="http://ws_test"
         ) as ac:
-            
-            yield ac
-    except RuntimeError as e:
-        logger.error(f"Runtime error occurred: {e}")
+            async with aconnect_ws(
+            f"/api/v1/ws/discussions/{test_discussion_2.id}",
+            ac
+            ) as websocket:
+                yield websocket
+    except RuntimeError:
+        logger.error(f"WebSocket disconnected")
 
 
 @pytest_asyncio.fixture
@@ -244,23 +257,59 @@ class TestMessage:
         assert get_response.status_code == 200
         assert len(get_response.json()["messages"]) == 10
 
+
+class TestWebSocket:
     async def test_ws_discussion(
         self,
-        ws_client: AsyncClient,
-        access_token: str,
-        test_discussion_2: DiscussionDB
+        websocket: AsyncWebSocketSession,
+        test_discussion_2: DiscussionDB,
+        test_user: UserDB
     ):
-        async with aconnect_ws(
-            f"/api/v1/ws/discussions/{test_discussion_2.id}",
-            ws_client
-        ) as websocket:
-            await websocket.send_json({"type": "auth", "token": access_token})
-            data = await asyncio.wait_for(websocket.receive_json(), timeout=1)
-            assert data == {"type": "auth_ok"}
-            
-            await asyncio.sleep(0.1) 
+        token = create_access_token(
+            data={
+                "sub": str(test_user.id),
+                "roles": json.dumps(test_user.roles)
+            },
+            secret_key=settings.TEST_ACCESS_SECRET_KEY
+        )
+        await websocket.send_json({"type": "auth", "token": token})
+        data = await asyncio.wait_for(websocket.receive_json(), timeout=2)
+        assert data == {"type": "auth_ok"}
 
-            await websocket.send_json({"text": "Hello, World!"})
-            raw_response = await asyncio.wait_for(websocket.receive_json(), timeout=1)
+        await websocket.send_json(
+            {"type": "send_message", "text": "Hello, World!"}
+        )
+        response: dict = await asyncio.wait_for(
+            websocket.receive_json(), timeout=2
+        )
 
-            assert "Hello, World!" in str(raw_response)
+        assert response["message"]["text"] == "Hello, World!"
+        assert response["type"] == "new_message"
+
+        await websocket.send_json({"type": "user_typing"})
+        response: dict = await asyncio.wait_for(
+            websocket.receive_json(), timeout=2
+        )
+
+        assert response["type"] == "user_typing"
+        assert response["user_id"] == str(test_user.id)
+        assert response["discussion_id"] == str(test_discussion_2.id)
+
+    async def test_ws_discussion_wrong_token(
+        self,
+        websocket: AsyncWebSocketSession,
+    ):
+        with pytest.raises(WebSocketDisconnect) as exc_info:
+            await websocket.send_json({"type": "auth", "token": "fake_token"})
+            await asyncio.wait_for(websocket.receive_json(), timeout=2)
+        assert exc_info.value.code == status.WS_1008_POLICY_VIOLATION
+
+    async def test_ws_discussion_wrong_type(
+        self,
+        websocket: AsyncWebSocketSession,
+    ):
+        await websocket.send_json({"type": "wrong_type"})
+        response = await asyncio.wait_for(websocket.receive_json(), timeout=2)
+
+        assert response["type"] == "error"
+        assert "Invalid message" in response["detail"]

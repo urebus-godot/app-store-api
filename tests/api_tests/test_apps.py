@@ -6,21 +6,22 @@ import pytest
 from app.models.app import AppDB
 
 
-
 class TestApps:
-    async def test_create_app(self, publisher_client: AsyncClient):
+    async def test_create_app(self, publisher_client: AsyncClient, logger):
         response = await publisher_client.post(
             "/api/v1/apps", json={"title": "gta 6", "price": 500}
         )
         data = response.json()
+        logger.error(data)
 
         assert response.status_code == 201
         assert data["price"] == "500"
 
-    async def test_create_app_not_publisher(self, auth_client: AsyncClient):
+    async def test_create_app_not_publisher(self, auth_client: AsyncClient, logger):
         response = await auth_client.post(
             "/api/v1/apps", json={"title": "gta 6", "price": 500}
         )
+        logger.info(response.json())
         assert response.status_code == 403
 
     @pytest.mark.parametrize(
@@ -96,7 +97,7 @@ class TestApps:
     async def test_get_apps(
         self, 
         client: AsyncClient, 
-        test_apps: list[AppDB]
+        test_apps: list[AppDB],
     ):
         query = {"search_query": "KEY NEWKEY"}
         response = await client.get("/api/v1/apps")

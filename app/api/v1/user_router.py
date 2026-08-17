@@ -19,6 +19,7 @@ from app.api.dependencies import (
     UserServiceDep,
     SendEmailDep,
     RefreshSecretKeyDep,
+    AccessSecretKeyDep,
     rate_limit,
     RedisDep,
     check_admin_password,
@@ -66,7 +67,9 @@ async def login(
     request: Request,
     response: Response,
     bg_tasks: BackgroundTasks,
-    sends_email: SendEmailDep
+    sends_email: SendEmailDep,
+    access_secret_key: AccessSecretKeyDep,
+    refresh_secret_key: RefreshSecretKeyDep,
 ) -> LoginResponse:
     """Returns refresh and access tokens to the user on success."""
     login_response = await user_service.login(
@@ -75,7 +78,9 @@ async def login(
         bg_tasks=bg_tasks,
         request=request,
         redis=redis,
-        sends_email=sends_email
+        sends_email=sends_email,
+        access_secret_key=access_secret_key,
+        refresh_secret_key=refresh_secret_key
     )
 
     response.set_cookie(
@@ -104,7 +109,8 @@ async def logout(
 @router.post("/users/refresh")
 async def refresh_tokens(
     request: Request,
-    secret_key: RefreshSecretKeyDep,
+    access_secret_key: AccessSecretKeyDep,
+    refresh_secret_key: RefreshSecretKeyDep,
     redis: RedisDep,
     user_service: UserServiceDep
 ) -> TokenResponse:
@@ -114,7 +120,8 @@ async def refresh_tokens(
     tokens = await auth.refresh_tokens(
         refresh_token=refresh_token, 
         redis=redis, 
-        secret_key=secret_key,
+        access_secret_key=access_secret_key,
+        refresh_secret_key=refresh_secret_key,
         user_service=user_service
     )
     return TokenResponse(
@@ -126,9 +133,12 @@ async def refresh_tokens(
 @router.post("/users/me/roles/publisher")
 async def set_publisher_role(
     user_id: UserIdDep,
-    user_service: UserServiceDep
+    user_service: UserServiceDep,
+    secret_key: AccessSecretKeyDep
 ) -> UserRoleResponse:
-    return await user_service.set_role(user_id, UserRole.PUBLISHER)
+    return await user_service.set_role(
+        user_id, UserRole.PUBLISHER, secret_key
+    )
 
 
 @router.post(
@@ -137,9 +147,12 @@ async def set_publisher_role(
 )
 async def set_admin_role(
     user_id: UserIdDep,
-    user_service: UserServiceDep
+    user_service: UserServiceDep,
+    secret_key: AccessSecretKeyDep
 ) -> UserRoleResponse:
-    return await user_service.set_role(user_id, UserRole.ADMIN)
+    return await user_service.set_role(
+        user_id, UserRole.ADMIN, secret_key
+    )
 
 
 @router.post(
@@ -149,9 +162,10 @@ async def set_admin_role(
 async def set_role_to_user(
     user_id: UUID,
     data: UserRoleRequest,
-    user_service: UserServiceDep
+    user_service: UserServiceDep,
+    secret_key: AccessSecretKeyDep
 ) -> UserRoleResponse:
-    return await user_service.set_role(user_id, data.role)
+    return await user_service.set_role(user_id, data.role, secret_key)
 
 
 @router.patch("/users/me")

@@ -160,10 +160,10 @@ async def rate_limit(
     try:
         logger.info("Start checking for limit")
         bearer = request.headers.get("Authorization")
-        logger.info(f"Getting bearer {bearer}")
 
         if bearer and bearer.startswith("Bearer"):
             access_token = bearer[7:]
+            logger.info(f"\nGot token: {access_token}\n")
             token_data = validate_access_token(access_token, secret_key)
             result = await rate_limiter.check(token_data.user_id)
             logger.info("Checked for authenticated user")
@@ -188,7 +188,7 @@ def get_session_factory() -> async_sessionmaker[AsyncSession]:
 def require_role(role: UserRole) -> UserDB:
     def wrapper(
         token: TokenDep, secret_key: AccessSecretKeyDep
-        ) -> UserDB:
+    ) -> UserDB:
         try:
             token_data = validate_access_token(token, secret_key)
             user_roles = token_data.roles
@@ -202,8 +202,15 @@ def require_role(role: UserRole) -> UserDB:
     return wrapper
 
 
-def check_admin_password(password: str) -> None:
-    if password != settings.ADMIN_PASSWORD:
+def get_admin_password() -> str:
+    return settings.ADMIN_PASSWORD
+
+
+def check_admin_password(
+    password: str,
+    admin_password: Annotated[str, Depends(get_admin_password)]
+) -> None:
+    if password != admin_password:
         raise incorrect_password_exception
 
 

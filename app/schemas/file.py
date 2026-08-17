@@ -1,10 +1,7 @@
 from pydantic import BaseModel
 
 
-
-
 class UploadPresignRequest(BaseModel):
-    filename: str
     content_type: str
 
 

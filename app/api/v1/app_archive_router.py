@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, status
 
 from app.api.dependencies import UserIdDep, AppArchiveServiceDep, rate_limit
 
-from app.schemas.storage import (
+from app.schemas.file import (
     DownloadPresignResponse,
     UploadPresignRequest,
     UploadPresignResponse,

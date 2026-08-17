@@ -33,7 +33,6 @@ def connect_to_sync_redis_client(
     return SyncRedisClient(url)
 
 
-@lru_cache
 def get_redis() -> Redis:
     from app.main import app
     return app.state.redis_client.redis

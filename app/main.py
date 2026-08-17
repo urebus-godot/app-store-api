@@ -15,7 +15,7 @@ from app.core.exception_handlers import (
     file_not_found_error_handler,
     request_error_handler,
     timeout_error_handler
-    )
+)
 from app.core.logging import setup_logging
 from app.core.config import settings
 
@@ -96,7 +96,7 @@ app.include_router(
 app.include_router(
     app_archive_router.router, 
     prefix="/api/v1/files/apps/{app_id}", 
-    tags=["Application", "Files"]
+    tags=["App archives"]
 )
 
 app.include_router(
@@ -134,6 +134,7 @@ async def health_check(
         return {"status": "Healthy"}
     except Exception:
         return unhealthy_response
+
 
 if __name__ == "__main__":
     import uvicorn

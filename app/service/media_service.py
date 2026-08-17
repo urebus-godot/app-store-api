@@ -7,7 +7,7 @@ from fastapi import HTTPException, status
 from app.models.app_cover import AppCover
 
 from app.schemas.media import AppCoverListResponse, AppCoverResponse, MediaConfirmResponse
-from app.schemas.storage import UploadPresignResponse
+from app.schemas.file import UploadPresignResponse
 
 from app.storage.protocols import ObjectStorage
 
@@ -243,7 +243,7 @@ class MediaService:
         if not object_key.startswith(expected_prefix):
             raise HTTPException(
                 status.HTTP_400_BAD_REQUEST, 
-                "Некорректный object_key"
+                "Incorrect object_key"
             )
 
         async with self.uow:
@@ -330,12 +330,19 @@ class MediaService:
         )
 """
 curl -X PUT \
-  -H "Content-Type: image/png" \
-  --data-binary "@/mnt/c/Users/user/Downloads/GetImage.PNG" \
-  "http://localhost:9000/user-avatars/users/e5c34317-172c-43ff-ba26-ec394348a3cc/fe9af225-7fc3-4b40-ace9-674fbd314d64.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=user%2F20260812%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260812T103412Z&X-Amz-Expires=600&X-Amz-SignedHeaders=content-type%3Bhost&X-Amz-Signature=581fcf01358d33c68c5f971c5622cf7f96ff36d0a1c87623614c8e1826e037e4"
+  -H "Content-Type: application/zip" \
+  --data-binary "@/mnt/c/Users/user/scripting/projects/backend/app_store_api/tests/files/archive.zip" \
+  "http://localhost:9000/app-archives/2290c58d-1788-42a5-9613-b7b084b1edd7/9d6100d7-84e2-43d6-ba78-b4065367a695.zip?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=user%2F20260815%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260815T110356Z&X-Amz-Expires=600&X-Amz-SignedHeaders=content-type%3Bhost&X-Amz-Signature=a273dcf37161667e7bf422faa9b7a08cbd6f5d74e311b6e602f40d6f893c55df"
   """
 
 """
-curl -X GET \
-  "http://localhost:9001/api/v1/buckets/user-avatars/objects/download?prefix=users%2Fe5c34317-172c-43ff-ba26-ec394348a3cc%2Ffe9af225-7fc3-4b40-ace9-674fbd314d64.png&version_id=null"
+curl -X PUT \
+  -H "Content-Type: image/png" \
+  --data-binary "@/mnt/c/Users/user/scripting/projects/backend/app_store_api/tests/files/test_app_cover.PNG" \
+  "http://localhost:9000/user-avatars/users/e5c34317-172c-43ff-ba26-ec394348a3cc/cc777b65-904f-41df-82ca-5234d88199f1.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=user%2F20260816%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260816T164537Z&X-Amz-Expires=600&X-Amz-SignedHeaders=content-type%3Bhost&X-Amz-Signature=250ed70fb11bad15046d20f71c7783766ad6e3006bbe72f027ad78882b59026c"
+  """
+
+"""
+curl -X GET --output file.zip \
+  "http://localhost:9000/app-archives/2290c58d-1788-42a5-9613-b7b084b1edd7/9d6100d7-84e2-43d6-ba78-b4065367a695.zip?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=user%2F20260815%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260815T110808Z&X-Amz-Expires=300&X-Amz-SignedHeaders=host&X-Amz-Signature=4201ee2bbb6750edcf15c726db43690eb3ca24737da86e4535354e1835555c27"
 """

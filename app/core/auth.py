@@ -5,7 +5,6 @@ import logging
 import json
 
 from fastapi import HTTPException, status
-from jwt import PyJWTError
 import jwt
 
 from app.utils.time import get_refresh_token_expire
@@ -14,7 +13,8 @@ from app.core.config import settings
 from app.core.exceptions import (
     invalid_refresh_token_exception,
     InvalidTokenError,
-    TokenExpiredError
+    TokenExpiredError,
+    token_expired_exception
 )
 from app.db.redis import Redis
 
@@ -23,6 +23,7 @@ logger = logging.getLogger("app.auth")
 
 def create_access_token(
     data: dict, 
+    secret_key: str,
     expires_delta: Optional[timedelta] = None
 ) -> str:
     """Create a JWT access token for the user."""
@@ -35,11 +36,13 @@ def create_access_token(
         {"exp": int(expire.timestamp()), "type": "access"}
     )
     return jwt.encode(
-        payload, settings.ACCESS_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
+        payload, secret_key, algorithm=settings.JWT_ALGORITHM
     )
 
 
-async def create_refresh_token(user_id: str, redis: Redis) -> str:
+async def create_refresh_token(
+    user_id: str, secret_key: str, redis: Redis
+) -> str:
     """Create a refresh token for the user."""
     jti = str(uuid4())
     family_id = str(uuid4())
@@ -54,7 +57,7 @@ async def create_refresh_token(user_id: str, redis: Redis) -> str:
     }
 
     refresh_token = jwt.encode(
-        payload, settings.REFRESH_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
+        payload, secret_key, algorithm=settings.JWT_ALGORITHM
     )
     days = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     refresh_ttl = int(days.total_seconds())
@@ -68,10 +71,14 @@ async def create_refresh_token(user_id: str, redis: Redis) -> str:
     return refresh_token
 
 
-async def create_token_pair(data: dict, redis: Redis) -> dict[str, str]:
+async def create_token_pair(
+    data: dict, redis: Redis,
+    access_secret_key: str,
+    refresh_secret_key: str
+) -> dict[str, str]:
     """Create both access and refresh tokens for the user."""
-    access_token = create_access_token(data)
-    refresh_token = await create_refresh_token(data["sub"], redis)
+    access_token = create_access_token(data, access_secret_key)
+    refresh_token = await create_refresh_token(data["sub"], refresh_secret_key, redis)
     return {"access_token": access_token, "refresh_token": refresh_token}
 
 
@@ -105,7 +112,8 @@ async def revoke_all_user_tokens(user_id: str, redis: Redis) -> None:
 async def refresh_tokens(
     refresh_token: str, 
     redis: Redis,
-    secret_key: str,
+    access_secret_key: str,
+    refresh_secret_key: str,
     user_service
 ) -> dict[str, str]:
     """Creates new refresh and access tokens
@@ -113,14 +121,15 @@ async def refresh_tokens(
     try:
         payload = jwt.decode(
             refresh_token,
-            secret_key,
+            refresh_secret_key,
             algorithms=settings.JWT_ALGORITHM,
         )
         logger.info(f"Decoded refresh token: \n {payload = }")
-    except PyJWTError as e:
-        logger.error(f"\n JWT Error occurred: \n{e}\n")
+    except jwt.InvalidTokenError as e:
         raise invalid_refresh_token_exception
-
+    except jwt.ExpiredSignatureError as e:
+        raise token_expired_exception
+    
     if payload.get("type") != "refresh":
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Wrong token type")
 
@@ -150,8 +159,12 @@ async def refresh_tokens(
     await redis.delete(f"refresh_token:{jti}")
 
     user = await user_service.get_user_by_id(user_id)
-    new_tokens = await create_token_pair({
-        "sub": user_id, "roles": json.dumps(user.roles)}, 
-        redis
+    new_tokens = await create_token_pair(
+        data={
+            "sub": user_id, "roles": json.dumps(user.roles)
+        }, 
+        redis=redis,
+        access_secret_key=access_secret_key,
+        refresh_secret_key=refresh_secret_key
     )
     return new_tokens

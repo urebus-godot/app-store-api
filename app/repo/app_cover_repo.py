@@ -19,17 +19,3 @@ class AppCoverRepository:
         stmt = select(AppCover).where(AppCover.app_id == app_id)
         covers = (await self.session.exec(stmt)).all()
         return covers
-
-    async def next_position(self, app_id: UUID):
-        stmt = (
-            select(AppCover.position)
-            .where(AppCover.app_id == app_id)
-            .order_by(AppCover.position.desc())
-            .limit(1)
-                )
-        position = (await self.session.exec(stmt)).first()
-
-        if position is None:
-            return 0
-        
-        return position + 1

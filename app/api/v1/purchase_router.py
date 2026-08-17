@@ -23,7 +23,7 @@ router = APIRouter(
 
 
 @router.post(
-    "/carts/{user_id}/{app_id}", 
+    "/carts/my/{app_id}", 
     status_code=status.HTTP_201_CREATED
     )
 async def add_app_to_cart(
@@ -50,7 +50,7 @@ async def purchase_apps_in_cart(
         )
 
 
-@router.post("/carts/me")
+@router.post("/carts/my")
 async def get_cart(
     user_id: UserIdDep,
     purchase_service: PurchaseServiceDep
@@ -59,7 +59,7 @@ async def get_cart(
     return cart
 
 
-@router.get("/purchases/history")
+@router.get("/purchases/my/history")
 async def get_purchase_history(
     user_id: UserIdDep,
     skip_limit: SkipLimitParams,
@@ -72,7 +72,7 @@ async def get_purchase_history(
 
 
 @router.delete(
-    "/carts/{user_id}/{app_id}", 
+    "/carts/my/{app_id}", 
     status_code=status.HTTP_204_NO_CONTENT
 )
 async def remove_app_from_cart(
@@ -84,7 +84,7 @@ async def remove_app_from_cart(
 
 
 @router.delete(
-    "/carts/me", 
+    "/carts/my", 
     status_code=status.HTTP_204_NO_CONTENT
     )
 async def clear_cart(

@@ -77,20 +77,6 @@ class Settings(BaseSettings):
     LOGGING_LEVEL: int = logging.DEBUG
     LOG_FILE_PATH: Optional[str] = None#"app_logs.log"
 
-    FILE_BASE_PATH: Path = Path("media")
-    STATIC_BASE_PATH: Path = FILE_BASE_PATH / Path("static")
-
-    APP_ARCHIVE_PATH: Path = FILE_BASE_PATH / Path("app_archives")
-    APP_COVER_PATH: Path = STATIC_BASE_PATH / Path("applications/covers")
-    APP_THUMBNAIL_PATH: Path = (
-        STATIC_BASE_PATH / Path("applications/thumbnails")
-        )
-
-    PROFILE_PICTURE_PATH: Path = STATIC_BASE_PATH / Path("profile_pictures")
-
-    ARCHIVE_EXTENSIONS: list[str] = [".rar", ".zip", ".7z"]
-    IMAGE_EXTENSIONS: list[str] = [".PNG", ".jpg", ".jpeg", ".webp"]
-
     MINIO_ACCESS_KEY: str
     MINIO_SECRET_KEY: str
     MINIO_INTERNAL_ENDPOINT: str = "http://minio:9000"
@@ -123,7 +109,7 @@ class Settings(BaseSettings):
         <h3>
             Apps have been purchased
             <h2>Details</h2>
-            <p><b>Total price: <i>%s</i></b></p>
+            <p><b>Total price: <i>%s rubles</i></b></p>
             <p><b>Applications: <i>%s</i></b></p>
             <p><b>Time of purchase: <i>%s</i></b></p>
         </h3>

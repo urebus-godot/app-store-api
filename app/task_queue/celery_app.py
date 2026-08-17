@@ -1,8 +1,10 @@
 from celery import Celery
 from celery.utils.log import get_task_logger
 from celery.schedules import crontab
+from celery.signals import setup_logging as setup_logging_signal
 
 from app.core.config import settings
+from app.core.logging import setup_logging
 
 BASE_TASK_PATH = "app.task_queue.tasks"
 
@@ -10,6 +12,10 @@ celery_app = Celery(
     broker=settings.BROKER_URL,
     backend=settings.RESULT_BACKEND_URL
 )
+
+@setup_logging_signal.connect
+def configure_celery_logging(*args, **kwargs):
+    setup_logging()
 
 celery_app.autodiscover_tasks(
     [

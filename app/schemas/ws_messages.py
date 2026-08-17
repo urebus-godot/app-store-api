@@ -4,8 +4,7 @@ from sqlmodel import SQLModel, Field
 from pydantic import TypeAdapter
 
 
-
-class AuthMessageEvent(SQLModel):
+class AuthMessage(SQLModel):
     type: Literal["auth"] = "auth"
     token: str
 
@@ -16,12 +15,11 @@ class SendMessage(SQLModel):
 
 
 class TypingMessage(SQLModel):
-    type: Literal["user_joined"] = "user_joined"
-    text: str
+    type: Literal["user_typing"] = "user_typing"
 
 
 IncomingMessage = Annotated[
-    Union[AuthMessageEvent, SendMessage, TypingMessage],
+    Union[AuthMessage, SendMessage, TypingMessage],
     Field(discriminator="type")
 ]
 incoming_adapter: TypeAdapter[IncomingMessage] = TypeAdapter(IncomingMessage)

@@ -3,7 +3,7 @@ from fakeredis.aioredis import FakeRedis
 from sqlmodel.ext.asyncio.session import AsyncSession
 import pytest
 
-from app.models.user import UserDB
+from app.models.user import UserDB, UserRole
 
 
 class TestUsers:
@@ -99,6 +99,34 @@ class TestUsers:
 
         get_response = await auth_client.get(f"/api/v1/users/{test_user.id}")
         assert get_response.status_code == 404
+
+    async def test_set_admin_role(
+        self, 
+        auth_client: AsyncClient,
+        db_session: AsyncSession
+    ):
+        admin_role_response = await auth_client.post(
+            f"/api/v1/users/me/roles/admin",
+            params={"password": "adminpass"}
+        )
+        assert admin_role_response.status_code == 200
+        return
+        get_user_response = await auth_client.get(
+            "/api/v1/users/me"
+        )
+        data = get_user_response.json()
+        assert UserRole.ADMIN.value in data["roles"]
+
+    async def test_set_admin_role_wrong_password(
+        self, 
+        auth_client: AsyncClient,
+        test_user: UserDB,
+    ):
+        admin_role_response = await auth_client.post(
+            f"/api/v1/users/me/roles/admin",
+            params={"password": "wrongpass"}
+        )
+        assert admin_role_response.status_code == 401
 
 
 class TestUserFiles:
