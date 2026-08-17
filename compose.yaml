@@ -49,7 +49,6 @@ services:
       - type: bind
         source: media
         target: /src/media
-
     restart: always
     env_file:
       - .env
@@ -101,11 +100,6 @@ services:
       - type: bind
         source: app
         target: /src/app
-      
-      - type: bind
-        source: media
-        target: /src/media
-
     depends_on:
       - db
       - redis

@@ -22,18 +22,16 @@ class Settings(BaseSettings):
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8000
 
-    TEST: bool = False
-
-    DB_URL: str
+    DB_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/db"
     TEST_DB_URL: str = (
         "postgresql+asyncpg://postgres:postgres@localhost:5432/test_db"
         )
 
-    REDIS_URL: str
+    REDIS_URL: str = "redis://redis:6379/0"
 
-    BROKER_URL: str
-    RESULT_BACKEND_URL: str
-    WORKER_DB_URL: str
+    BROKER_URL: str = "redis://redis:6379/0"
+    RESULT_BACKEND_URL: str = "redis://redis:6379/0"
+    WORKER_DB_URL: str = "postgresql+psycopg://postgres:postgres@db:5432/db"
     TEST_WORKER_DB_URL: str = (
         "postgresql+psycopg://postgres:postgres@localhost:5432/test_db"
         )
@@ -46,13 +44,13 @@ class Settings(BaseSettings):
     DB_OUTPUT: bool = False
     DEBUG: bool = True
 
-    ADMIN_PASSWORD: str
+    ADMIN_PASSWORD: str = "secret"
 
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 120
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    ACCESS_SECRET_KEY: str
-    REFRESH_SECRET_KEY: str
+    ACCESS_SECRET_KEY: str = "secret"
+    REFRESH_SECRET_KEY: str = "secret"
 
     TEST_ACCESS_SECRET_KEY: str = (
         "4a834639b4bee7011b42f243748c17f13c7aa211a86a06843b5683376e8f35d8"
@@ -76,8 +74,8 @@ class Settings(BaseSettings):
     LOGGING_LEVEL: int = logging.DEBUG
     LOG_FILE_PATH: Optional[str] = None#"app_logs.log"
 
-    MINIO_ACCESS_KEY: str
-    MINIO_SECRET_KEY: str
+    MINIO_ACCESS_KEY: str = "secret"
+    MINIO_SECRET_KEY: str = "secret"
     MINIO_INTERNAL_ENDPOINT: str = "http://minio:9000"
     MINIO_PUBLIC_ENDPOINT: str = "http://localhost:9000"
 
@@ -93,7 +91,7 @@ class Settings(BaseSettings):
     MAX_COVER_SIZE_MB: int = 10
 
     MAIL_USERNAME: str = "satalovserge"
-    MAIL_PASSWORD: str
+    MAIL_PASSWORD: str = "secret"
     MAIL_FROM: str = "satalovserge@gmail.com"
     MAIL_PORT: int = 587
     MAIL_SERVER: str = "smtp.gmail.com"
