@@ -1,25 +1,37 @@
 # App Store API
-## REST API for an online store where you can purchase and upload applications and games.
-**Details:** This is project is written in Python using FastAPI framework. It uses PostgreSQL 16 as a database management system and features a JWT authentication with Redis 7 as refresh token storage.
+## API for an online store where you can purchase and upload software.
+**Details:** 
+Language: Python
+Web framework: FastAPI
+Primary database: PostgreSQL
+Storage for user files: MinIO
+Background tasks: Celery
+Database for cache: Redis
+Reverse proxy: Nginx
+Containers: Docker
+Library for tests: Pytest
 ## Intructions to use project locally
 1. Download the repository.
-2. Make the project directory current.
+``` bash
+git clone path_to_project/app_store_api
+```
+3. Make the project directory current.
 ``` bash
 cd path_to_project/app_store_api
 ```
 3. Run the command to start application.
 ```
-uv run python -m app.main
+docker compose up -d
 ```
-4. Go by link http:127.0.0.1:8000/docs to visit the Swagger documentation or test the project using curl commands:
-### Free route
-``` powershell
-curl.exe -X 'GET' `
+4. Go by link https:127.0.0.1:8000/docs to visit the Swagger UI documentation or test the project using curl commands:
+### Public route
+``` bash
+curl -X 'GET' `
   'http://127.0.0.1:8000/health' `
   -H 'accept: application/json'
 ```
 ### Protected route
-``` powershell
+``` bash
 curl.exe -X 'GET' `
   'http://127.0.0.1:8000/api/v1/users/me' `
   -H 'accept: application/json' `
@@ -28,5 +40,5 @@ curl.exe -X 'GET' `
 ### Testing
 Run pytest tests using next command:
 ``` bash
-uv run python -m pytest
+python -m pytest
 ```
