@@ -78,7 +78,9 @@ async def create_token_pair(
 ) -> dict[str, str]:
     """Create both access and refresh tokens for the user."""
     access_token = create_access_token(data, access_secret_key)
-    refresh_token = await create_refresh_token(data["sub"], refresh_secret_key, redis)
+    refresh_token = await create_refresh_token(
+        data["sub"], refresh_secret_key, redis
+    )
     return {"access_token": access_token, "refresh_token": refresh_token}
 
 

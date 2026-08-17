@@ -63,7 +63,7 @@ async def websocket(
             ) as websocket:
                 yield websocket
     except RuntimeError:
-        logger.error(f"WebSocket disconnected")
+        logger.error("WebSocket disconnected")
 
 
 @pytest_asyncio.fixture

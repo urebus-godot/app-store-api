@@ -62,7 +62,9 @@ async def confirm_icon_upload(
     user_id: UserIdDep,
     media_service: MediaServiceDep,
 ) -> MediaConfirmResponse:
-    return await media_service.confirm_icon_upload(app_id=app_id, user_id=user_id)
+    return await media_service.confirm_icon_upload(
+        app_id=app_id, user_id=user_id
+    )
 
 
 @router.post(
@@ -113,4 +115,6 @@ async def delete_cover(
     user_id: UserIdDep,
     media_service: MediaServiceDep,
 ) -> None:
-    await media_service.delete_cover(app_id=app_id, user_id=user_id, cover_id=cover_id)
+    await media_service.delete_cover(
+        app_id=app_id, user_id=user_id, cover_id=cover_id
+    )

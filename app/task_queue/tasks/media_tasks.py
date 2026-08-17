@@ -50,7 +50,9 @@ def generate_image_variants(self, bucket: str, object_key: str) -> None:
         if image.mode not in ("RGB", "RGBA"):
             image = image.convert("RGBA")
 
-        for size, suffix in ((THUMBNAIL_SIZE, "thumb"), (MEDIUM_SIZE, "medium")):
+        for size, suffix in (
+            (THUMBNAIL_SIZE, "thumb"), (MEDIUM_SIZE, "medium")
+        ):
             variant = image.copy()
             variant.thumbnail(size)  # сохраняет пропорции, не растягивает
 

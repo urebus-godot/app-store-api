@@ -116,9 +116,12 @@ class AppArchiveService:
                 )
             
             if app.publisher_id != user_id:
-                has_purchase = await self._uow.purchase_repo.user_purchased_app(
+                has_purchase = await (
+                self._uow.purchase_repo
+                .user_purchased_app(
                     user_id=user_id, app_id=app_id
                     )
+                )
                 if not has_purchase:
                     raise app_not_purchased_exception
 

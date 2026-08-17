@@ -106,7 +106,7 @@ class TestUsers:
         db_session: AsyncSession
     ):
         admin_role_response = await auth_client.post(
-            f"/api/v1/users/me/roles/admin",
+            "/api/v1/users/me/roles/admin",
             params={"password": "adminpass"}
         )
         assert admin_role_response.status_code == 200
@@ -123,7 +123,7 @@ class TestUsers:
         test_user: UserDB,
     ):
         admin_role_response = await auth_client.post(
-            f"/api/v1/users/me/roles/admin",
+            "/api/v1/users/me/roles/admin",
             params={"password": "wrongpass"}
         )
         assert admin_role_response.status_code == 401

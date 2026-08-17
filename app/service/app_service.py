@@ -15,7 +15,6 @@ from app.schemas.app import (
     AppRequest, AppUpdate, GameUpdate, 
     )
 from app.models.app import GameGenre, AppDB
-from app.models.user import UserDB
 
 from app.repo.app_repo import AppRepository
 from app.repo.purchase_repo import PurchaseRepository

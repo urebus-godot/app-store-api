@@ -110,7 +110,9 @@ class PurchaseService:
             user_cart = await self.get_or_create_cart(user_id)
             app = await self.app_service.get_app(app_id)
 
-            purchased = await self.uow.purchase_repo.get_purchase(app_id, user_id)
+            purchased = await self.uow.purchase_repo.get_purchase(
+                app_id, user_id
+            )
             already_added = await self.uow.purchase_repo.get_cart_item(
                 user_cart.id, app_id
                 )

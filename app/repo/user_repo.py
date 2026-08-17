@@ -7,7 +7,7 @@ from sqlmodel import select, desc
 from sqlalchemy.orm import selectinload
 
 from app.models.user import UserDB
-from app.schemas.user import UserRequest, UserRole
+from app.schemas.user import UserRequest
 
 from app.core.security import get_password_hash
 

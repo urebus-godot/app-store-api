@@ -10,7 +10,10 @@ class MinioStorage:
         common = dict(
             aws_access_key_id=settings.MINIO_ACCESS_KEY,
             aws_secret_access_key=settings.MINIO_SECRET_KEY,
-            config=Config(signature_version="s3v4", s3={'addressing_style': 'path'}),
+            config=Config(
+                signature_version="s3v4", 
+                s3={'addressing_style': 'path'}
+                ),
             region_name="us-east-1",
         )
         self._internal_kwargs = {
@@ -30,7 +33,11 @@ class MinioStorage:
         async with self._session.client("s3", **self._public_kwargs) as client:
             return await client.generate_presigned_url(
                 "put_object",
-                Params={"Bucket": bucket, "Key": key, "ContentType": content_type},
+                Params={
+                    "Bucket": bucket, 
+                    "Key": key, 
+                    "ContentType": content_type
+                    },
                 ExpiresIn=expires_in,
             )
 
@@ -51,7 +58,9 @@ class MinioStorage:
         return await self.object_size(bucket, key) is not None
 
     async def object_size(self, bucket: str, key: str) -> int | None:
-        async with self._session.client("s3", **self._internal_kwargs) as client:
+        async with self._session.client(
+            "s3", **self._internal_kwargs
+        ) as client:
             try:
                 response = await client.head_object(Bucket=bucket, Key=key)
                 return response["ContentLength"]
@@ -64,5 +73,7 @@ class MinioStorage:
         return f"{settings.MINIO_PUBLIC_ENDPOINT}/{bucket}/{key}"
 
     async def delete_object(self, bucket: str, key: str) -> None:
-        async with self._session.client("s3", **self._internal_kwargs) as client:
+        async with self._session.client(
+            "s3", **self._internal_kwargs
+        ) as client:
             await client.delete_object(Bucket=bucket, Key=key)

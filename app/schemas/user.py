@@ -3,7 +3,7 @@ from uuid import UUID
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import EmailStr, ConfigDict, field_validator
+from pydantic import ConfigDict, field_validator
 from sqlmodel import SQLModel, Field
 
 from app.base_models.user import BaseUser, UserRole

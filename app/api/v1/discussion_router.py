@@ -1,7 +1,6 @@
 from uuid import UUID
 import asyncio
 import logging
-import json
 
 from fastapi import APIRouter, status, Depends, WebSocket
 from fastapi.websockets import WebSocketDisconnect
@@ -21,7 +20,7 @@ from app.schemas.discussion import (
     MessageRequest,
     MessageResponse
 )
-from app.schemas.ws_messages import incoming_adapter, AuthMessage
+from app.schemas.ws_messages import incoming_adapter
 from app.schemas.ws_events import (
     ErrorEvent
 )

@@ -1,4 +1,3 @@
-from functools import lru_cache
 
 from redis.asyncio import from_url as redis_from_url
 from redis.asyncio import Redis

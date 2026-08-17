@@ -125,7 +125,7 @@ class TestPurchases:
         test_cart: CartDB,
     ):
         remove_response = await auth_client.delete(
-            f"/api/v1/carts/my/097c51bc-3c31-4cdf-b726-a4b1df084d8e"
+            "/api/v1/carts/my/097c51bc-3c31-4cdf-b726-a4b1df084d8e"
         )
         assert remove_response.status_code == 404
 

@@ -23,11 +23,11 @@ from app.schemas.discussion import (
     ShortDiscussionResponse,
     DiscussionResponse,
 )
-from app.models.discussion import DiscussionDB, MessageDB
-from app.models.review import ReviewDB
-from app.models.finance import TransferDB
-from app.models.purchase import CartDB, CartItem, PurchaseDB
-from app.models.user import UserDB
+#from app.models.discussion import DiscussionDB, MessageDB
+#from app.models.review import ReviewDB
+#from app.models.finance import TransferDB
+#from app.models.purchase import CartDB, CartItem, PurchaseDB
+#from app.models.user import UserDB
 
 UserResponse.model_rebuild()
 CurrentUserResponse.model_rebuild()
