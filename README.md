@@ -1,5 +1,8 @@
 # App Store API
 RESTful API for an online store of computer software. It is designed to publish and purchase games and applications.
+
+---
+
 ## Technology stack:
 - Programming language: **Python 3.13**
 - Framework: **FastAPI**
@@ -9,37 +12,60 @@ RESTful API for an online store of computer software. It is designed to publish 
 - Cache: **Redis**
 - Task queue: **Celery**
 - Testing: **Pytest**
-- Linter: **Ruff**
+- Linting: **Ruff**
 - Reverse proxy: **Nginx**
 - Containerization: **Docker** & **Docker Compose**
-- Package Manager: UV
+- Package Manager: **UV**
+
+---
+
+## Features:
+- Fully asynchronous code
+- JWT authorization with short-lived access tokens and refresh tokens stored in Redis
+- CI/CD pipeline with testing, linting and image building
+- HTTP/2 and HTTPS support using Nginx
+- MinIO S3 for storing user-uploaded files with signed URLs
+- Service/Repository pattern + UOW
+- Multi-stage Docker image building
+- Sending email notifications in FastAPI BackgroundTasks and image processing in Celery tasks
+- Celery Beat for periodic tasks
+- Rate limiting using Redis
 ---
 
 ## 📂 Project structure
 
 ```text
+├── .gtihub/workflows     # CI/CD
 ├── app/                  # App code
-│   ├── api/              # Endpoints, routers, dependency injection
+│   ├── api/              # Endpoints, routers, FastAPI dependency injection
+│   ├── base_models/      # Base SQLModel models
 │   ├── core/             # Configuration, security, logging
 │   ├── db/               # PostgreSQL and Redis connections and configuration
-│   ├── base_models/      # Base SQLModel models
+│   ├── dependencies/     # Code of dependencies (Rate Limiter)
+│   ├── middleware/       # FastAPI middlewares
 │   ├── models/           # SQLModel db models
 │   ├── schemas/          # SQLModel schemas
 │   ├── service/          # Business logic
 │   ├── repo/             # Interaction with the db
+│   ├── uow/              # Unit of Work class
+│   ├── utils/            # Utility functions (datetime, size units conversion)
+│   ├── storage/          # Interaction with MinIO S3 storage
 │   ├── task_queue/       # Celery configuration and tasks
+│   ├── ws/               # WebSockets connection managers
 │   └── main.py           # FastAPI entry point
 ├── migrations/           # Alembic migrations
 ├── tests/                # Pytest tests
-├── .env.example          # Environment variables from .env file
+├── .dockerignore         # Files and directories not included in Docker images
+├── .env.example          # Environment variable examples from .env file
 ├── compose.yaml          # Docker containers to launch the project
 ├── compose.test.yaml     # Docker containers for tests
 ├── Dockerfile            # Image build instructions
 ├── pyproject.toml        # Project configuration and dependencies
-└── uv.lock               # Project dependencies with locked versions
+└── uv.lock               # Project dependencies with fixed versions
 ```
 
 ---
+
 ## Instructions to use project locally
 1. Download the repository.
 ``` bash
@@ -54,8 +80,11 @@ cd /path_to_project/app_store_api
 docker compose up --build
 ```
 4. Visit a documentation or test the project using curl commands.
-* Swagger UI: [http://localhost:8000/docs](http://localhost:8000/docs)
-* ReDoc: [http://localhost:8000/redoc](http://localhost:8000/redoc)
+* Swagger UI: [https://localhost/docs](https://localhost/docs)
+* ReDoc: [https://localhost/redoc](https://localhost/redoc)
+
+---
+
 ### Open route
 ``` bash
 curl -X 'GET' \
@@ -65,12 +94,21 @@ curl -X 'GET' \
 ### Protected route
 ``` bash
 curl -X 'GET' \
-  'http://127.0.0.1:8000/api/v1/users/me' \
+  'https://127.0.0.1/api/v1/users/me' \
   -H 'accept: application/json' \
-  -H 'Authorization: Bearer \
-  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4MDNlMjY1YS1hNmE \
-  5LTQ2NjAtODljYS0wY2M5ZTM2YmQ1MDIiLCJleHAiOjE3ODI5OD \
-  YzMzEsInR5cGUiOiJhY2Nlc3MifQ.Yy2ujVR2rCjKrRGxkYu_ZdYf-WBj0g6wo4QZKd4cDuA'
+  -H 'Authorization: Bearer user-access-token'
+```
+### Install packages and activate virtual environment
+``` bash
+uv sync --locked
+```
+Linux:
+``` bash
+source /path-to-project/.venv/bin/activate
+```
+Windows:
+``` bash
+/path-to-project/.venv/Scripts/Activate.ps1
 ```
 ### Testing
 Run pytest tests:
@@ -82,4 +120,10 @@ pytest
 Run the linter:
 ``` bash
 ruff check
+```
+### Migrations
+``` bash
+Run the database migrations:
+alembic revision -m "Changes of this migration" --autogenerate
+alembic upgrade head
 ```
