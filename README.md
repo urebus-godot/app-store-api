@@ -54,6 +54,7 @@ RESTful API for an online store of computer software. It is designed to publish 
 │   ├── ws/               # WebSockets connection managers
 │   └── main.py           # FastAPI entry point
 ├── migrations/           # Alembic migrations
+├── nginx/                # Nginx configuration
 ├── tests/                # Pytest tests
 ├── .dockerignore         # Files and directories not included in Docker images
 ├── .env.example          # Environment variable examples from .env file
