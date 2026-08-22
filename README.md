@@ -122,8 +122,8 @@ Run the linter:
 ruff check
 ```
 ### Migrations
-``` bash
 Run the database migrations:
+``` bash
 alembic revision -m "Changes of this migration" --autogenerate
 alembic upgrade head
 ```
