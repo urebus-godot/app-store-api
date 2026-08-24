@@ -51,7 +51,7 @@ class RateLimiter:
         self, 
         identifier: str,    
         scope: str,    
-        window_s: int = settings.WINDOW_SECONDS, 
+        window_seconds: int = settings.WINDOW_SECONDS, 
         limit: int = settings.REQUEST_LIMIT,
     ) -> RateLimitResult:
         key = f"rate_limit:{scope}:{identifier}"
@@ -60,7 +60,7 @@ class RateLimiter:
 
         allowed, remaining_requests = await self.script(
             keys=[key],
-            args=[now, window_s, limit, member]
+            args=[now, window_seconds, limit, member]
         )
 
         return RateLimitResult(
