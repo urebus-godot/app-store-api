@@ -2,7 +2,7 @@ from uuid import UUID
 from typing import Optional
 
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select, desc
+from sqlmodel import select
 
 from app.models.review import ReviewDB
 from app.schemas.review import ReviewRequest
@@ -35,7 +35,9 @@ class ReviewRepository:
 
         return review
 
-    async def get_review(self, id: UUID) -> Optional[ReviewDB]:
+    async def get_review(
+        self, id: UUID
+    ) -> Optional[ReviewDB]:
         review = (
             await self.session.exec(select(ReviewDB).where(ReviewDB.id == id))
         ).one_or_none()
@@ -45,21 +47,29 @@ class ReviewRepository:
     async def get_app_reviews(
         self,
         app_id: UUID,
+        skip: int, limit: int
     ) -> list[ReviewDB]:
         app_reviews = (
             await self.session.exec(
                 select(ReviewDB)
                 .where(ReviewDB.app_id == app_id)
-                .order_by(desc(ReviewDB.created_at))
+                .offset(skip)
+                .limit(limit)
+                .order_by(ReviewDB.created_at.desc())
             )
         ).all()
 
         return app_reviews
 
-    async def get_user_reviews(self, user_id: UUID) -> list[ReviewDB]:
+    async def get_user_reviews(
+        self, user_id: UUID, 
+        skip: int, limit: int
+    ) -> list[ReviewDB]:
         user_reviews = await self.session.exec(
             select(ReviewDB)
             .where(ReviewDB.author_id == user_id)
-            .order_by(desc(ReviewDB.created_at))
+            .offset(skip)
+            .limit(limit)
+            .order_by(ReviewDB.created_at.desc())
         )
         return user_reviews

@@ -171,7 +171,9 @@ async def get_own_published_apps(
 ) -> list[AppResponse | GameResponse]:
     logger.info("get_own_published_apps")
     skip, limit = skip_limit
-    apps = await app_service.get_publisher_apps(skip, limit, user_id, False)
+    apps = await app_service.get_publisher_apps(
+        skip=skip, limit=limit, user_id=user_id, public_only=False
+    )
     logger.info(f"published apps are \n {apps}")
     return apps
 
@@ -182,11 +184,12 @@ async def get_own_published_apps(
 async def get_publisher_apps(
     user_id: UUID,
     skip_limit: SkipLimitParams,
-    app_service: AppServiceDep,
-    review_service: ReviewServiceDep,
+    app_service: AppServiceDep
 ) -> list[AppResponse | GameResponse]:
     skip, limit = skip_limit
-    apps = await app_service.get_publisher_apps(skip, limit, user_id)
+    apps = await app_service.get_publisher_apps(
+        skip=skip, limit=limit, user_id=user_id
+    )
     return apps
 
 

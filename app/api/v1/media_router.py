@@ -2,7 +2,9 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
-from app.api.dependencies import UserIdDep, MediaServiceDep, rate_limit
+from app.api.dependencies import (
+    UserIdDep, MediaServiceDep, rate_limit, SkipLimitParams
+)
 
 from app.schemas.media import (
     AppCoverListResponse,
@@ -99,10 +101,12 @@ async def confirm_cover_upload(
     "/apps/{app_id}/covers"
 )
 async def list_covers(
+    skip_limit: SkipLimitParams,
     app_id: UUID,
     media_service: MediaServiceDep,
 ) -> AppCoverListResponse:
-    return await media_service.list_covers(app_id=app_id)
+    skip, limit = skip_limit
+    return await media_service.list_covers(app_id=app_id, skip=skip, limit=limit)
 
 
 @router.delete(

@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import EmailStr
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select, desc
+from sqlmodel import select
 from sqlalchemy.orm import selectinload
 
 from app.models.user import UserDB
@@ -27,7 +27,6 @@ class UserRepository:
             await self.session.exec(
                 select(UserDB)
                 .where(UserDB.username == username)
-                .options(*self.load_attrs)
             )
         ).one_or_none()
 
@@ -38,7 +37,6 @@ class UserRepository:
             await self.session.exec(
                 select(UserDB)
                 .where(UserDB.email == email)
-                .options(*self.load_attrs)
             )
         ).one_or_none()
         return user is not None
@@ -85,7 +83,7 @@ class UserRepository:
                 select(UserDB)
                 .offset(skip)
                 .limit(limit)
-                .order_by(desc(UserDB.registered_at))
+                .order_by(UserDB.registered_at.desc())
                 .options(*self.load_attrs)
             )
         ).all()

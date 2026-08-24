@@ -13,6 +13,12 @@ services:
       - db_data:/var/lib/postgresql/data
     networks:
       - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
   
   redis:
     image: redis:7
@@ -101,9 +107,8 @@ services:
         source: app
         target: /src/app
     depends_on:
-      - db
-      - redis
-      - minio
+      db:
+        condition: service_healthy
     restart: unless-stopped
     env_file:
       - .env
@@ -154,7 +159,7 @@ services:
       mc mb --ignore-existing app-icons;
       mc mb --ignore-existing app-covers;
       mc mb --ignore-existing app-archives;
-      mc anonymous set download avatars;
+      mc anonymous set download user-avatars;
       mc anonymous set download app-icons;
       mc anonymous set download app-covers;
       exit 0;

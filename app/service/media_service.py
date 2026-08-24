@@ -27,6 +27,7 @@ from app.core.exceptions import (
     )
 from app.core.config import settings
 from app.utils.files import validate_and_get_extension, to_megabytes
+from app.utils.files import variant_key
 
 from app.task_queue.tasks.media_tasks import generate_image_variants
 
@@ -43,6 +44,15 @@ class MediaService:
     def __init__(self, storage: ObjectStorage, uow: UnitOfWork) -> None:
         self.storage = storage
         self.uow = uow
+
+    async def delete_image_variants(
+        self, bucket: str, object_key: str
+    ) -> None:
+        for _, suffix in settings.IMAGE_SIZES:
+            await self.storage.delete_object(
+                bucket=bucket,
+                key=variant_key(object_key, suffix)
+            )
 
     async def presign_avatar_upload(
         self, user_id: UUID, content_type: str
@@ -93,7 +103,8 @@ class MediaService:
                 
                 if to_megabytes(size) > settings.MAX_AVATAR_ICON_SIZE_MB:
                     await self.storage.delete_object(
-                        settings.USER_AVATAR_BUCKET, user.pending_avatar_key
+                        settings.USER_AVATAR_BUCKET, 
+                        user.pending_avatar_key
                     )
                     user.pending_avatar_key = None
                     await self.uow.commit()
@@ -110,6 +121,10 @@ class MediaService:
             if old_key:
                 await self.storage.delete_object(
                     settings.USER_AVATAR_BUCKET, old_key
+                )
+                await self.delete_image_variants(
+                    settings.USER_AVATAR_BUCKET,
+                    old_key
                 )
                 logger.info(f"Deleting {old_key = }...")
 
@@ -196,6 +211,10 @@ class MediaService:
             await self.storage.delete_object(
                 settings.APP_ICON_BUCKET, old_key
             )
+            await self.delete_image_variants(
+                settings.USER_AVATAR_BUCKET,
+                old_key
+            )
 
         generate_image_variants.delay(
             settings.APP_ICON_BUCKET, new_key
@@ -259,13 +278,13 @@ class MediaService:
 
             if app.publisher_id != user_id:
                 raise no_rights_exception
-
+            
             size = await self.storage.object_size(
                 settings.APP_COVER_BUCKET, object_key
             )
             if size is None:
                 raise file_not_found_exception
-            
+
             if to_megabytes(size) > settings.MAX_COVER_SIZE_MB:
                 await self.storage.delete_object(
                     settings.APP_COVER_BUCKET, object_key
@@ -287,30 +306,33 @@ class MediaService:
             id=cover_id,
             url=self.storage.build_public_url(
                 settings.APP_COVER_BUCKET, object_key
-            )
+            ),
+            created_at=cover.created_at
         )
 
-    async def list_covers(self, app_id: UUID) -> AppCoverListResponse:
+    async def list_covers(
+        self, app_id: UUID,
+        skip: int, limit: int
+    ) -> AppCoverListResponse:
         async with self.uow:
             app = await self.uow.app_repo.get_app(app_id)
 
-            if app is None:
+            if app is None or not app.public:
                 raise app_not_found_exception
 
-            covers = await self.uow.app_cover_repo.get_app_covers(app_id)
+            covers = await self.uow.app_cover_repo.get_app_covers(app_id, skip, limit)
 
-        return AppCoverListResponse(
-            covers=[
+        covers = [
                 AppCoverResponse(
                     id=c.id,
                     url=self.storage.build_public_url(
                         settings.APP_COVER_BUCKET, c.object_key
                     ),
-                    position=c.position,
+                    created_at=c.created_at
                 )
                 for c in covers
-            ]
-        )
+        ]
+        return AppCoverListResponse(covers=covers)
 
     async def delete_cover(
         self, app_id: UUID, user_id: UUID, cover_id: UUID
@@ -333,4 +355,8 @@ class MediaService:
 
         await self.storage.delete_object(
             settings.APP_COVER_BUCKET, object_key
+        )
+        await self.delete_image_variants(
+            settings.USER_AVATAR_BUCKET,
+            object_key
         )

@@ -7,8 +7,7 @@ from PIL import Image
 from app.core.config import settings
 from app.task_queue.celery_app import celery_app
 
-THUMBNAIL_SIZE = (128, 128)
-MEDIUM_SIZE = (640, 640)
+from app.utils.files import variant_key
 
 
 def sync_s3_client():
@@ -20,14 +19,6 @@ def sync_s3_client():
         config=Config(signature_version="s3v4"),
         region_name="us-east-1",
     )
-
-
-def variant_key(object_key: str, suffix: str) -> str:
-    # apps/xxx/icon/abc.jpg -> apps/xxx/icon/abc_thumb.webp
-    # Ключ детерминированный — фронту не нужно ничего хранить в БД,
-    # чтобы построить URL превью, достаточно знать соглашение об имени.
-    stem = object_key.rsplit(".", 1)[0]
-    return f"{stem}_{suffix}.webp"
 
 
 @celery_app.task(
@@ -50,9 +41,7 @@ def generate_image_variants(self, bucket: str, object_key: str) -> None:
         if image.mode not in ("RGB", "RGBA"):
             image = image.convert("RGBA")
 
-        for size, suffix in (
-            (THUMBNAIL_SIZE, "thumb"), (MEDIUM_SIZE, "medium")
-        ):
+        for size, suffix in settings.IMAGE_SIZES:
             variant = image.copy()
             variant.thumbnail(size)  # сохраняет пропорции, не растягивает
 

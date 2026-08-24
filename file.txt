@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Error><Code>AccessDenied</Code><Message>Access Denied.</Message><Key>apps/2290c58d-1788-42a5-9613-b7b084b1edd7/icon/25b6263a-8fbd-4a08-b74c-d8c81d8de114.png</Key><BucketName>app-icons</BucketName><Resource>/app-icons/apps/2290c58d-1788-42a5-9613-b7b084b1edd7/icon/25b6263a-8fbd-4a08-b74c-d8c81d8de114.png</Resource><RequestId>18CC8D7249C167B9</RequestId><HostId>dd9025bab4ad464b049177c95eb6ebf374d3b3fd1af9251148b658df7ac2e3e8</HostId></Error>

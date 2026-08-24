@@ -10,9 +10,7 @@ from app.core.config import settings
 from app.utils.time import get_time_string
 from app.utils.email_send import send_email
 
-from app.db.redis import connect_to_sync_redis_client
-
-from app.task_queue.celery_app import celery_app
+from app.task_queue.celery_app import celery_app, redis_client, logger
 
 from app.models.app import AppDB
 from app.models.review import ReviewDB
@@ -27,15 +25,10 @@ SessionLocal = sessionmaker(
     expire_on_commit=False
     )
 
-redis_client = connect_to_sync_redis_client()
-
 
 @celery_app.task(name="tasks.update_app_rating")
 def update_app_rating(app_id: str) -> None:
     with SessionLocal() as session:
-        reviews = session.exec(
-            select(ReviewDB)
-        ).all()
         app_id = UUID(app_id)
         result = session.exec(
             select(func.count(ReviewDB.id), func.avg(ReviewDB.rating))
@@ -57,34 +50,40 @@ def update_app_rating(app_id: str) -> None:
 
 
 @celery_app.task(name="tasks.check_for_users_birthday")
-def check_for_users_birthday():
+def check_for_users_birthday() -> list[str]:
+    """
+    Finds users whose birth_date attribute matches the current date,
+    stores promo codes for them in Redis and sends them emails.
+
+    Returns generated promo codes.
+    """
     with SessionLocal() as session:
-        now = datetime.now(timezone.utc)
+        now = datetime.now()
         current_date = now.date()
         stmt = (
             select(UserDB)
-            .where(
-                extract("month", UserDB.birth_date) == current_date.month,
-                extract("day", UserDB.birth_date) == current_date.day
-                )
+
         )
 
         users: list[UserDB] = session.exec(stmt).all()
+        logger.debug(f"{users = }")
+        codes = []
 
         for user in users:
             if user.email is not None:
                 redis = redis_client.redis
                 balance = 500
                 code = uuid4()
+                codes.append(code)
 
                 redis.set(
                     name=f"promo_codes:{code}",
                     value=balance,
                     ex=3600 * 24
-                    )
+                )
                 tomorrow_time = get_time_string(
                     now + timedelta(days=1)
-                    )
+                )
                 
                 email_body = settings.BIRTHDAY_CODE_TEMPLATE % (
                     user.username,
@@ -92,7 +91,7 @@ def check_for_users_birthday():
                     balance,
                     get_time_string(),
                     tomorrow_time
-                    )
+                )
 
                 asyncio.run(
                     send_email(
@@ -101,3 +100,5 @@ def check_for_users_birthday():
                         email_body
                     )
                 )
+
+    return codes

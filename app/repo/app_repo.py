@@ -2,7 +2,7 @@ from uuid import UUID
 from typing import Optional
 
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select, desc
+from sqlmodel import select
 from sqlalchemy.orm import selectinload
 
 from app.models.app import AppDB
@@ -86,7 +86,7 @@ class AppRepository:
             select(AppDB)
             .offset(skip)
             .options(*self.load_attrs)
-            .order_by(desc(AppDB.published_at))
+            .order_by(AppDB.published_at.desc())
         )
 
         if limit is not None:
@@ -109,7 +109,7 @@ class AppRepository:
             select(AppDB)
             .offset(skip)
             .options(*self.load_attrs)
-            .order_by(AppDB.published_at)
+            .order_by(AppDB.published_at.desc())
             .where(AppDB.public, AppDB.keywords.overlap(keywords))
         )
 
@@ -128,7 +128,7 @@ class AppRepository:
                     PurchaseDB.app_id == AppDB.id,
                     PurchaseDB.user_id == user_id,
                 )
-                .order_by(desc(AppDB.published_at))
+                .order_by(AppDB.published_at.desc())
             )
         ).all()
         return apps
@@ -144,14 +144,14 @@ class AppRepository:
             select(AppDB)
             .where(AppDB.publisher_id == user_id)
             .offset(skip)
-            .order_by(desc(AppDB.published_at))
+            .order_by(AppDB.published_at.desc())
         )
 
         if public_only:
             stmt = stmt.where(AppDB.public)
 
         if limit > 0:
-            stmt.limit(limit)
+            stmt = stmt.limit(limit)
 
         publisher_apps = (
             await self.session.exec(stmt.options(*self.load_attrs))
@@ -169,7 +169,7 @@ class AppRepository:
         stmt = (
             select(AppDB)
             .where(AppDB.category == AppCategory.GAME)
-            .order_by(desc(AppDB.published_at))
+            .order_by(AppDB.published_at.desc())
             .offset(skip)
             .limit(limit)
         )
@@ -200,7 +200,7 @@ class AppRepository:
                 AppDB.public,
                 AppDB.category == AppCategory.GAME
                 )
-            .order_by(desc(AppDB.published_at))
+            .order_by(AppDB.published_at.desc())
             .offset(skip)
             .limit(limit)
         )
@@ -217,7 +217,7 @@ class AppRepository:
     async def get_top_games_genre(
         self, 
         genre: GameGenre,
-        skip: int, limit: int
+        skip: int = 0, limit: int = 5
     ) -> list[AppDB]:
         games = (await self.session.exec(
             select(AppDB)
@@ -227,9 +227,11 @@ class AppRepository:
                 AppDB.public
                 )
             .order_by(
-                desc(AppDB.times_purchased),
-                desc(AppDB.rating)
-            ).limit(5).options(*self.load_attrs)
+                AppDB.times_purchased.desc(),
+                AppDB.rating.desc()
+            )
+            .offset(skip).limit(limit)
+            .options(*self.load_attrs)
         )).all()
 
         return games
@@ -245,8 +247,8 @@ class AppRepository:
                 AppDB.public
                 )
             .order_by(
-                desc(AppDB.times_purchased),
-                desc(AppDB.rating)
+                AppDB.times_purchased.desc(),
+                AppDB.rating.desc()
                 ).offset(skip).limit(limit)
                 .options(*self.load_attrs)
         )).all()

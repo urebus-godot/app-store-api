@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, status, Depends
 
 from app.api.dependencies import (
-    UserIdDep, ReviewServiceDep, rate_limit
+    UserIdDep, ReviewServiceDep, rate_limit, SkipLimitParams
     )
 from app.schemas.review import ReviewRequest, ReviewResponse
 
@@ -24,17 +24,23 @@ async def create_review(
 
 @router.get("/reviews/{app_id}")
 async def get_app_reviews(
-    app_id: UUID, review_service: ReviewServiceDep
+    skip_limit: SkipLimitParams,
+    app_id: UUID, 
+    review_service: ReviewServiceDep
 ) -> list[ReviewResponse]:
-    reviews = await review_service.get_app_reviews(app_id)
+    skip, limit = skip_limit
+    reviews = await review_service.get_app_reviews(app_id, skip, limit)
     return reviews
 
 
 @router.get("/users/me/reviews")
 async def get_own_reviews(
-    user_id: UserIdDep, review_service: ReviewServiceDep
+    skip_limit: SkipLimitParams,
+    user_id: UserIdDep, 
+    review_service: ReviewServiceDep
 ) -> list[ReviewResponse]:
-    return await review_service.get_user_reviews(user_id)
+    skip, limit = skip_limit
+    return await review_service.get_user_reviews(user_id, skip, limit)
 
 
 @router.delete(

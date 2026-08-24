@@ -1,6 +1,12 @@
 from celery import Celery
 from celery.schedules import crontab
-from celery.signals import setup_logging as setup_logging_signal
+from celery.signals import (
+    setup_logging as setup_logging_signal, 
+    worker_shutdown as worker_shutdown_signal
+)
+import logging
+
+from app.db.redis import connect_to_sync_redis_client
 
 from app.core.config import settings
 from app.core.logging import setup_logging
@@ -12,9 +18,17 @@ celery_app = Celery(
     backend=settings.RESULT_BACKEND_URL
 )
 
+redis_client = connect_to_sync_redis_client()
+
+
 @setup_logging_signal.connect
 def configure_celery_logging(*args, **kwargs):
     setup_logging()
+
+@worker_shutdown_signal.connect
+def on_worker_shutdown(*args, **kwargs):
+    redis_client.close_conn()
+
 
 celery_app.autodiscover_tasks(
     [
@@ -38,4 +52,4 @@ celery_app.conf.beat_schedule = {
     }
 }
 
-#logger = get_task_logger(__name__)
+logger = logging.getLogger("app.task_queue.celery_app")

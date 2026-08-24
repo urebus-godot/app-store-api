@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from pydantic import BaseModel
 
@@ -14,6 +15,7 @@ class ConfirmCoverRequest(BaseModel):
 class AppCoverResponse(BaseModel):
     id: uuid.UUID
     url: str
+    created_at: datetime
 
 
 class AppCoverListResponse(BaseModel):

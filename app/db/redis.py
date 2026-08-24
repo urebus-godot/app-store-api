@@ -1,7 +1,8 @@
-
 from redis.asyncio import from_url as redis_from_url
 from redis.asyncio import Redis
 from redis import from_url as sync_redis_from_url
+
+from fastapi import Request
 
 from app.core.config import settings
 
@@ -19,7 +20,7 @@ class SyncRedisClient:
         self.redis = sync_redis_from_url(url, decode_responses=True)
 
     def close_conn(self) -> None:
-        self.redis.aclose()
+        self.redis.close()
 
 
 def connect_to_redis_client(url: str = settings.REDIS_URL) -> RedisClient:
@@ -32,6 +33,6 @@ def connect_to_sync_redis_client(
     return SyncRedisClient(url)
 
 
-def get_redis() -> Redis:
-    from app.main import app
-    return app.state.redis_client.redis
+def get_redis(request: Request) -> Redis:
+    app_state = request.app.state
+    return app_state.redis_client.redis

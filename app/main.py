@@ -7,14 +7,16 @@ from fastapi.exceptions import ResponseValidationError
 
 from sqlalchemy import text
 
+import botocore.exceptions as boto_exceptions
+
 import httpx
 
 from app.middleware.logging import RequestLoggerMiddleware
 from app.core.exception_handlers import (
     response_validation_error_handler,
-    file_not_found_error_handler,
     request_error_handler,
-    timeout_error_handler
+    timeout_error_handler,
+    boto_client_error_handler
 )
 from app.core.logging import setup_logging
 from app.core.config import settings
@@ -49,9 +51,9 @@ app = FastAPI(
     lifespan=lifespan,
     exception_handlers={
         ResponseValidationError: response_validation_error_handler,
-        FileNotFoundError: file_not_found_error_handler,
         httpx.RequestError: request_error_handler,
-        httpx.ReadTimeout: timeout_error_handler
+        httpx.ReadTimeout: timeout_error_handler,
+        boto_exceptions.ClientError: boto_client_error_handler
     }
 )
 

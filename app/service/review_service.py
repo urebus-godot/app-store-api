@@ -75,14 +75,20 @@ class ReviewService:
 
     async def get_app_reviews(
         self,
-        app_id: UUID
+        app_id: UUID,
+        skip: int, limit: int
     ) -> list[ReviewDB]:
         await self.app_service.get_app(app_id)
-        app_reviews = await self.review_repo.get_app_reviews(app_id)
+        app_reviews = await self.review_repo.get_app_reviews(app_id, skip, limit)
         return app_reviews
 
-    async def get_user_reviews(self, user_id: UUID) -> list[ReviewDB]:
-        user_reviews = await self.review_repo.get_user_reviews(user_id)
+    async def get_user_reviews(
+        self, user_id: UUID, 
+        skip: int, limit: int
+    ) -> list[ReviewDB]:
+        user_reviews = await self.review_repo.get_user_reviews(
+            user_id, skip, limit
+        )
         return user_reviews
 
     async def delete_review(

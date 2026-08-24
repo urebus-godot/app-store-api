@@ -4,18 +4,11 @@ from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import ResponseValidationError
 
+import botocore.exceptions as boto_exceptions
+
 import httpx
 
 logger = logging.getLogger("app.exception_handlers")
-
-
-def file_not_found_error_handler(
-    request: Request, exception: FileNotFoundError
-) -> JSONResponse:
-    return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"message": "File not found"},
-    )
 
 
 def response_validation_error_handler(
@@ -23,7 +16,7 @@ def response_validation_error_handler(
 ) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-        content={"message": exception.errors()},
+        content={"errors": exception.errors()},
     )
 
 
@@ -44,4 +37,14 @@ def timeout_error_handler(
     return JSONResponse(
         status_code=status.HTTP_504_GATEWAY_TIMEOUT,
         content={"message": "Response timeout expired"},
+    )
+
+
+def boto_client_error_handler(
+    request: Request, exception: boto_exceptions.ClientError
+) -> JSONResponse:
+    logger.error(f"Boto client error: {exception.errors()}")
+    return JSONResponse(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        content={"message": "Boto client error occurred", "errors": exception.errors()},
     )
