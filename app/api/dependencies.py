@@ -60,6 +60,10 @@ from app.ws.discussion_manager import (
 )
 
 oauth_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/login")
+optional_oauth_scheme = OAuth2PasswordBearer(
+    tokenUrl="/api/v1/users/login",
+    auto_error=False
+)
 
 token_errors = {
     InvalidTokenPayloadError: invalid_token_payload_exception,
@@ -103,7 +107,7 @@ def validate_access_token(
 
 
 def get_current_user_id_optionally(
-    token: Annotated[Optional[str], Depends(oauth_scheme)], 
+    token: Annotated[Optional[str], Depends(optional_oauth_scheme)], 
     secret_key: AccessSecretKeyDep
 ) -> Optional[UUID]:
     try:
@@ -115,7 +119,7 @@ def get_current_user_id_optionally(
 
         return UUID(user_id)
 
-    except TokenError:
+    except Exception:
         return None
 
 
@@ -155,29 +159,29 @@ async def rate_limit(
     rate_limiter: Annotated[RateLimiter, Depends(get_rate_limiter)],
     secret_key: AccessSecretKeyDep,
     request: Request,
-    response: Response
+    response: Response,
+    user_id: str | None = Depends(get_current_user_id_optionally),
 ):
-    try:
-        logger.info("Start checking for limit")
-        bearer = request.headers.get("Authorization")
+    # 1. Грубый лимит по IP — защита от анонимного флуда
+    ip_result = await rate_limiter.check(
+        request.client.host,
+        scope="ip",
+        limit=20,
+        window_seconds=60,
+    )
+    if not ip_result.allowed:
+        raise too_many_requests_exception
 
-        if bearer and bearer.startswith("Bearer"):
-            access_token = bearer[7:]
-            token_data = validate_access_token(access_token, secret_key)
-            result = await rate_limiter.check(token_data.user_id)
-            logger.info("Checked for authenticated user")
-        else:
-            result = await rate_limiter.check(request.client.host)
-            logger.info("Checked for guest")
-
-        response.headers["X-RateLimit-Remaining"] = str(
-            result.remaining_requests)
-
-        if not result.allowed:
-            logger.info("Request limit exceeded")
+    # 2. Более узкий лимит по user_id — только для авторизованных
+    if user_id is not None:
+        user_result = await rate_limiter.check(
+            user_id,
+            scope="user",
+            limit=5,
+            window_seconds=60,
+        )
+        if not user_result.allowed:
             raise too_many_requests_exception
-    except TokenError as e:
-        raise token_errors[type(e)]
 
  
 def get_session_factory() -> async_sessionmaker[AsyncSession]:

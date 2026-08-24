@@ -41,7 +41,6 @@ RESTful API for an online store of computer software. It is designed to publish 
 │   ├── base_models/      # Base SQLModel models
 │   ├── core/             # Configuration, security, logging
 │   ├── db/               # PostgreSQL and Redis connections and configuration
-│   ├── dependencies/     # Code of dependencies (Rate Limiter)
 │   ├── middleware/       # FastAPI middleware
 │   ├── models/           # SQLModel db models
 │   ├── schemas/          # SQLModel schemas

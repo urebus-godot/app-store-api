@@ -14,6 +14,10 @@ local window = tonumber(ARGV[2])
 local request_limit = tonumber(ARGV[3])
 local member = ARGV[4]
 
+if now == nil or window == nil or request_limit == nil then
+    return redis.error_reply("invalid numeric argument passed to script")
+end
+
 redis.call('ZREMRANGEBYSCORE', key, 0, now - window)
 
 local request_count = redis.call('ZCARD', key)
@@ -31,32 +35,36 @@ end
 class RateLimitResult:
     allowed: bool
     remaining_requests: int
+    scope: str
 
 
 class RateLimiter:
     def __init__(
         self,
         redis: Redis,
-        window_s: int = settings.WINDOW_SECONDS, 
-        limit: int = settings.REQUEST_LIMIT,
         script: str = LUA_RATE_LIMITER_SCRIPT
     ):
-        self._redis = redis
-        self._window_s = window_s
-        self._limit = limit
-        self._script = self._redis.register_script(script)
+        self.redis = redis
+        self.script = self.redis.register_script(script)
 
-    async def check(self, identifier: str):
-        key = f"rate_limit:{identifier}"
+    async def check(
+        self, 
+        identifier: str,    
+        scope: str,    
+        window_s: int = settings.WINDOW_SECONDS, 
+        limit: int = settings.REQUEST_LIMIT,
+    ) -> RateLimitResult:
+        key = f"rate_limit:{scope}:{identifier}"
         now = time.time()
         member = f"{now}:{uuid.uuid4().hex}"
 
-        allowed, remaining_requests = await self._script(
+        allowed, remaining_requests = await self.script(
             keys=[key],
-            args=[now, self._window_s, self._limit, member]
+            args=[now, window_s, limit, member]
         )
 
         return RateLimitResult(
             allowed=bool(allowed),
-            remaining_requests=remaining_requests
+            remaining_requests=remaining_requests,
+            scope=scope
         )
