@@ -35,20 +35,20 @@ RESTful API for an online store of computer software. It is designed to publish 
 ## 📂 Project structure
 
 ```text
-├── .gtihub/workflows     # CI/CD
+├── .github/workflows     # CI/CD
 ├── app/                  # App code
 │   ├── api/              # Endpoints, routers, FastAPI dependency injection
 │   ├── base_models/      # Base SQLModel models
 │   ├── core/             # Configuration, security, logging
 │   ├── db/               # PostgreSQL and Redis connections and configuration
 │   ├── dependencies/     # Code of dependencies (Rate Limiter)
-│   ├── middleware/       # FastAPI middlewares
+│   ├── middleware/       # FastAPI middleware
 │   ├── models/           # SQLModel db models
 │   ├── schemas/          # SQLModel schemas
 │   ├── service/          # Business logic
 │   ├── repo/             # Interaction with the db
 │   ├── uow/              # Unit of Work class
-│   ├── utils/            # Utility functions (datetime, size units conversion)
+│   ├── utils/            # Utility functions (datetime, size units conversion, email sending)
 │   ├── storage/          # Interaction with MinIO S3 storage
 │   ├── task_queue/       # Celery configuration and tasks
 │   ├── ws/               # WebSockets connection managers
@@ -56,6 +56,9 @@ RESTful API for an online store of computer software. It is designed to publish 
 ├── migrations/           # Alembic migrations
 ├── nginx/                # Nginx configuration
 ├── tests/                # Pytest tests
+│   ├── api/              # Endpoints tests
+│   ├── unit/             # Function and rate limiter tests
+│   └── conftest.py       # General fixtures
 ├── .dockerignore         # Files and directories not included in Docker images
 ├── .env.example          # Environment variable examples from .env file
 ├── compose.yaml          # Docker containers to launch the project
@@ -105,11 +108,11 @@ uv sync --locked
 ```
 Linux:
 ``` bash
-source /path-to-project/.venv/bin/activate
+source /path/to/project/.venv/bin/activate
 ```
 Windows:
 ``` bash
-/path-to-project/.venv/Scripts/Activate.ps1
+/path/to/project/.venv/Scripts/Activate.ps1
 ```
 ### Testing
 Run pytest tests:

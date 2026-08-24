@@ -24,4 +24,3 @@ htmlcov/
 *.coverage
 media/
 certs/
-tests/files

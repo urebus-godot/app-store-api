@@ -6,7 +6,7 @@ x/
 .vscode/
 .github/
 htmlcov/
-
+.github/
 .git
 .gitignore
 .coverage

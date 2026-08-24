@@ -33,7 +33,7 @@ from app.core.config import settings
 from app.schemas.token import TokenData
 from app.models.user import UserDB, UserRole
 
-from app.dependencies.rate_limiter import RateLimiter
+from app.db.rate_limiter import RateLimiter
 from app.uow.orm import OrmUnitOfWork
 
 from app.repo.user_repo import UserRepository
@@ -43,14 +43,14 @@ from app.repo.review_repo import ReviewRepository
 from app.repo.purchase_repo import PurchaseRepository
 from app.repo.discussion_repo import DiscussionRepository
 
-from app.service.finance_service import FinanceService
-from app.service.user_service import UserService
-from app.service.app_service import AppService
-from app.service.review_service import ReviewService
-from app.service.purchase_service import PurchaseService
-from app.service.discussion_service import DiscussionService
-from app.service.app_archive_service import AppArchiveService
-from app.service.media_service import MediaService
+from app.services.finance_service import FinanceService
+from app.services.user_service import UserService
+from app.services.app_service import AppService
+from app.services.review_service import ReviewService
+from app.services.purchase_service import PurchaseService
+from app.services.discussion_service import DiscussionService
+from app.services.app_archive_service import AppArchiveService
+from app.services.media_service import MediaService
 
 from app.storage.minio_repository import MinioStorage
 from app.storage.protocols import ObjectStorage
@@ -163,7 +163,6 @@ async def rate_limit(
 
         if bearer and bearer.startswith("Bearer"):
             access_token = bearer[7:]
-            logger.info(f"\nGot token: {access_token}\n")
             token_data = validate_access_token(access_token, secret_key)
             result = await rate_limiter.check(token_data.user_id)
             logger.info("Checked for authenticated user")
