@@ -103,10 +103,6 @@ class UserService:
         if not user:
             raise incorrect_creds_exception
 
-        email_body = settings.LOGIN_TEMPLATE % (
-            request.client.host, get_time_string()
-        )
-
         tokens = await create_token_pair(
             data={
                 "sub": str(user.id), "roles": json.dumps(user.roles)
@@ -116,6 +112,9 @@ class UserService:
             refresh_secret_key=refresh_secret_key
         )
         if user.email is not None and sends_email:
+            email_body = settings.LOGIN_TEMPLATE % (
+                request.client.host, get_time_string()
+            )
             bg_tasks.add_task(
                 send_email,
                 [str(user.email)],

@@ -49,10 +49,12 @@ class MediaService:
         self, bucket: str, object_key: str
     ) -> None:
         for _, suffix in settings.IMAGE_SIZES:
+            key = variant_key(object_key, suffix)
             await self.storage.delete_object(
                 bucket=bucket,
-                key=variant_key(object_key, suffix)
+                key=key
             )
+            logger.info(f"Deleted image file.\nBucket: {bucket}\n Key: {key}")
 
     async def presign_avatar_upload(
         self, user_id: UUID, content_type: str
@@ -208,11 +210,12 @@ class MediaService:
             new_key = app.icon_key
 
         if old_key:
+            logger.info(f"Found old key of icon\nOld key: {old_key}")
             await self.storage.delete_object(
                 settings.APP_ICON_BUCKET, old_key
             )
             await self.delete_image_variants(
-                settings.USER_AVATAR_BUCKET,
+                settings.APP_ICON_BUCKET,
                 old_key
             )
 
@@ -357,6 +360,9 @@ class MediaService:
             settings.APP_COVER_BUCKET, object_key
         )
         await self.delete_image_variants(
-            settings.USER_AVATAR_BUCKET,
+            settings.APP_COVER_BUCKET,
             object_key
         )
+
+
+        

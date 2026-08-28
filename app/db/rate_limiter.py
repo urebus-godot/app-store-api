@@ -1,5 +1,6 @@
 import time
 import uuid
+from typing import Literal
 from dataclasses import dataclass
 
 from redis.asyncio import Redis
@@ -50,7 +51,7 @@ class RateLimiter:
     async def check(
         self, 
         identifier: str,    
-        scope: str,    
+        scope: Literal["user", "ip"],    
         window_seconds: int = settings.WINDOW_SECONDS, 
         limit: int = settings.REQUEST_LIMIT,
     ) -> RateLimitResult:

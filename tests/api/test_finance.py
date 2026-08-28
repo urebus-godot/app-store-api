@@ -1,7 +1,7 @@
-
-import pytest
-from httpx import AsyncClient
 from unittest.mock import patch, Mock
+import pytest
+
+from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.user import UserDB
@@ -71,7 +71,7 @@ class TestFinance:
         )
         assert response.status_code == 200
 
-    @patch("app.service.finance_service.AsyncClient.get")
+    @patch("app.services.finance_service.AsyncClient.get")
     @pytest.mark.parametrize(
         argnames=["currency", "rate"],
         argvalues=[
@@ -91,17 +91,15 @@ class TestFinance:
         ):
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_response.json.return_value = [
-                {
-                "date": "2026-07-17",
+        mock_response.json.return_value = {
+                "date": "2026-01-01",
                 "base": "RUB",
                 "quote": currency,
                 "rate": rate
-                }
-            ]
+        }
         mock_get.return_value = mock_response
         test_user.balance = 1000
-        response = await auth_client.post(
+        response = await auth_client.get(
             "/api/v1/finance/me/balance",
             params={
                 "currency": currency

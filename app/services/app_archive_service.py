@@ -32,7 +32,7 @@ class AppArchiveService:
         uow: UnitOfWork
     ) -> None:
         self._storage = storage
-        self._uow = uow
+        self.uow = uow
 
     async def presign_app_archive_upload(
         self,
@@ -45,8 +45,8 @@ class AppArchiveService:
         )
         object_key = f"{app_id}/{uuid.uuid4()}.{extension}"
 
-        async with self._uow:
-            app = await self._uow.app_repo.get_app(app_id)
+        async with self.uow:
+            app = await self.uow.app_repo.get_app(app_id)
 
             if app is None:
                 raise app_not_found_exception
@@ -62,7 +62,7 @@ class AppArchiveService:
             )
 
             app.pending_archive_key = object_key
-            await self._uow.commit()
+            await self.uow.commit()
 
         return UploadPresignResponse(
             upload_url=upload_url,
@@ -75,8 +75,8 @@ class AppArchiveService:
         app_id: uuid.UUID, 
         publisher_id: uuid.UUID
     ) -> None:
-        async with self._uow:
-            app = await self._uow.app_repo.get_app(app_id)
+        async with self.uow:
+            app = await self.uow.app_repo.get_app(app_id)
 
             if app.publisher_id != publisher_id:
                 raise no_rights_exception
@@ -93,7 +93,7 @@ class AppArchiveService:
             old_key = app.archive_key
             app.archive_key = app.pending_archive_key
             app.pending_archive_key = None
-            await self._uow.commit()
+            await self.uow.commit()
 
             if old_key is not None:
                 await self._storage.delete_object(
@@ -103,8 +103,8 @@ class AppArchiveService:
     async def presign_app_archive_download(
         self, app_id: uuid.UUID, user_id: uuid.UUID
     ) -> DownloadPresignResponse:
-        async with self._uow:
-            app = await self._uow.app_repo.get_app(app_id)
+        async with self.uow:
+            app = await self.uow.app_repo.get_app(app_id)
 
             if app is None:
                 raise app_not_found_exception
@@ -117,7 +117,7 @@ class AppArchiveService:
             
             if app.publisher_id != user_id:
                 has_purchase = await (
-                self._uow.purchase_repo
+                self.uow.purchase_repo
                 .user_purchased_app(
                     user_id=user_id, app_id=app_id
                     )

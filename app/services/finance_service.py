@@ -9,8 +9,7 @@ from app.uow.orm import UnitOfWork
 from app.core.exceptions import (
     insufficient_funds_exception,
     invalld_promo_code_exception
-    )
-
+)
 from app.repo.finance_repo import FinanceRepository
 from app.repo.user_repo import UserRepository
 
@@ -104,28 +103,28 @@ class FinanceService:
         return transfers
 
     async def convert_rubles(
-        self, amount: float, to_currency: CurrencyType
+        self, 
+        amount: float, 
+        to_currency: CurrencyType,
+        api_client: AsyncClient
     ) -> Decimal | JSONResponse:
         """Makes call to external API to convert 
         funds from rubles to specified currency"""
         if to_currency == CurrencyType.RUB or amount == 0.0:
             return round(Decimal(amount), 2)
 
-        async with AsyncClient(
-            base_url="https://api.frankfurter.dev/v2"
-        ) as ac:
-            api_response = await ac.get(
-                "/rates",
-                params={"quotes": to_currency, "base": "RUB"}
-                )
-            data = api_response.json()
-            if api_response.status_code >= 400:
-                return JSONResponse(
-                    data,
-                    api_response.status_code
-                )
-            
-            rate = data[0]["rate"]
-            converted_amount = amount * rate
+        api_response = await api_client.get(
+            "/rates",
+            params={"quotes": to_currency, "base": "RUB"}
+        )
+        data = api_response.json()
+        if api_response.status_code >= 400:
+            return JSONResponse(
+                data,
+                api_response.status_code
+            )
+        
+        rate = data[0]["rate"]
+        converted_amount = amount * rate
 
         return round(Decimal(converted_amount), 2)

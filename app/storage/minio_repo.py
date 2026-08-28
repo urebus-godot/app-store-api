@@ -1,8 +1,14 @@
+import json
+import logging
+
 import aioboto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
 
 from app.core.config import settings
+
+logger = logging.getLogger("storage.minio_repo")
+
 
 class MinioStorage:
     def __init__(self) -> None:
@@ -23,6 +29,36 @@ class MinioStorage:
             **common, "endpoint_url": settings.MINIO_PUBLIC_ENDPOINT
             }
 
+    async def create_bucket(self, bucket_name: str, public: bool) -> None:
+        async with self._session.client(
+            "s3", 
+            **self._internal_kwargs
+        ) as client:
+            try:
+                logger.info("Checking if the bucket is already created")
+                await client.head_bucket(Bucket=bucket_name)
+            except Exception:
+                logger.info("Creating the bucket")
+                await client.create_bucket(Bucket=bucket_name)
+
+            if public:
+                public_policy = {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {"AWS": ["*"]},
+                            "Action": ["s3:GetObject"],
+                            "Resource": [f"arn:aws:s3:::{bucket_name}/*"]
+                        }
+                    ]
+                }
+
+                await client.put_bucket_policy(
+                    Bucket=bucket_name,
+                    Policy=json.dumps(public_policy)
+                )
+
     async def generate_presigned_upload_url(
         self,
         bucket: str,
@@ -30,7 +66,9 @@ class MinioStorage:
         content_type: str,
         expires_in: int = 300,
     ) -> str:
-        async with self._session.client("s3", **self._public_kwargs) as client:
+        async with self._session.client(
+            "s3", **self._public_kwargs
+        ) as client:
             return await client.generate_presigned_url(
                 "put_object",
                 Params={
@@ -47,7 +85,9 @@ class MinioStorage:
         key: str,
         expires_in: int = 300,
     ) -> str:
-        async with self._session.client("s3", **self._public_kwargs) as client:
+        async with self._session.client(
+            "s3", **self._public_kwargs
+        ) as client:
             return await client.generate_presigned_url(
                 "get_object",
                 Params={"Bucket": bucket, "Key": key},

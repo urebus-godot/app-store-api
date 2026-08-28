@@ -29,6 +29,7 @@ def sync_s3_client():
 )
 def generate_image_variants(self, bucket: str, object_key: str) -> None:
     client = sync_s3_client()
+    client
 
     try:
         response = client.get_object(Bucket=bucket, Key=object_key)

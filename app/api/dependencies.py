@@ -52,7 +52,7 @@ from app.services.discussion_service import DiscussionService
 from app.services.app_archive_service import AppArchiveService
 from app.services.media_service import MediaService
 
-from app.storage.minio_repository import MinioStorage
+from app.storage.minio_repo import MinioStorage
 from app.storage.protocols import ObjectStorage
 
 from app.ws.discussion_manager import (
@@ -157,7 +157,6 @@ def get_rate_limiter(redis: RedisDep) -> RateLimiter:
 
 async def rate_limit(
     rate_limiter: Annotated[RateLimiter, Depends(get_rate_limiter)],
-    secret_key: AccessSecretKeyDep,
     request: Request,
     response: Response,
     user_id: str | None = Depends(get_current_user_id_optionally),
@@ -166,9 +165,11 @@ async def rate_limit(
     ip_result = await rate_limiter.check(
         request.client.host,
         scope="ip",
-        limit=20,
-        window_seconds=60,
+        #limit=20,
+        #window_seconds=60,
     )
+    response.headers["X-RateLimit-Remaining-IP-Address"] = (
+        str(ip_result.remaining_requests))
     if not ip_result.allowed:
         raise too_many_requests_exception
 
@@ -177,9 +178,11 @@ async def rate_limit(
         user_result = await rate_limiter.check(
             user_id,
             scope="user",
-            limit=5,
-            window_seconds=60,
+            #limit=20,
+            #window_seconds=60,
         )
+        response.headers["X-RateLimit-Remaining-User"] = (
+            str(user_result.remaining_requests))
         if not user_result.allowed:
             raise too_many_requests_exception
 

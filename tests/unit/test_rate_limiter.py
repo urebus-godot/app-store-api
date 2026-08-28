@@ -20,12 +20,12 @@ class TestRateLimiter:
             )
             logger.info(f"\n\n\n\n{response.json() = }\n\n\n\n")
             assert response.status_code == 200
-        return
+
         limited_response = await rate_limited_client.get(
             "/api/v1/apps"
         )
         remaining = limited_response.headers.get("X-RateLimit-Remaining")
-        rate_limit_len = await fake_redis.zcard("rate_limit:127.0.0.1")
+        rate_limit_len = await fake_redis.zcard("rate_limit:ip:127.0.0.1")
         assert rate_limit_len == settings.REQUEST_LIMIT
         assert remaining == "0"
         assert limited_response.status_code == 429
@@ -50,7 +50,7 @@ class TestRateLimiter:
             "/api/v1/users"
         )
         remaining = limited_response.headers.get("X-RateLimit-Remaining")
-        rate_limit_len = await fake_redis.zcard(f"rate_limit:{test_user.id}")
+        rate_limit_len = await fake_redis.zcard(f"rate_limit:user:{test_user.id}")
 
         assert rate_limit_len == settings.REQUEST_LIMIT
         assert remaining == "0"

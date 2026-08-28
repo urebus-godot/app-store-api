@@ -10,8 +10,9 @@ from sqlalchemy import text
 import botocore.exceptions as boto_exceptions
 
 import httpx
+from httpx import AsyncClient
 
-from app.middleware.logging import RequestLoggerMiddleware
+from app.middleware.request_logger import RequestLoggerMiddleware
 from app.core.exception_handlers import (
     response_validation_error_handler,
     request_error_handler,
@@ -21,7 +22,7 @@ from app.core.exception_handlers import (
 from app.core.logging import setup_logging
 from app.core.config import settings
 
-from app.api.dependencies import RedisDep, SessionDep
+from app.api.dependencies import RedisDep, SessionDep, get_object_storage
 from app.api.v1 import (
     app_archive_router,
     app_router,
@@ -34,14 +35,23 @@ from app.api.v1 import (
 )
 from app.db.redis import connect_to_redis_client
 
+setup_logging()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.redis_client = connect_to_redis_client()
-    yield
-    await app.state.redis_client.close_conn()
+    app.state.conversion_api_client = AsyncClient(
+        base_url="https://api.frankfurter.dev/v2"
+    )
+    object_storage = get_object_storage()
 
-setup_logging()
+    for bucket_name, public in settings.BUCKETS.items():
+        await object_storage.create_bucket(bucket_name, public)
+
+    yield
+    
+    await app.state.redis_client.close_conn()
+    await app.state.conversion_api_client.aclose()
 
 app = FastAPI(
     title=settings.API_TITLE,

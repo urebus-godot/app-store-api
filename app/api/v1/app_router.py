@@ -5,7 +5,7 @@ import logging
 from fastapi import (
     APIRouter, status, 
     Depends, Query
-    )
+)
 
 from app.api.dependencies import (
     UserIdDep,

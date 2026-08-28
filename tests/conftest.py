@@ -159,6 +159,8 @@ def override_general_deps(
     fake_redis: FakeRedis,
     ignore_rate_limit: bool = True
     ) -> None:
+    app.state.conversion_api_client = None
+
     app.dependency_overrides[get_session] = lambda: db_session
     app.dependency_overrides[get_session_factory] = lambda: session_factory
     app.dependency_overrides[get_redis] = lambda: fake_redis 
@@ -530,33 +532,33 @@ async def test_apps(db_session: AsyncSession, test_user_2: UserDB):
             keywords=[" KEY ", " key 2"], 
             publisher_id=test_user_2.id,
             archive_key="test-archive-key"
-            ),
+        ),
         AppDB(
             title="test", 
             keywords=["kEy"],
             publisher_id=test_user_2.id,
             archive_key="test-archive-key"
-            ),
+        ),
         AppDB(
             title="test", 
             keywords=["  key  "],
             publisher_id=test_user_2.id,
             archive_key="test-archive-key"
-            ),
+        ),
         AppDB(
             title="test", 
             keywords=[" Newkey "],
             publisher_id=test_user_2.id,
             archive_key="test-archive-key"
-            ),
+        ),
         AppDB(
             title="hidden test", 
             keywords=[" Newkey "],
             publisher_id=test_user_2.id,
             public=False,
             archive_key="test-archive-key"
-            )
-        ]
+        )
+    ]
     db_session.add_all(apps)
     await db_session.flush()
     for app in apps:

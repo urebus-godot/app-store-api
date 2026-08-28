@@ -9,6 +9,7 @@ from sqlalchemy import String
 
 from app.models.purchase import PurchaseDB
 from app.base_models.user import BaseUser, UserRole
+from app.models.discussion import DiscussionDB  
 
 
 class UserDB(BaseUser, table=True):

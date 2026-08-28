@@ -36,8 +36,8 @@ class Settings(BaseSettings):
         "postgresql+psycopg://postgres:postgres@localhost:5432/test_db"
         )
 
-    WINDOW_SECONDS: int = 5
-    REQUEST_LIMIT: int = 10
+    WINDOW_SECONDS: int = 60
+    REQUEST_LIMIT: int = 20 * 100
 
     CACHE_TTL_SECONDS: int = 3600
 
@@ -46,7 +46,7 @@ class Settings(BaseSettings):
 
     ADMIN_PASSWORD: str = "secret"
 
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15 * 100
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     ACCESS_SECRET_KEY: str = "secret"
@@ -84,6 +84,13 @@ class Settings(BaseSettings):
     APP_ICON_BUCKET: str = "app-icons"
     USER_AVATAR_BUCKET: str = "user-avatars"
 
+    BUCKETS: dict[str, bool] = {
+        APP_ARCHIVE_BUCKET: False, 
+        APP_COVER_BUCKET: True, 
+        APP_ICON_BUCKET: True, 
+        USER_AVATAR_BUCKET: True
+    }
+ 
     THUMBNAIL_SIZE: tuple[int, int] = (128, 128)
     MEDIUM_SIZE: tuple[int, int] = (640, 640)
     IMAGE_SIZES: tuple[tuple, tuple] = ((THUMBNAIL_SIZE, "thumb"), (MEDIUM_SIZE, "medium"))

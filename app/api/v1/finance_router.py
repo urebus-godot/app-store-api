@@ -1,7 +1,7 @@
 from decimal import Decimal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 
 from app.schemas.finance import TransferRequest, TransferResponse
@@ -64,16 +64,19 @@ async def get_transfer_history(
     return await finance_service.get_transfers(user_id, *skip_limit)
 
 
-@router.post("/finance/me/balance")
+@router.get("/finance/me/balance")
 async def get_balance(
+    request: Request,
     user: UserDep,
     finance_service: FinanceServiceDep,
     currency: CurrencyType = CurrencyType.RUB,
     ) -> JSONResponse:
     """Returns current user's balance measured in the specified currency."""
     result = await finance_service.convert_rubles(
-        float(user.balance), currency
-        )
+        float(user.balance), 
+        currency, 
+        request.app.state.conversion_api_client
+    )
     if isinstance(result, Decimal):
         return {"balance": result, "currency": currency}
     else:

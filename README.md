@@ -1,13 +1,13 @@
 # App Store API
-RESTful API for an online store of computer software. It is designed to publish and purchase games and applications.
+RESTful API for a computer software online store. It is designed for publishing and purchasing games and applications.
 
 ---
 
 ## Technology stack:
-- Programming language: **Python 3.13**
-- Framework: **FastAPI**
+- Programming language: **Python 3.11+**
+- Web framework: **FastAPI**
 - ORM: **SQLModel** + **SQLAlchemy**
-- Database: **PostgreSQL 16**
+- Database: **PostgreSQL**
 - DB migrations: **Alembic**
 - Cache: **Redis**
 - Task queue: **Celery**
@@ -23,8 +23,8 @@ RESTful API for an online store of computer software. It is designed to publish 
 - Fully asynchronous code
 - JWT authorization with short-lived access tokens and refresh tokens stored in Redis
 - CI/CD pipeline with testing, linting and image building
-- HTTP/2 and HTTPS support using Nginx
-- MinIO S3 for storing user-uploaded files with signed URLs
+- HTTP/2 and HTTPS support using Nginx (mkcert for local certificates)
+- MinIO S3 for storing user-uploaded files with signed URLs for private files
 - Service/Repository pattern + UOW
 - Multi-stage Docker image building
 - Sending email notifications in FastAPI BackgroundTasks and image processing in Celery tasks
@@ -37,10 +37,11 @@ RESTful API for an online store of computer software. It is designed to publish 
 ```text
 ├── .github/workflows     # CI/CD
 ├── app/                  # App code
-│   ├── api/              # Endpoints, routers, FastAPI dependency injection
+│   ├── api/v1            # Endpoints, routers
+│   └── dependencies.py   # FastAPI dependency injection
 │   ├── base_models/      # Base SQLModel models
-│   ├── core/             # Configuration, security, logging
-│   ├── db/               # PostgreSQL and Redis connections and configuration
+│   ├── core/             # Configuration, auth, security, logging
+│   ├── db/               # PostgreSQL, Redis connections and configuration, Redis rate limiter
 │   ├── middleware/       # FastAPI middleware
 │   ├── models/           # SQLModel db models
 │   ├── schemas/          # SQLModel schemas
@@ -55,16 +56,16 @@ RESTful API for an online store of computer software. It is designed to publish 
 ├── migrations/           # Alembic migrations
 ├── nginx/                # Nginx configuration
 ├── tests/                # Pytest tests
-│   ├── api/              # Endpoints tests
-│   ├── unit/             # Function and rate limiter tests
+│   ├── api/              # Endpoint tests
+│   ├── unit/             # Function tests
 │   └── conftest.py       # General fixtures
 ├── .dockerignore         # Files and directories not included in Docker images
 ├── .env.example          # Environment variable examples from .env file
 ├── compose.yaml          # Docker containers to launch the project
 ├── compose.test.yaml     # Docker containers for tests
-├── Dockerfile            # Image build instructions
+├── Dockerfile            # Docker image build instructions
 ├── pyproject.toml        # Project configuration and dependencies
-└── uv.lock               # Project dependencies with fixed versions
+└── uv.lock               # Project dependencies
 ```
 
 ---
