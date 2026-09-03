@@ -1,8 +1,8 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, BackgroundTasks
 
-from app.api.dependencies import (
+from app.api.deps import (
     UserIdDep, MediaServiceDep, rate_limit, SkipLimitParams
 )
 
@@ -36,8 +36,11 @@ async def request_avatar_upload_url(
 async def confirm_avatar_upload(
     user_id: UserIdDep,
     media_service: MediaServiceDep,
+    bg_tasks: BackgroundTasks
 ) -> MediaConfirmResponse:
-    return await media_service.confirm_avatar_upload(user_id=user_id)
+    return await media_service.confirm_avatar_upload(
+        user_id=user_id, bg_tasks=bg_tasks
+    )
 
 
 # ---------- Иконка приложения ----------
@@ -63,9 +66,10 @@ async def confirm_icon_upload(
     app_id: UUID,
     user_id: UserIdDep,
     media_service: MediaServiceDep,
+    bg_tasks: BackgroundTasks
 ) -> MediaConfirmResponse:
     return await media_service.confirm_icon_upload(
-        app_id=app_id, user_id=user_id
+        app_id=app_id, user_id=user_id, bg_tasks=bg_tasks
     )
 
 
@@ -106,7 +110,10 @@ async def list_covers(
     media_service: MediaServiceDep,
 ) -> AppCoverListResponse:
     skip, limit = skip_limit
-    return await media_service.list_covers(app_id=app_id, skip=skip, limit=limit)
+    return await media_service.list_covers(
+        app_id=app_id, 
+        skip=skip, limit=limit
+    )
 
 
 @router.delete(
@@ -118,7 +125,11 @@ async def delete_cover(
     cover_id: UUID,
     user_id: UserIdDep,
     media_service: MediaServiceDep,
+    bg_tasks: BackgroundTasks
 ) -> None:
     await media_service.delete_cover(
-        app_id=app_id, user_id=user_id, cover_id=cover_id
+        app_id=app_id, 
+        user_id=user_id, 
+        cover_id=cover_id, 
+        bg_tasks=bg_tasks
     )

@@ -8,7 +8,7 @@ import botocore.exceptions as boto_exceptions
 
 import httpx
 
-logger = logging.getLogger("app.exception_handlers")
+logger = logging.getLogger("core.exception_handlers")
 
 
 def response_validation_error_handler(
@@ -46,5 +46,8 @@ def boto_client_error_handler(
     logger.error(f"Boto client error: {exception.errors()}")
     return JSONResponse(
         status_code=status.HTTP_502_BAD_GATEWAY,
-        content={"message": "Boto client error occurred", "errors": exception.errors()},
+        content={
+            "message": 
+            "Boto client error occurred", "errors": exception.errors()
+        },
     )

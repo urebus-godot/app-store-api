@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 from datetime import datetime, timezone, date, timedelta
 import asyncio
 import logging
+import logging.config
 import json
 
 from sqlalchemy.ext.asyncio import (
@@ -15,7 +16,7 @@ from sqlalchemy.ext.asyncio import (
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import SQLModel
 
-from httpx import ASGITransport, AsyncClient
+from httpx import ASGITransport, AsyncClient, Response
 from fakeredis.aioredis import FakeRedis
 from fakeredis import FakeServer
 import pytest_asyncio
@@ -25,7 +26,7 @@ from app.models.user import UserDB, UserRole
 from app.models.app import AppDB, GameGenre
 
 from app.db.postgres import get_session
-from app.api.dependencies import (
+from app.api.deps import (
     get_current_user, 
     get_current_user_id, 
     get_redis, 
@@ -34,8 +35,9 @@ from app.api.dependencies import (
     get_access_secret_key,
     rate_limit,
     get_session_factory,
-    get_admin_password
-    )
+    get_admin_password,
+    get_finance_api_client
+)
 from app.core.auth import create_access_token
 from app.core.security import get_password_hash
 
@@ -211,9 +213,32 @@ async def auth_client(
         session_factory,
         fake_redis
     )
+
+    class MockFinanceAPIClient:
+        def get_rate(self, currency: str):
+            rates = {
+                "EUR": 0.011,
+                "USD": 0.013,
+                "GBP": 0.0095
+            }
+            return rates[currency]
+
+        async def get(self, url: str, params: dict):
+            data = {
+                "date": "2026-01-01",
+                "base": "RUB",
+                "quote": params["quotes"],
+                "rate": self.get_rate(params["quotes"])
+            }
+            return Response(
+                status_code=200, 
+                json=data
+            )
+
     app.dependency_overrides[get_current_user] = lambda: test_user
     app.dependency_overrides[get_current_user_id] = lambda: test_user.id
     app.dependency_overrides[get_admin_password] = lambda: "adminpass"
+    app.dependency_overrides[get_finance_api_client] = lambda: MockFinanceAPIClient()
 
     transport = ASGITransport(app)
     async with AsyncClient(

@@ -18,7 +18,7 @@ from app.core.exceptions import (
 )
 from app.db.redis import Redis
 
-logger = logging.getLogger("app.auth")
+logger = logging.getLogger("core.auth")
 
 
 def create_access_token(
@@ -89,7 +89,11 @@ def decode_access_token(
 ) -> dict:
     """Decode and validate a JWT access token."""
     try:
-        payload = jwt.decode(token, secret_key, algorithms=["HS256"])
+        payload = jwt.decode(
+            token, 
+            secret_key, 
+            algorithms=[settings.JWT_ALGORITHM]
+        )
         return payload
     except jwt.ExpiredSignatureError:
         raise TokenExpiredError()

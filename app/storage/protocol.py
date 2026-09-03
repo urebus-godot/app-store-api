@@ -36,3 +36,8 @@ class ObjectStorage(Protocol):
 
     async def delete_object(self, bucket: str, key: str) -> None:
         ...
+
+    async def delete_image_variants(
+        self, bucket: str, object_key: str
+    ) -> None:
+        ...

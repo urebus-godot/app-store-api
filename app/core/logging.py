@@ -1,7 +1,6 @@
 import logging
 from contextvars import ContextVar
 
-from app.core.config import settings
 from typing import Any, Literal
 import sys
 
@@ -42,7 +41,7 @@ def build_logging_config(
             },
             "json": {
                 # pip/uv install python-json-logger
-                "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
+                "()": "pythonjsonlogger.json.JsonFormatter",
                 "format": (
                     "%(asctime)s %(levelname)s %(name)s "
                     "%(request_id)s %(user_id)s %(message)s"
@@ -62,17 +61,29 @@ def build_logging_config(
             "level": level,
         },
         "loggers": {
-            "uvicorn": {"handlers": ["default"], "level": level, "propagate": False},
-            # access-лог uvicorn дублирует наш RequestLoggingMiddleware — глушим
-            "uvicorn.access": {"handlers": ["default"], "level": "WARNING", "propagate": False},
-            # SQL полезен на DEBUG, но засоряет INFO
-            "sqlalchemy.engine": {"handlers": ["default"], "level": "WARNING", "propagate": False},
-            "app": {"handlers": ["default"], "level": level, "propagate": False},
-            "celery": {"handlers": ["default"], "level": level, "propagate": False},
+            "uvicorn": {
+                "handlers": ["default"], "level": level, "propagate": False
+                },
+            "uvicorn.access": {
+                "handlers": ["default"], "level": "WARNING", 
+                "propagate": False
+                },
+            "sqlalchemy.engine": {
+                "handlers": ["default"], "level": "WARNING", 
+                "propagate": False
+                },
+            "app": {
+                "handlers": ["default"], "level": level, "propagate": False
+                },
+            "celery": {
+                "handlers": ["default"], "level": level, "propagate": False
+                },
         },
     }
 
 
-def setup_logging(env: Literal["local", "production"] = "local", level: str = "INFO") -> None:
-    """Вызывать один раз при старте процесса (FastAPI app, Celery worker)."""
+def setup_logging(
+    env: Literal["local", "production"] = "local", 
+    level: str = "INFO"
+) -> None:
     logging.config.dictConfig(build_logging_config(env=env, level=level))

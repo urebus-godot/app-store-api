@@ -8,7 +8,10 @@ x/
 htmlcov/
 .github/
 .git
-.gitignore
 .coverage
 .uv
+
+.gitignore
 README.md
+*.sh
+*.txt

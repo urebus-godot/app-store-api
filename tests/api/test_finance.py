@@ -71,7 +71,7 @@ class TestFinance:
         )
         assert response.status_code == 200
 
-    @patch("app.services.finance_service.AsyncClient.get")
+    #@patch("app.services.finance_service.AsyncClient.get")
     @pytest.mark.parametrize(
         argnames=["currency", "rate"],
         argvalues=[
@@ -82,22 +82,26 @@ class TestFinance:
     )
     async def test_get_balance(
         self,
-        mock_get,
+        #mock_get,
         auth_client: AsyncClient, 
         currency: str,
         rate: float,
         test_user: UserDB,
         logger
-        ):
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
-                "date": "2026-01-01",
-                "base": "RUB",
-                "quote": currency,
-                "rate": rate
-        }
-        mock_get.return_value = mock_response
+    ):
+        #mock_response = Mock()
+        #mock_response.status_code = 200
+        #mock_response.json.return_value = {
+        #    "date": "2026-01-01",
+        #    "base": "RUB",
+        #    "quote": currency,
+        #    "rate": rate
+        #}
+        #mock_response.json.return_value = {
+        #    "currency": currency,
+        #    "balance": rate
+        #}
+        #mock_get.return_value = mock_response
         test_user.balance = 1000
         response = await auth_client.get(
             "/api/v1/finance/me/balance",

@@ -1,10 +1,10 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from uuid import UUID, uuid4
 import asyncio
 
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
-from sqlmodel import Session, extract, select, update
+from sqlmodel import Session, select, update
 
 from app.core.config import settings
 from app.utils.time import get_time_string

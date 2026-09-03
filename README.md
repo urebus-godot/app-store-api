@@ -39,7 +39,7 @@ RESTful API for a computer software online store. It is designed for publishing 
 ├── app/                  # App code
 │   ├── api/v1            # Endpoints, routers
 │   └── dependencies.py   # FastAPI dependency injection
-│   ├── base_models/      # Base SQLModel models
+│───├── base_models/      # Base SQLModel models
 │   ├── core/             # Configuration, auth, security, logging
 │   ├── db/               # PostgreSQL, Redis connections and configuration, Redis rate limiter
 │   ├── middleware/       # FastAPI middleware

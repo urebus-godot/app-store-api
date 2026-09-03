@@ -12,7 +12,7 @@ from fastapi import (
 )
 from fastapi.security import OAuth2PasswordRequestForm
 
-from app.api.dependencies import (
+from app.api.deps import (
     UserDep,
     UserIdDep,
     SkipLimitParams,
@@ -43,7 +43,7 @@ router = APIRouter(
     dependencies=[Depends(rate_limit)]
 )
 
-logger = logging.getLogger("app.user_router")
+logger = logging.getLogger("api.v1.user_router")
 
 
 @router.post(
@@ -214,7 +214,10 @@ async def get_users(
 async def delete_current_user(
     user_id: UserIdDep,
     redis: RedisDep,
-    user_service: UserServiceDep
+    user_service: UserServiceDep,
+    bg_tasks: BackgroundTasks
 ) -> None:
     """Deletes user."""
-    await user_service.delete_user(user_id, redis)
+    await user_service.delete_user(
+        user_id=user_id, redis=redis, bg_tasks=bg_tasks
+    )

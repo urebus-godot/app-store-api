@@ -52,6 +52,11 @@ class AppDB(BaseApp, table=True):
         cascade_delete=True,
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
+    covers: list["AppCover"] = Relationship(
+        back_populates="app",
+        cascade_delete=True,
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
 
     __table_args__ = (
         Index(

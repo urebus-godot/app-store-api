@@ -5,8 +5,8 @@ from app.core.exceptions import (
     message_not_found_exception,
     discussion_not_found_exception,
     no_rights_exception,
+    app_not_found_exception
 )
-from app.repo.discussion_repo import DiscussionRepository
 from app.services.app_service import AppService
 
 from app.models.discussion import (
@@ -34,16 +34,15 @@ from app.ws.discussion_manager import DiscussionWebsocketManager
 
 from app.uow.orm import UnitOfWork
 
-logger = logging.getLogger("discussion_service")
+logger = logging.getLogger("services.discussion")
+
 
 class DiscussionService:
     def __init__(
         self, 
-        discussion_repo: DiscussionRepository, 
         app_service: AppService,
         uow: UnitOfWork
     ):
-        self.discussion_repo = discussion_repo
         self.app_service = app_service
         self.uow = uow
 
@@ -55,7 +54,11 @@ class DiscussionService:
     ) -> DiscussionDB:
         async with self.uow:
             user = await self.uow.user_repo.get_user_by_id(user_id)
-            app = await self.app_service.get_app(app_id)
+            app = await self.uow.app_repo.get_app(app_id)
+
+            if app is None:
+                raise app_not_found_exception
+
             discussion = await self.uow.discussion_repo.create_discussion(
                 data, user, app_id
             )
@@ -66,10 +69,11 @@ class DiscussionService:
     async def get_discussion(
         self, id: UUID, skip: int = 0, limit: int = 10
     ) -> DiscussionResponse:
-        discussion = await self.discussion_repo.get_discussion(id)
-        
-        if discussion is None:
-            raise discussion_not_found_exception
+        async with self.uow:
+            discussion = await self.uow.discussion_repo.get_discussion(id)
+            
+            if discussion is None:
+                raise discussion_not_found_exception
 
         return DiscussionResponse(
             id=discussion.id,
@@ -79,11 +83,17 @@ class DiscussionService:
         )
 
     async def get_app_discussions(self, app_id: UUID) -> list[DiscussionDB]:
-        discussions = await self.discussion_repo.get_app_discussions(app_id)
+        async with self.uow:
+            discussions = await self.uow.discussion_repo.get_app_discussions(
+                app_id
+            )
         return discussions
 
     async def get_user_discussions(self, user_id: UUID) -> list[DiscussionDB]:
-        discussions = await self.discussion_repo.get_user_discussions(user_id)
+        async with self.uow:
+            discussions = await self.uow.discussion_repo.get_user_discussions(
+                user_id
+            )
         return discussions
 
     async def delete_discussion(
@@ -167,5 +177,5 @@ class DiscussionService:
             if message.author_id != user_id:
                 raise no_rights_exception
 
-            await self.uow.session.delete(message)
+            await self.uow.delete(message)
             await self.uow.commit()

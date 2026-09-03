@@ -5,6 +5,11 @@ class UploadPresignRequest(BaseModel):
     content_type: str
 
 
+class AppArchiveUploadPresignRequest(BaseModel):
+    content_type: str
+    filename: str
+
+
 class UploadPresignResponse(BaseModel):
     upload_url: str
     object_key: str

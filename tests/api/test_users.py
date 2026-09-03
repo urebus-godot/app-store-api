@@ -127,7 +127,3 @@ class TestUsers:
             params={"password": "wrongpass"}
         )
         assert admin_role_response.status_code == 401
-
-
-class TestUserFiles:
-    pass

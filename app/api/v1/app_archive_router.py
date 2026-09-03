@@ -2,11 +2,11 @@ import uuid
 
 from fastapi import APIRouter, Depends, status
 
-from app.api.dependencies import UserIdDep, AppArchiveServiceDep, rate_limit
+from app.api.deps import UserIdDep, AppArchiveServiceDep, rate_limit
 
 from app.schemas.file import (
     DownloadPresignResponse,
-    UploadPresignRequest,
+    AppArchiveUploadPresignRequest,
     UploadPresignResponse,
 )
 
@@ -20,14 +20,15 @@ router = APIRouter(
 )
 async def request_app_archive_upload_url(
     app_id: uuid.UUID,
-    data: UploadPresignRequest,
+    data: AppArchiveUploadPresignRequest,
     user_id: UserIdDep,
     file_service: AppArchiveServiceDep,
 ) -> UploadPresignResponse:
     return await file_service.presign_app_archive_upload(
         app_id=app_id,
         publisher_id=user_id,
-        content_type=data.content_type
+        content_type=data.content_type,
+        filename=data.filename
     )
 
 

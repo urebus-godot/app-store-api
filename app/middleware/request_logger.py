@@ -7,8 +7,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.logging import request_id_var
 
-
-logger = logging.getLogger("app.request")
+logger = logging.getLogger("middleware.request")
 
 
 class RequestLoggerMiddleware(BaseHTTPMiddleware):

@@ -22,7 +22,6 @@ from app.core.exceptions import (
     app_not_found_exception,
     no_app_archive_exception
 )
-from app.repo.purchase_repo import PurchaseRepository
 
 from app.services.app_service import AppService
 from app.services.user_service import UserService
@@ -31,7 +30,8 @@ from app.models.app import AppDB
 from app.models.purchase import PurchaseDB, CartItem, CartDB
 from app.schemas.purchase import CartResponse
 
-logger = logging.getLogger("purchase_service")
+logger = logging.getLogger("services.purchase")
+
 
 class PurchaseService:
     def __init__(
@@ -39,11 +39,9 @@ class PurchaseService:
         redis: Redis,
         app_service: AppService,
         user_service: UserService,
-        purchase_repo: PurchaseRepository,
         uow: UnitOfWork
     ):
         self.redis = redis
-        self.purchase_repo = purchase_repo
         self.app_service = app_service
         self.user_service = user_service
         self.uow = uow
@@ -98,9 +96,10 @@ class PurchaseService:
     async def get_purchase_history(
         self, user_id: UUID, skip: int, limit: int
     ) -> list[PurchaseDB]:
-        purchases = await self.purchase_repo.get_purchases(
-            user_id, skip, limit
-        )
+        async with self.uow:
+            purchases = await self.uow.purchase_repo.get_purchases(
+                user_id, skip, limit
+            )
         return purchases
 
     async def add_app_to_cart(
@@ -108,8 +107,11 @@ class PurchaseService:
     ) -> CartItem:
         async with self.uow:
             user_cart = await self.get_or_create_cart(user_id)
-            app = await self.app_service.get_app(app_id)
+            app = await self.uow.app_repo.get_app(app_id)
 
+            if app is None:
+                raise app_not_found_exception
+            
             purchased = await self.uow.purchase_repo.get_purchase(
                 app_id, user_id
             )
@@ -172,22 +174,18 @@ class PurchaseService:
                 
                 purchased_apps.append(item)
                 actual_total_price += item.app.price
-                
-                # Копим деньги для издателей
+
                 pub_id = item.app.publisher_id
                 publisher_earnings[pub_id] += item.app.price
 
-            # Если все игры из корзины уже куплены
             if not purchased_apps:
                 await self.delete_cart(user_id, self.uow)
                 await self.redis.delete(f"cart_cache:{user.id}")
                 return []
 
-            # 3. Проверяем баланс по актуальной стоимости
             if user.balance < actual_total_price:
                 raise insufficient_funds_exception
 
-            # 4. Проводим списания и начисления внутри БД
             user.balance -= actual_total_price
             
             for item in purchased_apps:
@@ -200,15 +198,12 @@ class PurchaseService:
                     )
                 publisher.balance += earnings
 
-            # 5. Удаляем корзину и кэш
             await self.delete_cart(user_id)
             await self.redis.delete(f"cart_cache:{user.id}")
-            
-            # 6. Фиксируем транзакцию в БД
+
             await self.uow.commit()
             logger.info("Transaction has ended successfully")
 
-            # 7. Только ПОСЛЕ успешного коммита планируем отправку Email
             if user.email is not None:
                 app_names = ", ".join(
                     item.app.title for item in purchased_apps

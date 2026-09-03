@@ -29,6 +29,16 @@ from app.models.finance import TransferDB
 from app.models.purchase import CartDB, CartItem, PurchaseDB
 from app.models.user import UserDB
 
+__all__ = [
+    DiscussionDB, 
+    MessageDB, 
+    ReviewDB, 
+    TransferDB, 
+    CartDB, 
+    CartItem,
+    PurchaseDB, 
+    UserDB
+]
 
 UserResponse.model_rebuild()
 CurrentUserResponse.model_rebuild()

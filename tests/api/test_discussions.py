@@ -21,7 +21,7 @@ from app.core.config import settings
 from app.core.auth import create_access_token
 
 from app.main import app
-from app.api.dependencies import (
+from app.api.deps import (
     get_redis, 
     get_access_secret_key, 
     get_session, 

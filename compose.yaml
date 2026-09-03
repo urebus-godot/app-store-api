@@ -104,7 +104,7 @@ services:
       - "8000"
     volumes:
       - type: bind
-        source: app
+        source: ./app
         target: /src/app
     depends_on:
       db:

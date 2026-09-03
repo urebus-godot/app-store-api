@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlmodel.ext.asyncio.session import AsyncSession
 from fastapi import Depends, Query, Request, Response
 from fastapi.security import OAuth2PasswordBearer
-
+ 
 from app.db.postgres import get_session, session_factory
 from app.db.redis import get_redis
 
@@ -53,7 +53,7 @@ from app.services.app_archive_service import AppArchiveService
 from app.services.media_service import MediaService
 
 from app.storage.minio_repo import MinioStorage
-from app.storage.protocols import ObjectStorage
+from app.storage.protocol import ObjectStorage
 
 from app.ws.discussion_manager import (
     DiscussionWebsocketManager
@@ -71,7 +71,7 @@ token_errors = {
     InvalidTokenError: invalid_access_token_exception
 }
 
-logger = logging.getLogger("dependencies")
+logger = logging.getLogger("api.deps")
 
 
 def skip_limit_params(
@@ -159,14 +159,14 @@ async def rate_limit(
     rate_limiter: Annotated[RateLimiter, Depends(get_rate_limiter)],
     request: Request,
     response: Response,
-    user_id: str | None = Depends(get_current_user_id_optionally),
+    user_id: Optional[UUID] = Depends(get_current_user_id_optionally),
 ):
     # 1. Грубый лимит по IP — защита от анонимного флуда
     ip_result = await rate_limiter.check(
         request.client.host,
         scope="ip",
-        #limit=20,
-        #window_seconds=60,
+        limit= 15,
+        window_seconds=60,
     )
     response.headers["X-RateLimit-Remaining-IP-Address"] = (
         str(ip_result.remaining_requests))
@@ -178,8 +178,8 @@ async def rate_limit(
         user_result = await rate_limiter.check(
             user_id,
             scope="user",
-            #limit=20,
-            #window_seconds=60,
+            limit=20,
+            window_seconds=60,
         )
         response.headers["X-RateLimit-Remaining-User"] = (
             str(user_result.remaining_requests))
@@ -228,34 +228,35 @@ def get_user_repo(session: SessionDep) -> UserRepository:
     return UserRepository(session)
 
 def get_user_service(
-    user_repo: UserRepoDep,
     app_service: AppServiceDep,
-    uow: UnitOfWorkDep
+    uow: UnitOfWorkDep,
+    storage: ObjectStorageDep
 ) -> UserService:
-    return UserService(user_repo, app_service, uow)
+    return UserService(app_service=app_service, uow=uow, storage=storage)
 
 
 def get_finance_repo(session: SessionDep) -> FinanceRepository:
     return FinanceRepository(session)
 
 def get_finance_service(
-    finance_repo: FinanceRepoDep,
-    user_repo: UserRepoDep,
     uow: UnitOfWorkDep
 ) -> FinanceService:
-    return FinanceService(finance_repo, user_repo, uow)
+    return FinanceService(uow)
 
 
 def get_app_repo(session: SessionDep) -> AppRepository:
     return AppRepository(session)
 
 def get_app_service(
-    app_repo: AppRepoDep, 
-    user_repo: UserRepoDep,
-    purchase_repo: PurchaseRepoDep,
-    uow: UnitOfWorkDep
+    uow: UnitOfWorkDep,
+    storage: ObjectStorageDep,
+    media_service: MediaServiceDep
 ) -> AppService:
-    return AppService(app_repo, user_repo, purchase_repo, uow)
+    return AppService(
+        uow=uow, 
+        storage=storage,
+        media_service=media_service
+    )
 
 
 def get_review_repo(
@@ -264,11 +265,10 @@ def get_review_repo(
     return ReviewRepository(session)
 
 def get_review_service(
-    review_repo: ReviewRepoDep, 
     app_service: AppServiceDep,
     uow: UnitOfWorkDep
 ) -> ReviewService:
-    return ReviewService(review_repo, app_service, uow)
+    return ReviewService(app_service, uow)
 
 
 def get_purchase_repo(
@@ -280,23 +280,21 @@ def get_purchase_service(
     redis: RedisDep, 
     app_service: AppServiceDep, 
     user_service: UserServiceDep,
-    purchase_repo: PurchaseRepoDep,
     uow: UnitOfWorkDep
 ) -> PurchaseService:
     return PurchaseService(
-        redis, app_service, user_service, purchase_repo, uow
-        )
+        redis, app_service, user_service, uow
+    )
 
 
 def get_discussion_repo(session: SessionDep) -> DiscussionRepository:
     return DiscussionRepository(session)
 
 def get_discussion_service(
-    discussion_repo: DiscussionRepoDep, 
     app_service: AppServiceDep,
     uow: UnitOfWorkDep
 ) -> DiscussionService:
-    return DiscussionService(discussion_repo, app_service, uow)
+    return DiscussionService(app_service, uow)
 
 def get_discussion_manager(redis: RedisDep) -> DiscussionWebsocketManager:
     return DiscussionWebsocketManager(redis)
@@ -315,16 +313,21 @@ def get_object_storage() -> ObjectStorage:
 
 def get_app_archive_service(
     uow: UnitOfWorkDep,
-    storage: Annotated[ObjectStorage, Depends(get_object_storage)]
+    storage: ObjectStorageDep
 ) -> AppArchiveService:
     return AppArchiveService(storage=storage, uow=uow)
 
 
 def get_media_service(
     uow: UnitOfWorkDep, 
-    storage: ObjectStorage = Depends(get_object_storage),
+    storage: ObjectStorageDep
 ) -> MediaService:
     return MediaService(storage=storage, uow=uow)
+
+
+def get_finance_api_client():
+    from app.main import app
+    return app.state.finance_api_client
 
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -370,6 +373,10 @@ DiscussionRepoDep = Annotated[
 
 DiscussionManagerDep = Annotated[
     DiscussionWebsocketManager, Depends(get_discussion_manager)
+]
+
+ObjectStorageDep = Annotated[
+    ObjectStorage, Depends(get_object_storage)
 ]
 
 RedisDep = Annotated[Redis, Depends(get_redis)]

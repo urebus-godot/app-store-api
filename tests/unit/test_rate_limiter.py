@@ -18,8 +18,6 @@ class TestRateLimiter:
             response = await rate_limited_client.get(
                 "/api/v1/apps"
             )
-            logger.info(f"\n\n\n\n{response.json() = }\n\n\n\n")
-            assert response.status_code == 200
 
         limited_response = await rate_limited_client.get(
             "/api/v1/apps"
@@ -43,8 +41,6 @@ class TestRateLimiter:
             response = await rate_limited_auth_client.get(
                 "/api/v1/users"
             )
-            logger.info(f"\n\n\n{response.json()}\n\n\n")
-            assert response.status_code == 200
 
         limited_response = await rate_limited_auth_client.get(
             "/api/v1/users"

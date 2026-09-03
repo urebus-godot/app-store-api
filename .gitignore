@@ -11,16 +11,18 @@ wheels/
 
 .env
 x/
-*.sql
-*.sh
-*.python-version
-*.json
-*.html
+
 .pytest_cache
 .ruff_cache
 .vscode/
 htmlcov/
-*.python-version
-*.coverage
 media/
 certs/
+
+*.sql
+*.sh
+*.json
+*.html
+*.python-version
+*.coverage
+*.txt

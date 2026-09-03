@@ -1,7 +1,8 @@
-
 from httpx import AsyncClient
 from fastapi.exceptions import ResponseValidationError
 import pytest
+
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.app import AppDB
 
@@ -54,8 +55,14 @@ class TestApps:
             pass
 
     async def test_delete_app(
-        self, publisher_client: AsyncClient, test_app: AppDB
+        self, 
+        publisher_client: AsyncClient, 
+        test_app: AppDB,
+        db_session: AsyncSession
     ):
+        test_app.archive_key = None
+        await db_session.flush()
+
         delete_response = await publisher_client.delete(
             f"/api/v1/apps/{test_app.id}"
         )
@@ -103,7 +110,3 @@ class TestApps:
         response = await client.get("/api/v1/apps")
         assert response.status_code == 200
         assert len(response.json()) == len(test_apps) - 1
-
-
-class TestAppFiles:
-    pass

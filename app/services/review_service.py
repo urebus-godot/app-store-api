@@ -12,7 +12,6 @@ from app.core.exceptions import (
 from app.schemas.review import ReviewRequest
 from app.models.review import ReviewDB
 
-from app.repo.review_repo import ReviewRepository
 from app.services.app_service import AppService
 
 from app.uow.orm import UnitOfWork
@@ -22,11 +21,9 @@ from app.task_queue.tasks.db_tasks import update_app_rating
 class ReviewService:
     def __init__(
         self, 
-        review_repo: ReviewRepository, 
         app_service: AppService,
         uow: UnitOfWork
     ):
-        self.review_repo = review_repo
         self.app_service = app_service
         self.uow = uow
 
@@ -66,10 +63,11 @@ class ReviewService:
         return review
 
     async def get_review(self, id: UUID) -> ReviewDB:
-        review = await self.review_repo.get_review(id)
+        async with self.uow:
+            review = await self.uow.review_repo.get_review(id)
 
-        if review is None:
-            raise review_not_found_exception
+            if review is None:
+                raise review_not_found_exception
 
         return review
 
@@ -78,17 +76,25 @@ class ReviewService:
         app_id: UUID,
         skip: int, limit: int
     ) -> list[ReviewDB]:
-        await self.app_service.get_app(app_id)
-        app_reviews = await self.review_repo.get_app_reviews(app_id, skip, limit)
+        async with self.uow:
+            app = await self.uow.app_repo.get_app(app_id)
+
+            if app is None:
+                raise app_not_found_exception
+
+            app_reviews = await self.uow.review_repo.get_app_reviews(
+                app_id, skip, limit
+            )
         return app_reviews
 
     async def get_user_reviews(
         self, user_id: UUID, 
         skip: int, limit: int
     ) -> list[ReviewDB]:
-        user_reviews = await self.review_repo.get_user_reviews(
-            user_id, skip, limit
-        )
+        async with self.uow:
+            user_reviews = await self.uow.review_repo.get_user_reviews(
+                user_id, skip, limit
+            )
         return user_reviews
 
     async def delete_review(
@@ -103,7 +109,7 @@ class ReviewService:
             if not review.author_id == user_id:
                 raise no_rights_exception
 
-            await self.uow.session.delete(review)
+            await self.uow.delete(review)
             await self.uow.commit()
             
         app_id = str(review.app_id)

@@ -3,6 +3,7 @@ import logging
 
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlmodel import SQLModel
 
 from app.repo.purchase_repo import PurchaseRepository
 from app.repo.app_repo import AppRepository
@@ -53,3 +54,9 @@ class OrmUnitOfWork(UnitOfWork):
     async def rollback(self) -> None:
         await self.session.rollback()
         logger.debug("Rolled transaction back")
+
+    async def add(self, object: SQLModel) -> None:
+        self.session.add(object)
+
+    async def delete(self, object: SQLModel) -> None:
+        await self.session.delete(object)

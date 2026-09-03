@@ -1,19 +1,22 @@
 from decimal import Decimal
 from uuid import UUID
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
+from httpx import AsyncClient
 
 from app.schemas.finance import TransferRequest, TransferResponse
 from app.base_models.finance import CurrencyType
 
-from app.api.dependencies import (
+from app.api.deps import (
     UserDep, 
     UserIdDep, 
     FinanceServiceDep, 
     rate_limit, 
     SkipLimitParams,
-    RedisDep
+    RedisDep,
+    get_finance_api_client
     )
 
 router = APIRouter(
@@ -69,13 +72,16 @@ async def get_balance(
     request: Request,
     user: UserDep,
     finance_service: FinanceServiceDep,
+    finance_api_client: Annotated[
+        AsyncClient, Depends(get_finance_api_client)
+    ],
     currency: CurrencyType = CurrencyType.RUB,
     ) -> JSONResponse:
     """Returns current user's balance measured in the specified currency."""
     result = await finance_service.convert_rubles(
         float(user.balance), 
         currency, 
-        request.app.state.conversion_api_client
+        finance_api_client
     )
     if isinstance(result, Decimal):
         return {"balance": result, "currency": currency}

@@ -22,7 +22,7 @@ from app.core.exception_handlers import (
 from app.core.logging import setup_logging
 from app.core.config import settings
 
-from app.api.dependencies import RedisDep, SessionDep, get_object_storage
+from app.api.deps import RedisDep, SessionDep, get_object_storage
 from app.api.v1 import (
     app_archive_router,
     app_router,
@@ -40,7 +40,7 @@ setup_logging()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.redis_client = connect_to_redis_client()
-    app.state.conversion_api_client = AsyncClient(
+    app.state.finance_api_client = AsyncClient(
         base_url="https://api.frankfurter.dev/v2"
     )
     object_storage = get_object_storage()
@@ -120,10 +120,10 @@ app.include_router(
 cors = CORSMiddleware(
     app=app,
     allow_origins=["*"],
-    allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_methods=["*"],
     allow_headers=["*"],
     allow_credentials=True,
-    expose_headers=["X-RateLimit-Remaining"]
+    #expose_headers=["X-RateLimit-Remaining"]
 )
 
 

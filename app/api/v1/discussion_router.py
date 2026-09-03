@@ -10,8 +10,7 @@ from pydantic import ValidationError
 from app.core.config import settings
 from app.core.exceptions import (
     InvalidTokenError, 
-    InvalidTokenPayloadError, 
-    UserNotFoundError
+    InvalidTokenPayloadError
 )
 from app.schemas.discussion import (
     DiscussionRequest,
@@ -24,8 +23,7 @@ from app.schemas.ws_messages import incoming_adapter
 from app.schemas.ws_events import (
     ErrorEvent
 )
-
-from app.api.dependencies import (
+from app.api.deps import (
     DiscussionServiceDep, 
     UserIdDep,
     rate_limit, 
@@ -41,7 +39,7 @@ router = APIRouter(
     dependencies=[Depends(rate_limit)]
 )
 
-logger = logging.getLogger("app.discussion_router")
+logger = logging.getLogger("api.v1.discussion_router")
 
 
 # ------ Discussion routes ------
@@ -75,7 +73,10 @@ async def ws_discussion(
         user = await user_repo.get_user_by_id(user_id)
 
         if not user:
-            raise UserNotFoundError()
+            await websocket.close(
+                code=status.WS_1008_POLICY_VIOLATION,
+                reason="User not found"
+            )
 
         logger.info("Validated token from user")
     except asyncio.TimeoutError:
@@ -88,12 +89,6 @@ async def ws_discussion(
         await websocket.close(
             code=status.WS_1008_POLICY_VIOLATION,
             reason="Invalid token"
-        )
-        return
-    except UserNotFoundError:
-        await websocket.close(
-            code=status.WS_1008_POLICY_VIOLATION,
-            reason="User not found"
         )
         return
     except ValidationError as e:

@@ -52,4 +52,4 @@ celery_app.conf.beat_schedule = {
     }
 }
 
-logger = logging.getLogger("app.task_queue.celery_app")
+logger = logging.getLogger("task_queue.celery_app")

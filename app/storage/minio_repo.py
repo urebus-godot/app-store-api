@@ -7,6 +7,8 @@ from botocore.exceptions import ClientError
 
 from app.core.config import settings
 
+from app.utils.files import variant_key
+
 logger = logging.getLogger("storage.minio_repo")
 
 
@@ -117,3 +119,20 @@ class MinioStorage:
             "s3", **self._internal_kwargs
         ) as client:
             await client.delete_object(Bucket=bucket, Key=key)
+            logger.info(f"Deleted object with key: {key}")
+            # can raise CloudDirectory.Client.*.ResourceNotFoundException
+
+    async def delete_image_variants(
+        self, bucket: str, object_key: str
+    ) -> None:
+        """Deletes the original image and its generated variants"""
+        await self.delete_object(
+            bucket, object_key
+        )
+        for _, suffix in settings.IMAGE_SIZES:
+            key = variant_key(object_key, suffix)
+            await self.delete_object(
+                bucket=bucket,
+                key=key
+            )
+            logger.info(f"Deleted image file.\nBucket: {bucket}\n Key: {key}")

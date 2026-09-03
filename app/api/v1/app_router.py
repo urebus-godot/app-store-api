@@ -3,11 +3,14 @@ from uuid import UUID
 import logging
 
 from fastapi import (
-    APIRouter, status, 
-    Depends, Query
+    APIRouter, 
+    status, 
+    Depends, 
+    Query,
+    BackgroundTasks
 )
 
-from app.api.dependencies import (
+from app.api.deps import (
     UserIdDep,
     SkipLimitParams,
     PublisherDep,
@@ -200,6 +203,9 @@ async def get_publisher_apps(
 async def delete_app(
     id: UUID, 
     user_id: UserIdDep, 
-    app_service: AppServiceDep
+    app_service: AppServiceDep,
+    bg_tasks: BackgroundTasks
 ) -> None:
-    return await app_service.delete_app_by_user(id, user_id)
+    return await app_service.delete_app_by_user(
+        id=id, user_id=user_id, bg_tasks=bg_tasks
+    )

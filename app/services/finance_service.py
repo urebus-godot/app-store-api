@@ -3,6 +3,7 @@ from uuid import UUID, uuid4
 
 from httpx import AsyncClient
 from fastapi.responses import JSONResponse
+from fastapi import status
 
 from redis.asyncio import Redis
 from app.uow.orm import UnitOfWork
@@ -10,8 +11,6 @@ from app.core.exceptions import (
     insufficient_funds_exception,
     invalld_promo_code_exception
 )
-from app.repo.finance_repo import FinanceRepository
-from app.repo.user_repo import UserRepository
 
 from app.schemas.finance import TransferRequest
 from app.models.finance import TransferDB
@@ -21,12 +20,8 @@ from app.base_models.finance import CurrencyType
 class FinanceService:
     def __init__(
         self, 
-        finance_repo: FinanceRepository,
-        user_repo: UserRepository,
         uow: UnitOfWork
     ):
-        self.finance_repo = finance_repo
-        self.user_repo = user_repo
         self.uow = uow
 
     async def create_promo_code(
@@ -87,7 +82,7 @@ class FinanceService:
             
             result = await self.uow.finance_repo.create_transfer_to_card(
                 data, user
-                )
+            )
             await self.uow.commit()
 
         return result
@@ -97,8 +92,9 @@ class FinanceService:
         user_id: UUID,
         skip: int, limit: int
     ) -> list[TransferDB]:
-        transfers = await self.finance_repo.get_transfers(
-            user_id, skip, limit
+        async with self.uow:
+            transfers = await self.uow.finance_repo.get_transfers(
+                user_id, skip, limit
             )
         return transfers
 
@@ -121,10 +117,10 @@ class FinanceService:
         if api_response.status_code >= 400:
             return JSONResponse(
                 data,
-                api_response.status_code
+                status_code=status.HTTP_502_BAD_GATEWAY
             )
         
-        rate = data[0]["rate"]
+        rate = data["rate"]
         converted_amount = amount * rate
 
         return round(Decimal(converted_amount), 2)

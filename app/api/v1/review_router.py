@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, status, Depends
 
-from app.api.dependencies import (
+from app.api.deps import (
     UserIdDep, ReviewServiceDep, rate_limit, SkipLimitParams
     )
 from app.schemas.review import ReviewRequest, ReviewResponse

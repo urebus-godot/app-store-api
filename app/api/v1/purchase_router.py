@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, status, BackgroundTasks, Depends
 
-from app.api.dependencies import (
+from app.api.deps import (
     PurchaseServiceDep,
     UserIdDep,
     UserDep,

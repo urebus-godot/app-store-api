@@ -1,4 +1,5 @@
-import uuid
+from uuid import UUID
+import logging
 
 from fastapi import HTTPException, status
 
@@ -12,7 +13,8 @@ from app.core.exceptions import (
 from app.core.config import settings
 
 from app.schemas.file import DownloadPresignResponse, UploadPresignResponse
-from app.storage.protocols import ObjectStorage
+
+from app.storage.protocol import ObjectStorage
 
 from app.uow.base import UnitOfWork
 from app.utils.files import validate_and_get_extension
@@ -24,6 +26,8 @@ ALLOWED_ARCHIVE_CONTENT_TYPES = {
     "application/vnd.rar": "rar"
 }
 
+logger = logging.getLogger("services.app_archive")
+
 
 class AppArchiveService:
     def __init__(
@@ -31,19 +35,20 @@ class AppArchiveService:
         storage: ObjectStorage, 
         uow: UnitOfWork
     ) -> None:
-        self._storage = storage
+        self.storage = storage
         self.uow = uow
 
     async def presign_app_archive_upload(
         self,
-        app_id: uuid.UUID,
-        publisher_id: uuid.UUID,
-        content_type: str
+        app_id: UUID,
+        publisher_id: UUID,
+        content_type: str,
+        filename: str
     ) -> UploadPresignResponse:
         extension = validate_and_get_extension(
             ALLOWED_ARCHIVE_CONTENT_TYPES, content_type
         )
-        object_key = f"{app_id}/{uuid.uuid4()}.{extension}"
+        object_key = f"apps/{app_id}/{filename}.{extension}"
 
         async with self.uow:
             app = await self.uow.app_repo.get_app(app_id)
@@ -54,7 +59,7 @@ class AppArchiveService:
             if app.publisher_id != publisher_id:
                 raise no_rights_exception
 
-            upload_url = await self._storage.generate_presigned_upload_url(
+            upload_url = await self.storage.generate_presigned_upload_url(
                 bucket=settings.APP_ARCHIVE_BUCKET,
                 key=object_key,
                 content_type=content_type,
@@ -72,8 +77,8 @@ class AppArchiveService:
 
     async def confirm_app_archive_upload(
         self, 
-        app_id: uuid.UUID, 
-        publisher_id: uuid.UUID
+        app_id: UUID, 
+        publisher_id: UUID
     ) -> None:
         async with self.uow:
             app = await self.uow.app_repo.get_app(app_id)
@@ -84,7 +89,7 @@ class AppArchiveService:
             if app.pending_archive_key is None:
                 raise no_load_exception
 
-            exists = await self._storage.object_exists(
+            exists = await self.storage.object_exists(
                 settings.APP_ARCHIVE_BUCKET, app.pending_archive_key
             )
             if not exists:
@@ -93,15 +98,16 @@ class AppArchiveService:
             old_key = app.archive_key
             app.archive_key = app.pending_archive_key
             app.pending_archive_key = None
+
             await self.uow.commit()
 
             if old_key is not None:
-                await self._storage.delete_object(
+                await self.storage.delete_object(
                     settings.APP_ARCHIVE_BUCKET, old_key
                 )
 
     async def presign_app_archive_download(
-        self, app_id: uuid.UUID, user_id: uuid.UUID
+        self, app_id: UUID, user_id: UUID
     ) -> DownloadPresignResponse:
         async with self.uow:
             app = await self.uow.app_repo.get_app(app_id)
@@ -127,7 +133,7 @@ class AppArchiveService:
 
             archive_key = app.archive_key
 
-        download_url = await self._storage.generate_presigned_download_url(
+        download_url = await self.storage.generate_presigned_download_url(
             bucket=settings.APP_ARCHIVE_BUCKET,
             key=archive_key,
             expires_in=settings.DOWNLOAD_TTL_SECONDS,
@@ -135,4 +141,22 @@ class AppArchiveService:
         return DownloadPresignResponse(
             download_url=download_url, 
             expires_in=settings.DOWNLOAD_TTL_SECONDS
+            )
+
+    async def delete_app_archive(
+        self, app_id: UUID, user_id: UUID
+    ) -> None:
+        async with self.uow:
+            logger.info("Deleting app archive")
+            app = await self.uow.app_repo.get_app(app_id)
+
+            if app.publisher_id != user_id:
+                raise no_rights_exception
+            
+            if app.pending_archive_key is None:
+                raise no_load_exception
+
+            await self.storage.delete_object(
+                settings.APP_ARCHIVE_BUCKET, 
+                app.archive_key
             )

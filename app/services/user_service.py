@@ -1,5 +1,6 @@
 from typing import Optional, Union
 from uuid import UUID
+import logging
 import json
 
 from fastapi import BackgroundTasks, Request
@@ -14,7 +15,6 @@ from app.models.user import UserDB
 from app.schemas.user import UserRequest, UserUpdate, UserRoleResponse
 from app.schemas.token import LoginResponse
 
-from app.repo.user_repo import UserRepository
 from app.services.app_service import AppService
 
 from app.core.exceptions import (
@@ -35,23 +35,27 @@ from app.utils.email_send import send_email
 
 from app.uow.orm import UnitOfWork
 
+from app.storage.protocol import ObjectStorage
+
+logger = logging.getLogger("services.user")
+
 
 class UserService:
     def __init__(
         self, 
-        user_repo: UserRepository,
         app_service: AppService,
-        uow: UnitOfWork
+        uow: UnitOfWork,
+        storage: ObjectStorage
     ):
-        self.user_repo = user_repo
         self.app_service = app_service
         self.uow = uow
+        self.storage = storage
 
     async def username_registered(self, username: str) -> bool:
-        return await self.user_repo.username_registered(username)
+        return await self.uow.user_repo.username_registered(username)
 
     async def email_registered(self, email: EmailStr) -> bool:
-        return await self.user_repo.email_registered(email)
+        return await self.uow.user_repo.email_registered(email)
 
     async def register_user(
         self, data: UserRequest, 
@@ -197,31 +201,35 @@ class UserService:
     async def get_user_by_username(
         self, username: str
     ) -> Optional[UserDB]:
-        user = await self.user_repo.get_user_by_username(username)
+        async with self.uow:
+            user = await self.uow.user_repo.get_user_by_username(username)
 
-        if user is None:
-            raise user_not_found_exception
+            if user is None:
+                raise user_not_found_exception
 
-        return user
+            return user
 
     async def get_user_by_id(
         self, id: UUID
     ) -> Optional[UserDB]:
-        user = await self.user_repo.get_user_by_id(id)
+        async with self.uow:
+            user = await self.uow.user_repo.get_user_by_id(id)
 
-        if user is None:
-            raise user_not_found_exception
+            if user is None:
+                raise user_not_found_exception
 
-        return user
+            return user
 
     async def get_users(self, skip: int, limit: int) -> list[UserDB]:
-        users = await self.user_repo.get_users(skip, limit)
-        return users
+        async with self.uow:
+            users = await self.uow.user_repo.get_users(skip, limit)
+            return users
 
     async def delete_user(
         self, 
         user_id: UUID, 
-        redis: Redis
+        redis: Redis,
+        bg_tasks: BackgroundTasks
     ) -> None:
         async with self.uow:
             user = await self.uow.user_repo.get_user_by_id(user_id)
@@ -229,14 +237,16 @@ class UserService:
             if user is None:
                 raise user_not_found_exception
 
-            published_apps = await self.uow.app_repo.get_publisher_apps(
-                user_id=user_id, public_only=False
-                )
-
-            for app in published_apps:
-                await self.app_service.delete_app(app.id, self.uow)
-
             await redis.delete(f"user_tokens:{user_id}")
-            await self.uow.session.delete(user)
+            await self.uow.delete(user)
+
+            logger.info(f"{user.avatar_key}")
+
+            if user.avatar_key is not None:
+                bg_tasks.add_task(
+                    self.storage.delete_image_variants, 
+                    settings.USER_AVATAR_BUCKET, 
+                    user.avatar_key
+                )
 
             await self.uow.commit()
