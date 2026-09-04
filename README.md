@@ -83,7 +83,7 @@ cd /path_to_project/app_store_api
 ``` bash
 docker compose up --build
 ```
-4. Visit a documentation or test the project using curl commands.
+4. Visit a documentation.
 * Swagger UI: [https://localhost/docs](https://localhost/docs)
 * ReDoc: [https://localhost/redoc](https://localhost/redoc)
 
@@ -98,7 +98,7 @@ curl -X 'GET' \
 ### Protected route
 ``` bash
 curl -X 'GET' \
-  'https://127.0.0.1/api/v1/users/me' \
+  'https://localhost/api/v1/users/me' \
   -H 'accept: application/json' \
   -H 'Authorization: Bearer user-access-token'
 ```
