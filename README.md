@@ -35,37 +35,37 @@ RESTful API for a computer software online store. It is designed for publishing 
 ## 📂 Project structure
 
 ```text
-├── .github/workflows     # CI/CD
-├── app/                  # App code
-│   ├── api/v1            # Endpoints, routers
-│   └── dependencies.py   # FastAPI dependency injection
-│───├── base_models/      # Base SQLModel models
-│   ├── core/             # Configuration, auth, security, logging
-│   ├── db/               # PostgreSQL, Redis connections and configuration, Redis rate limiter
-│   ├── middleware/       # FastAPI middleware
-│   ├── models/           # SQLModel db models
-│   ├── schemas/          # SQLModel schemas
-│   ├── service/          # Business logic
-│   ├── repo/             # Interaction with the db
-│   ├── uow/              # Unit of Work class
-│   ├── utils/            # Utility functions (datetime, size units conversion, email sending)
-│   ├── storage/          # Interaction with MinIO S3 storage
-│   ├── task_queue/       # Celery configuration and tasks
-│   ├── ws/               # WebSockets connection managers
-│   └── main.py           # FastAPI entry point
-├── migrations/           # Alembic migrations
-├── nginx/                # Nginx configuration
-├── tests/                # Pytest tests
-│   ├── api/              # Endpoint tests
-│   ├── unit/             # Function tests
-│   └── conftest.py       # General fixtures
-├── .dockerignore         # Files and directories not included in Docker images
-├── .env.example          # Environment variable examples from .env file
-├── compose.yaml          # Docker containers to launch the project
-├── compose.test.yaml     # Docker containers for tests
-├── Dockerfile            # Docker image build instructions
-├── pyproject.toml        # Project configuration and dependencies
-└── uv.lock               # Project dependencies
+├── .github/workflows       # CI/CD
+├── app/                    # App code
+│   └── api/v1              # Endpoints, routers
+│       └── dependencies.py # FastAPI dependency injection
+│───├── base_models/        # Base SQLModel models
+│   ├── core/               # Configuration, auth, security, logging
+│   ├── db/                 # PostgreSQL, Redis connections and configuration, Redis rate limiter
+│   ├── middleware/         # FastAPI middleware
+│   ├── models/             # SQLModel db models
+│   ├── schemas/            # SQLModel schemas
+│   ├── service/            # Business logic
+│   ├── repo/               # Interaction with the db
+│   ├── uow/                # Unit of Work class
+│   ├── utils/              # Utility functions (datetime, size units conversion, email sending)
+│   ├── storage/            # Interaction with MinIO S3 storage
+│   ├── task_queue/         # Celery configuration and tasks
+│   ├── ws/                 # WebSockets connection managers
+│   └── main.py             # FastAPI entry point
+├── migrations/             # Alembic migrations
+├── nginx/                  # Nginx configuration
+├── tests/                  # Pytest tests
+│   ├── api/                # Endpoint tests
+│   ├── unit/               # Function tests
+│   └── conftest.py         # General fixtures
+├── .dockerignore           # Files and directories not included in Docker images
+├── .env.example            # Environment variable examples from .env file
+├── compose.yaml            # Docker containers to launch the project
+├── compose.test.yaml       # Docker containers for tests
+├── Dockerfile              # Docker image build instructions
+├── pyproject.toml          # Project configuration and dependencies
+└── uv.lock                 # Project dependencies
 ```
 
 ---
