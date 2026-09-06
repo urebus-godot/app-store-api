@@ -11,12 +11,11 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore"
-        )
+    )
 
     API_TITLE: str = "App Store API"
-    API_DESC: str = (
-        "REST API of an online store for desktop applications and video games"
-    )
+    API_DESC: str = """RESTful API for an online store 
+        selling games and apps."""
     API_VERSION: str = "1.0"
 
     API_HOST: str = "0.0.0.0"
@@ -37,7 +36,8 @@ class Settings(BaseSettings):
         )
 
     WINDOW_SECONDS: int = 60
-    REQUEST_LIMIT: int = 15
+    REQUEST_LIMIT_IP: int = 15
+    REQUEST_LIMIT_USER: int = 20
 
     CACHE_TTL_SECONDS: int = 3600
 
@@ -46,7 +46,7 @@ class Settings(BaseSettings):
 
     ADMIN_PASSWORD: str = "secret"
 
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15 * 100
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     ACCESS_SECRET_KEY: str = "secret"
@@ -61,7 +61,7 @@ class Settings(BaseSettings):
 
     JWT_ALGORITHM: str = "HS256"
 
-    AUTH_TIMEOUT: float = 5.0
+    WS_AUTH_TIMEOUT: float = 5.0
 
     MIN_PASSWORD_LEN: int = 8
 

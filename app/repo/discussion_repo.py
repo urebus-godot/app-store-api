@@ -57,22 +57,29 @@ class DiscussionRepository:
 
         return discussion
 
-    async def get_app_discussions(self, app_id: UUID) -> list[DiscussionDB]:
+    async def get_app_discussions(
+        self, skip: int, limit: int, app_id: UUID
+    ) -> list[DiscussionDB]:
         discussions = (
             await self.session.exec(
                 select(DiscussionDB)
                 .where(DiscussionDB.app_id == app_id)
+                .offset(skip).limit(limit)
                 .order_by(desc(DiscussionDB.created_at))
             )
         ).all()
 
         return discussions
 
-    async def get_user_discussions(self, user_id: UUID) -> list[DiscussionDB]:
+    async def get_user_discussions(
+        self, user_id: UUID,
+        skip: int, limit: int
+    ) -> list[DiscussionDB]:
         discussions = (
             await self.session.exec(
                 select(DiscussionDB)
                 .where(DiscussionDB.creator_id == user_id)
+                .offset(skip).limit(limit)
                 .order_by(desc(DiscussionDB.created_at))
             )
         ).all()

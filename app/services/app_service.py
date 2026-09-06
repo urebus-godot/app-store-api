@@ -20,7 +20,7 @@ from app.services.media_service import MediaService
 
 from app.utils.search import format_keywords
 
-from app.uow.orm import UnitOfWork
+from app.uow.protocol import UnitOfWork
 
 from app.storage.protocol import ObjectStorage
 
@@ -92,14 +92,17 @@ class AppService:
                 apps = await self.uow.app_repo.get_apps_by_keywords(
                     keywords=format_keywords(search_query.split()),
                     skip=skip, limit=limit
-                    )
+                )
 
         return apps
 
-    async def get_purchased_apps(self, user_id: UUID) -> list[AppDB]:
+    async def get_purchased_apps(
+        self, user_id: UUID,
+        skip: int, limit: int
+    ) -> list[AppDB]:
         async with self.uow:
             purchased_apps = await self.uow.app_repo.get_purchased_apps(
-                user_id
+                user_id, skip, limit
             )
         return purchased_apps
 
@@ -149,31 +152,47 @@ class AppService:
         return games
 
     async def get_top_games(
-        self
+        self, 
+        skip: int, limit: int
     ) -> list[AppDB]:
         async with self.uow:
-            games = await self.uow.app_repo.get_top_games(0, 10)
+            games = await self.uow.app_repo.get_top_games(skip, limit)
         return games
 
     async def get_top_games_genre(
-        self, genre: Optional[GameGenre]
+        self, genre: Optional[GameGenre], 
+        skip: int, limit: int
     ) -> list[AppDB]:
         async with self.uow:
-            games = await self.uow.app_repo.get_top_games_genre(genre, 0, 10)
+            games = await self.uow.app_repo.get_top_games_genre(
+                genre, skip, limit
+            )
         return games
 
-    async def delete_app(
-        self, id: UUID
+    async def delete_app_with_its_files(
+        self, app: AppDB, bg_tasks: BackgroundTasks
     ) -> None:
-        raise NotImplementedError()
-        app = await self.uow.app_repo.get_app(id)
+        if app.archive_key is not None:
+            bg_tasks.add_task(
+                self.storage.delete_object,
+                settings.APP_ARCHIVE_BUCKET,
+                app.archive_key
+            )
 
-        if app is None:
-            return
+        if app.icon_key is not None:
+            bg_tasks.add_task(
+                self.storage.delete_image_variants,
+                settings.APP_ICON_BUCKET,
+                app.icon_key
+            )
 
+        bg_tasks.add_task(
+            self.media_service.delete_app_covers,
+            app.id
+        )
         await self.uow.delete(app)
 
-    async def delete_app_by_user(
+    async def delete_app(
         self, id: UUID, user_id: UUID, bg_tasks: BackgroundTasks
     ) -> None:
         async with self.uow:
@@ -184,26 +203,18 @@ class AppService:
             
             if not app.publisher_id == user_id:
                 raise no_rights_exception
-            logger.info(f"\n\n{app.archive_key}\n\n")
-            if app.archive_key is not None:
-                bg_tasks.add_task(
-                    self.storage.delete_object,
-                    settings.APP_ARCHIVE_BUCKET,
-                    app.archive_key
-                )
 
-            if app.icon_key is not None:
-                bg_tasks.add_task(
-                    self.storage.delete_image_variants,
-                    settings.APP_ICON_BUCKET,
-                    app.icon_key
-                )
-
-            logger.info("Adding delete_app_covers task")
-
-            bg_tasks.add_task(
-                self.media_service.delete_app_covers,
-                id
-            )
-            await self.uow.delete(app)
+            await self.delete_app_with_its_files(app, bg_tasks)
             await self.uow.commit()
+
+    async def delete_publisher_apps(
+        self, 
+        publisher_id: UUID, 
+        bg_tasks: BackgroundTasks,
+        uow: UnitOfWork
+    ) -> None:
+        apps = await uow.app_repo.get_publisher_apps(
+            publisher_id, public_only=False
+        )
+        for app in apps:
+            await self.delete_app_with_its_files(app, bg_tasks)

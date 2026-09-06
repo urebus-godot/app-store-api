@@ -23,7 +23,7 @@ def response_validation_error_handler(
 def request_error_handler(
     request: Request, exception: httpx.RequestError
 ) -> JSONResponse:
-    logger.error(f"Request exception: {exception.errors()}")
+    logger.error(f"Request exception: {exception}")
     return JSONResponse(
         status_code=status.HTTP_502_BAD_GATEWAY,
         content={"message": "Error while sending request to API"},
@@ -33,7 +33,7 @@ def request_error_handler(
 def timeout_error_handler(
     request: Request, exception: httpx.ReadTimeout
 ) -> JSONResponse:
-    logger.error(f"Timeout exception: {exception.errors()}")
+    logger.error(f"Timeout exception: {exception}")
     return JSONResponse(
         status_code=status.HTTP_504_GATEWAY_TIMEOUT,
         content={"message": "Response timeout expired"},

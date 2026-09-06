@@ -1,8 +1,8 @@
 from decimal import Decimal
 from uuid import UUID
-from typing import Annotated
+from typing import Annotated, Any, Union
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from httpx import AsyncClient
 
@@ -29,8 +29,11 @@ async def top_up_balance(
     data: TransferRequest,
     user_id: UserIdDep,
     finance_service: FinanceServiceDep
-) -> dict[str, Decimal]:
-    """Increases user's balance by specified amount"""
+) -> TransferResponse:
+    """Increases user's balance by specified amount 
+    and adds transfer to the database.
+    
+    *Returns*: TransferResponse object"""
     return await finance_service.create_transfer_to_balance(
         data, user_id
         )
@@ -43,6 +46,11 @@ async def enter_promo_code(
     redis: RedisDep,
     finance_service: FinanceServiceDep
 ) -> dict[str, Decimal]:
+    """Increases user's balance and deletes the promo code
+    if it is stored in the Redis.
+
+    *Returns*: dict object containing new user's balance 
+    and received balance"""
     return await finance_service.process_promo_code(
         user_id, promo_code, redis
         )
@@ -53,31 +61,47 @@ async def withdraw_funds_to_card(
     data: TransferRequest,
     user_id: UserIdDep,
     finance_service: FinanceServiceDep
-) -> dict[str, Decimal]:
-    """Increases user's balance by specified amount"""
+) -> TransferResponse:
+    """Simulates a transfer from the user balance to a card linked 
+    to the user and adds it to the database.
+
+    *Returns*: TransferResponse object"""
     return await finance_service.create_transfer_to_card(data, user_id)
 
 
-@router.get("/transfers/history")
+@router.get(
+    "/transfers/history",
+    response_model=list[TransferResponse]
+)
 async def get_transfer_history(
     user_id: UserIdDep,
     skip_limit: SkipLimitParams,
     finance_service: FinanceServiceDep
 ) -> list[TransferResponse]:
+    """Fetches the current user's transfers from the database.
+
+    *Returns*: list of TransferResponse objects"""
     return await finance_service.get_transfers(user_id, *skip_limit)
 
 
-@router.get("/finance/me/balance")
+@router.get(
+    "/finance/me/balance",
+    response_model=Union[dict[str, Any], JSONResponse]
+)
 async def get_balance(
-    request: Request,
     user: UserDep,
     finance_service: FinanceServiceDep,
     finance_api_client: Annotated[
         AsyncClient, Depends(get_finance_api_client)
     ],
     currency: CurrencyType = CurrencyType.RUB,
-    ) -> JSONResponse:
-    """Returns current user's balance measured in the specified currency."""
+) -> dict[str, Any] | JSONResponse:
+    """Calls an external API to convert the user's balance 
+    from rubles to the specified currency.
+    
+    *Returns*: dict object containing the user's 
+    balance in the specified currency if the call was successful; 
+    otherwise, returns JSONResponse object with details."""
     result = await finance_service.convert_rubles(
         float(user.balance), 
         currency, 

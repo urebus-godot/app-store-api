@@ -12,9 +12,6 @@ from app.models.user import UserDB
 class FinanceRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
-        self.load_attrs = (
-            
-        )
 
     async def create_transfer_to_balance(
         self, data: TransferRequest, user: UserDB
@@ -30,7 +27,7 @@ class FinanceRepository:
 
         self.session.add(transfer_db)
 
-        return {"new_balance": user.balance}
+        return transfer_db
 
     async def create_transfer_to_card(
         self, data: TransferRequest, user: UserDB
@@ -45,7 +42,7 @@ class FinanceRepository:
 
         self.session.add(transfer_db)
 
-        return {"new_balance": user.balance}
+        return transfer_db
 
     async def get_transfers(
         self, 

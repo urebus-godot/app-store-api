@@ -1,4 +1,4 @@
-import uuid
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
@@ -19,11 +19,16 @@ router = APIRouter(
     "/archive/upload_url"
 )
 async def request_app_archive_upload_url(
-    app_id: uuid.UUID,
+    app_id: UUID,
     data: AppArchiveUploadPresignRequest,
     user_id: UserIdDep,
     file_service: AppArchiveServiceDep,
 ) -> UploadPresignResponse:
+    """Requests URL to upload the app archive file to MinIO storage.
+    
+    *Returns*: 
+    UploadPresignResponse object containing
+    upload URL, archive object key, and the expiration time"""
     return await file_service.presign_app_archive_upload(
         app_id=app_id,
         publisher_id=user_id,
@@ -37,10 +42,14 @@ async def request_app_archive_upload_url(
     status_code=status.HTTP_204_NO_CONTENT
 )
 async def confirm_app_archive_upload(
-    app_id: uuid.UUID,
+    app_id: UUID,
     user_id: UserIdDep,
     file_service: AppArchiveServiceDep,
-):
+) -> None:
+    """Confirms that the app archive file has been uploaded to MinIO storage
+    and makes it downloadable to users.
+    
+    *Returns*: None"""
     await file_service.confirm_app_archive_upload(
         app_id=app_id, publisher_id=user_id
     )
@@ -48,10 +57,15 @@ async def confirm_app_archive_upload(
 
 @router.get("/archive/download_url")
 async def request_app_archive_download_url(
-    app_id: uuid.UUID,
+    app_id: UUID,
     user_id: UserIdDep,
     file_service: AppArchiveServiceDep,
 ) -> DownloadPresignResponse:
+    """Requests URL of the app archive file uploaded to MinIO storage.
+    
+    *Returns*:
+    DownloadPresignResponse object containing 
+    download URL and the expiration time"""
     return await file_service.presign_app_archive_download(
         app_id=app_id, user_id=user_id,
     )

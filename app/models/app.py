@@ -32,7 +32,6 @@ class AppDB(BaseApp, table=True):
         ge=1.0, le=5.0
         )
     times_purchased: int = Field(default=0, ge=0)
-    #public: bool
 
     publisher_id: UUID = Field(foreign_key="users.id", ondelete="CASCADE")
     publisher: "UserDB" = Relationship(back_populates="published_apps")
@@ -60,9 +59,9 @@ class AppDB(BaseApp, table=True):
 
     __table_args__ = (
         Index(
-            "ix_apps_keywords_gin",
+            "ix_apps_keywords_gin_public",
             "keywords",
             postgresql_using="gin",
-            postgresql_where=("public")
+            postgresql_where=("public = true")
         ),
     )

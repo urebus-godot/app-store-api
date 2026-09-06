@@ -161,24 +161,20 @@ async def rate_limit(
     response: Response,
     user_id: Optional[UUID] = Depends(get_current_user_id_optionally),
 ):
-    # 1. Грубый лимит по IP — защита от анонимного флуда
-    ip_result = await rate_limiter.check(
-        request.client.host,
-        scope="ip",
-        limit= 15,
-        window_seconds=60,
-    )
-    response.headers["X-RateLimit-Remaining-IP-Address"] = (
-        str(ip_result.remaining_requests))
-    if not ip_result.allowed:
-        raise too_many_requests_exception
-
-    # 2. Более узкий лимит по user_id — только для авторизованных
-    if user_id is not None:
+    if user_id is None:
+        ip_result = await rate_limiter.check(
+            request.client.host,
+            scope="ip",
+        )
+        response.headers["X-RateLimit-Remaining-IP-Address"] = (
+            str(ip_result.remaining_requests))
+        if not ip_result.allowed:
+            raise too_many_requests_exception
+    else:
         user_result = await rate_limiter.check(
             user_id,
             scope="user",
-            limit=20,
+            limit=settings.REQUEST_LIMIT_USER,
             window_seconds=60,
         )
         response.headers["X-RateLimit-Remaining-User"] = (
@@ -325,9 +321,8 @@ def get_media_service(
     return MediaService(storage=storage, uow=uow)
 
 
-def get_finance_api_client():
-    from app.main import app
-    return app.state.finance_api_client
+def get_finance_api_client(request: Request):
+    return request.app.state.finance_api_client
 
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]

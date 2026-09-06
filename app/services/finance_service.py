@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from fastapi import status
 
 from redis.asyncio import Redis
-from app.uow.orm import UnitOfWork
+from app.uow.protocol import UnitOfWork
 from app.core.exceptions import (
     insufficient_funds_exception,
     invalld_promo_code_exception
@@ -61,31 +61,30 @@ class FinanceService:
 
     async def create_transfer_to_balance(
         self, data: TransferRequest, user_id: UUID
-    ) -> dict[str, Decimal]:
-        """Increase user's balance and create row in the db for transfer."""
+    ) -> TransferDB:
         async with self.uow:
             user = await self.uow.user_repo.get_user_by_id(user_id)
-            result = await self.uow.finance_repo.create_transfer_to_balance(
+            transfer = await self.uow.finance_repo.create_transfer_to_balance(
                 data, user
                 )
             await self.uow.commit()
 
-        return result
+        return transfer
 
     async def create_transfer_to_card(
         self, data: TransferRequest, user_id: UUID
-    ) -> dict[str, Decimal]:
+    ) -> TransferDB:
         async with self.uow:
             user = await self.uow.user_repo.get_user_by_id(user_id)
             if user.balance < data.amount:
                 raise insufficient_funds_exception
             
-            result = await self.uow.finance_repo.create_transfer_to_card(
+            transfer = await self.uow.finance_repo.create_transfer_to_card(
                 data, user
             )
             await self.uow.commit()
 
-        return result
+        return transfer
 
     async def get_transfers(
         self, 
@@ -104,8 +103,6 @@ class FinanceService:
         to_currency: CurrencyType,
         api_client: AsyncClient
     ) -> Decimal | JSONResponse:
-        """Makes call to external API to convert 
-        funds from rubles to specified currency"""
         if to_currency == CurrencyType.RUB or amount == 0.0:
             return round(Decimal(amount), 2)
 
@@ -116,7 +113,7 @@ class FinanceService:
         data = api_response.json()
         if api_response.status_code >= 400:
             return JSONResponse(
-                data,
+                content=data,
                 status_code=status.HTTP_502_BAD_GATEWAY
             )
         

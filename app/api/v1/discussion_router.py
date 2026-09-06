@@ -53,13 +53,16 @@ async def ws_discussion(
     user_repo: UserRepoDep,
     discussion_manager: DiscussionManagerDep,
     secret_key: AccessSecretKeyDep
-):
+) -> None:
+    """Websocket endpoint of the discussion with specified ID.
+    It allows users to send and receive messages in real time.
+    The first message sent by user must contain JWT access token."""
     await websocket.accept()
     try:
         logger.info("Awaiting data from websocket...")
         ws_data = await asyncio.wait_for(
             websocket.receive_json(), 
-            timeout=settings.AUTH_TIMEOUT
+            timeout=settings.WS_AUTH_TIMEOUT
         )
         msg_type = ws_data.get("type", None)
 
@@ -139,7 +142,8 @@ async def ws_discussion(
 @router.post(
     "/discussions/{app_id}", 
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(rate_limit)]
+    dependencies=[Depends(rate_limit)],
+    response_model=ShortDiscussionResponse
 )
 async def create_discussion(
     data: DiscussionRequest,
@@ -147,6 +151,9 @@ async def create_discussion(
     user_id: UserIdDep,
     discussion_service: DiscussionServiceDep
 ) -> ShortDiscussionResponse:
+    """Creates the discussion and adds it to the database.
+
+    *Returns*: ShortDiscussionResponse object"""
     return await discussion_service.create_discussion(
         data, user_id, app_id
     )
@@ -154,13 +161,17 @@ async def create_discussion(
 
 @router.get(
     "/discussions/{id}",
-    dependencies=[Depends(rate_limit)]
-    )
+    dependencies=[Depends(rate_limit)],
+    response_model=DiscussionResponse
+)
 async def get_discussion(
     id: UUID, 
     skip_limit: SkipLimitParams,
     discussion_service: DiscussionServiceDep
 ) -> DiscussionResponse:
+    """Fetches the discussion with the specified ID from the database.
+
+    *Returns*: DiscussionResponse object"""
     skip, limit = skip_limit
     return await discussion_service.get_discussion(
         id=id, skip=skip, limit=limit
@@ -169,21 +180,35 @@ async def get_discussion(
 
 @router.get(
     "/discussions/app/{app_id}",
-    dependencies=[Depends(rate_limit)]
+    dependencies=[Depends(rate_limit)],
+    response_model=ShortDiscussionResponse
 )
 async def get_app_discussions(
-    app_id: UUID, discussion_service: DiscussionServiceDep
+    app_id: UUID, 
+    skip_limit: SkipLimitParams,
+    discussion_service: DiscussionServiceDep
 ) -> list[ShortDiscussionResponse]:
-    return await discussion_service.get_app_discussions(app_id)
+    """Fetches discussions for the app 
+    with the specified ID from the database.
+
+    *Returns*: list of ShortDiscussionResponse objects"""
+    skip, limit = skip_limit
+    return await discussion_service.get_app_discussions(
+        app_id=app_id, skip=skip, limit=limit
+    )
 
 
 @router.get(
     "/discussions/user/me",
-    dependencies=[Depends(rate_limit)]
+    dependencies=[Depends(rate_limit)],
+    response_model=list[ShortDiscussionResponse]
 )
 async def get_my_discussions(
     user_id: UserIdDep, discussion_service: DiscussionServiceDep
 ) -> list[ShortDiscussionResponse]:
+    """Fetches discussions created by the current user from the database.
+
+    *Returns*: list of ShortDiscussionResponse objects"""
     return await discussion_service.get_user_discussions(user_id)
 
 
@@ -191,12 +216,15 @@ async def get_my_discussions(
     "/discussions/{id}", 
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(rate_limit)]
-    )
+)
 async def delete_discussion(
     id: UUID,
     user_id: UserIdDep,
     discussion_service: DiscussionServiceDep
 ) -> None:
+    """Deletes discussion with the specified ID from the database.
+
+    *Returns*: None"""
     await discussion_service.delete_discussion(id, user_id)
 
 
@@ -205,7 +233,8 @@ async def delete_discussion(
 @router.post(
     "/discussions/{discussion_id}/messages",
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(rate_limit)]
+    dependencies=[Depends(rate_limit)],
+    response_model=MessageResponse
 )
 async def create_message(
     data: MessageRequest,
@@ -213,6 +242,9 @@ async def create_message(
     user_id: UserIdDep,
     discussion_service: DiscussionServiceDep
 ) -> MessageResponse:
+    """Creates the message for the discussion with the specified ID.
+
+    *Returns*: MessageResponse"""
     return await discussion_service.create_message(
         data, user_id, discussion_id
     )
@@ -228,4 +260,7 @@ async def delete_message(
     user_id: UserIdDep,
     discussion_service: DiscussionServiceDep
 ) -> None:
+    """Deletes the message with the specified ID from the database.
+
+    *Returns*: None"""
     await discussion_service.delete_message(id, user_id)

@@ -122,8 +122,6 @@ async def refresh_tokens(
     refresh_secret_key: str,
     user_service
 ) -> dict[str, str]:
-    """Creates new refresh and access tokens
-    if the refresh token is **not** blacklisted."""
     try:
         payload = jwt.decode(
             refresh_token,

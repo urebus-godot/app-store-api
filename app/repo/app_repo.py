@@ -120,7 +120,10 @@ class AppRepository:
 
         return apps
 
-    async def get_purchased_apps(self, user_id: UUID) -> list[AppDB]:
+    async def get_purchased_apps(
+        self, user_id: UUID,
+        skip: int, limit: int,
+    ) -> list[AppDB]:
         apps = (
             await self.session.exec(
                 select(AppDB)
@@ -128,6 +131,7 @@ class AppRepository:
                     PurchaseDB.app_id == AppDB.id,
                     PurchaseDB.user_id == user_id,
                 )
+                .offset(skip).limit(limit)
                 .order_by(AppDB.published_at.desc())
             )
         ).all()
@@ -170,8 +174,7 @@ class AppRepository:
             select(AppDB)
             .where(AppDB.category == AppCategory.GAME)
             .order_by(AppDB.published_at.desc())
-            .offset(skip)
-            .limit(limit)
+            .offset(skip).limit(limit)
         )
 
         if only_public:
@@ -196,9 +199,9 @@ class AppRepository:
         stmt = (
             select(AppDB)
             .where(
-                AppDB.keywords.overlap(keywords),
                 AppDB.public,
-                AppDB.category == AppCategory.GAME
+                AppDB.category == AppCategory.GAME, 
+                AppDB.keywords.overlap(keywords)
                 )
             .order_by(AppDB.published_at.desc())
             .offset(skip)
@@ -217,7 +220,7 @@ class AppRepository:
     async def get_top_games_genre(
         self, 
         genre: GameGenre,
-        skip: int = 0, limit: int = 5
+        skip: int = 0, limit: int = 10
     ) -> list[AppDB]:
         games = (await self.session.exec(
             select(AppDB)
@@ -249,8 +252,9 @@ class AppRepository:
             .order_by(
                 AppDB.times_purchased.desc(),
                 AppDB.rating.desc()
-                ).offset(skip).limit(limit)
-                .options(*self.load_attrs)
+            )
+            .offset(skip).limit(limit)
+            .options(*self.load_attrs)
         )).all()
 
         return games

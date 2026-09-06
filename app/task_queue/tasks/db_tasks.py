@@ -4,13 +4,13 @@ import asyncio
 
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
-from sqlmodel import Session, select, update
+from sqlmodel import Session, select, update, extract
 
 from app.core.config import settings
 from app.utils.time import get_time_string
 from app.utils.email_send import send_email
 
-from app.task_queue.celery_app import celery_app, redis_client, logger
+from app.task_queue.celery_app import celery_app, redis_client
 
 from app.models.app import AppDB
 from app.models.review import ReviewDB
@@ -26,7 +26,7 @@ SessionLocal = sessionmaker(
     )
 
 
-@celery_app.task(name="tasks.update_app_rating")
+@celery_app.task(name="db_tasks.update_app_rating")
 def update_app_rating(app_id: str) -> None:
     with SessionLocal() as session:
         app_id = UUID(app_id)
@@ -49,7 +49,7 @@ def update_app_rating(app_id: str) -> None:
         session.commit()
 
 
-@celery_app.task(name="tasks.check_for_users_birthday")
+@celery_app.task(name="db_tasks.check_for_users_birthday")
 def check_for_users_birthday() -> list[str]:
     """
     Finds users whose birth_date attribute matches the current date,
@@ -62,11 +62,13 @@ def check_for_users_birthday() -> list[str]:
         current_date = now.date()
         stmt = (
             select(UserDB)
-
+            .where(
+                extract("month", UserDB.birth_date) == current_date.month,
+                extract("day", UserDB.birth_date) == current_date.day,
+            )
         )
 
         users: list[UserDB] = session.exec(stmt).all()
-        logger.debug(f"{users = }")
         codes = []
 
         for user in users:

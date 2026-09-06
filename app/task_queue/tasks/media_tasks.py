@@ -22,20 +22,18 @@ def sync_s3_client():
 
 
 @celery_app.task(
-    name="tasks.generate_image_variants",
+    name="media_tasks.generate_image_variants",
     bind=True,
     max_retries=3,
     default_retry_delay=10,
 )
 def generate_image_variants(self, bucket: str, object_key: str) -> None:
     client = sync_s3_client()
-    client
 
     try:
         response = client.get_object(Bucket=bucket, Key=object_key)
         original_bytes = response["Body"].read()
     except Exception as exc:
-        # транзиентная сетевая ошибка/таймаут — ретраим, а не роняем таску
         raise self.retry(exc=exc)
 
     with Image.open(io.BytesIO(original_bytes)) as image:
@@ -44,7 +42,7 @@ def generate_image_variants(self, bucket: str, object_key: str) -> None:
 
         for size, suffix in settings.IMAGE_SIZES:
             variant = image.copy()
-            variant.thumbnail(size)  # сохраняет пропорции, не растягивает
+            variant.thumbnail(size)
 
             buffer = io.BytesIO()
             variant.save(buffer, format="WEBP", quality=82)

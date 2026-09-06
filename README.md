@@ -8,7 +8,7 @@ RESTful API for a computer software online store. It is designed for publishing 
 - Web framework: **FastAPI**
 - ORM: **SQLModel** + **SQLAlchemy**
 - Database: **PostgreSQL**
-- DB migrations: **Alembic**
+- Database migrations: **Alembic**
 - Cache: **Redis**
 - Task queue: **Celery**
 - Testing: **Pytest**
@@ -25,7 +25,8 @@ RESTful API for a computer software online store. It is designed for publishing 
 - CI/CD pipeline with testing, linting and image building
 - HTTP/2 and HTTPS support using Nginx (mkcert for local certificates)
 - MinIO S3 for storing user-uploaded files with signed URLs for private files
-- Service/Repository pattern + UOW
+- Multi-layered architecture (Router -> Service -> Repository)
+- Unit of Work pattern
 - Multi-stage Docker image building
 - Sending email notifications in FastAPI BackgroundTasks and image processing in Celery tasks
 - Celery Beat for periodic tasks
@@ -83,13 +84,13 @@ cd /path_to_project/app_store_api
 ``` bash
 docker compose up --build
 ```
-4. Visit a documentation or test the project using curl commands.
+4. Visit a documentation.
 * Swagger UI: [https://localhost/docs](https://localhost/docs)
 * ReDoc: [https://localhost/redoc](https://localhost/redoc)
 
 ---
 
-### Open route
+### Public route
 ``` bash
 curl -X 'GET' \
   'https://localhost/health' \
@@ -98,7 +99,7 @@ curl -X 'GET' \
 ### Protected route
 ``` bash
 curl -X 'GET' \
-  'https://127.0.0.1/api/v1/users/me' \
+  'https://localhost/api/v1/users/me' \
   -H 'accept: application/json' \
   -H 'Authorization: Bearer user-access-token'
 ```

@@ -33,7 +33,7 @@ from app.core.config import settings
 from app.utils.time import get_time_string
 from app.utils.email_send import send_email
 
-from app.uow.orm import UnitOfWork
+from app.uow.protocol import UnitOfWork
 
 from app.storage.protocol import ObjectStorage
 
@@ -133,7 +133,7 @@ class UserService:
 
     async def logout(
         self, refresh_token: str, redis: Redis, secret_key: str
-    ) -> dict[str, str]:
+    ) -> None:
         try:
             payload = jwt.decode(
                 refresh_token,
@@ -145,9 +145,6 @@ class UserService:
             if ttl > 0:
                 await redis.set(f"blacklist:{jti}", "1", ex=ttl)
             await redis.delete(f"refresh_token:{jti}")
-
-            return {"message": "Logout successful"}
-
         except DecodeError:
             raise invalid_refresh_token_exception
 
@@ -159,7 +156,7 @@ class UserService:
 
             if not user:
                 raise user_not_found_exception
-
+    
             if role.value in user.roles:
                 raise already_has_role_exception
 
@@ -238,6 +235,9 @@ class UserService:
                 raise user_not_found_exception
 
             await redis.delete(f"user_tokens:{user_id}")
+            await self.app_service.delete_publisher_apps(
+                user_id, bg_tasks, self.uow
+            )
             await self.uow.delete(user)
 
             logger.info(f"{user.avatar_key}")

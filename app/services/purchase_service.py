@@ -7,7 +7,7 @@ import logging
 from redis.asyncio import Redis
 from fastapi import BackgroundTasks
 
-from app.uow.orm import UnitOfWork
+from app.uow.protocol import UnitOfWork
 from app.utils.email_send import send_email
 
 from app.utils.time import get_time_string
@@ -64,12 +64,10 @@ class PurchaseService:
     async def get_cart_for_user(
         self, user_id: UUID, 
     ) -> CartResponse:
-        """Returns user's cart or creates it and writes to the cache"""
         cached_cart = await self.redis.get(f"cart_cache:{user_id}")
 
         if cached_cart is not None:
             cart = CartResponse.model_validate_json(cached_cart)
-            logger.info(f"Found cart in the cache: {cart}")
             return cart
 
         async with self.uow:
@@ -83,13 +81,11 @@ class PurchaseService:
             cart = CartResponse.model_validate(cart)
             cart.total_price = total_price
 
-            logger.info(f"User's cart: {cart}")
             await self.redis.set(
                 name=f"cart_cache:{user_id}",
                 value=cart.model_dump_json(),
                 ex=settings.CACHE_TTL_SECONDS,
             )
-            logger.info("Added cart to the cache")
 
         return cart
 

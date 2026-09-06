@@ -49,17 +49,20 @@ logger = logging.getLogger("api.v1.user_router")
 @router.post(
     "/users",
     status_code=status.HTTP_201_CREATED,
-    response_model=CurrentUserResponse
+    response_model=CurrentUserResponse,
+    tags=["Users"]
 )
 async def register_user(
     data: UserRequest, 
     user_service: UserServiceDep
 ) -> CurrentUserResponse:
-    """Creates new user."""
+    """Creates new user and adds it to the database.
+    
+    *Returns*: CurrentUserResponse object"""
     return await user_service.register_user(data)
 
 
-@router.post("/users/login")
+@router.post("/users/login", tags=["Auth"])
 async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     user_service: UserServiceDep,
@@ -71,7 +74,10 @@ async def login(
     access_secret_key: AccessSecretKeyDep,
     refresh_secret_key: RefreshSecretKeyDep,
 ) -> LoginResponse:
-    """Returns refresh and access tokens to the user on success."""
+    """Authenticates user and creates a pair of JWT access and refresh tokens.
+    Then sets refresh token cookie.
+    
+    *Returns*: LoginResponse object"""
     login_response = await user_service.login(
         form_data.username,
         form_data.password,
@@ -94,19 +100,29 @@ async def login(
     return login_response
 
 
-@router.post("/users/logout")
+@router.post(
+    "/users/logout", 
+    tags=["Auth"],
+    status_code=status.HTTP_204_NO_CONTENT
+)
 async def logout(
     request: Request,
     secret_key: RefreshSecretKeyDep,
     user_service: UserServiceDep,
     redis: RedisDep,
-) -> dict[str, str]:
-    """Adds user's refresh token to the blacklist or deletes it from Redis."""
+) -> None:
+    """Adds the user's refresh token to the blacklist 
+    and deletes it from Redis.
+    
+    *Returns*: None"""
     refresh_token = request.cookies.pop("refresh_token", None)
-    return await user_service.logout(refresh_token, redis, secret_key)
+    await user_service.logout(refresh_token, redis, secret_key)
 
 
-@router.post("/users/refresh")
+@router.post(
+    "/users/refresh", 
+    tags=["Auth"]
+)
 async def refresh_tokens(
     request: Request,
     access_secret_key: AccessSecretKeyDep,
@@ -114,9 +130,10 @@ async def refresh_tokens(
     redis: RedisDep,
     user_service: UserServiceDep
 ) -> TokenResponse:
-    """Creates refresh and access tokens on success."""
+    """Creates a new pair of JWT refresh and access tokens.
+        
+    *Returns*: TokenResponse object"""
     refresh_token = request.cookies.get("refresh_token")
-    logger.info(f"Start refreshing token: \n{refresh_token=}")
     tokens = await auth.refresh_tokens(
         refresh_token=refresh_token, 
         redis=redis, 
@@ -130,12 +147,15 @@ async def refresh_tokens(
     )
 
 
-@router.post("/users/me/roles/publisher")
+@router.post("/users/me/roles/publisher", tags=["Users"])
 async def set_publisher_role(
     user_id: UserIdDep,
     user_service: UserServiceDep,
     secret_key: AccessSecretKeyDep
 ) -> UserRoleResponse:
+    """Adds *publisher* role to the current user's roles.
+        
+    *Returns*: UserRoleResponse object"""
     return await user_service.set_role(
         user_id, UserRole.PUBLISHER, secret_key
     )
@@ -143,13 +163,18 @@ async def set_publisher_role(
 
 @router.post(
     "/users/me/roles/admin",
-    dependencies=[Depends(check_admin_password)]
+    dependencies=[Depends(check_admin_password)],
+    tags=["Users"]
 )
 async def set_admin_role(
     user_id: UserIdDep,
     user_service: UserServiceDep,
     secret_key: AccessSecretKeyDep
 ) -> UserRoleResponse:
+    """Adds *admin* role to the current user's roles
+    if the entered password is correct.
+        
+    *Returns*: UserRoleResponse object"""
     return await user_service.set_role(
         user_id, UserRole.ADMIN, secret_key
     )
@@ -157,7 +182,8 @@ async def set_admin_role(
 
 @router.post(
     "/users/{user_id}/roles",
-    dependencies=[Depends(require_role(UserRole.ADMIN))]
+    dependencies=[Depends(require_role(UserRole.ADMIN))],
+    tags=["Users"]
 )
 async def set_role_to_user(
     user_id: UUID,
@@ -165,44 +191,68 @@ async def set_role_to_user(
     user_service: UserServiceDep,
     secret_key: AccessSecretKeyDep
 ) -> UserRoleResponse:
+    """Adds the specified role to the user's with the specified ID roles
+    if the user has the admin role.
+        
+    *Returns*: UserRoleResponse object"""
     return await user_service.set_role(user_id, data.role, secret_key)
 
 
-@router.patch("/users/me")
+@router.patch(
+    "/users/me", 
+    tags=["Users"],
+    response_model=CurrentUserResponse
+)
 async def update_current_user(
     data: UserUpdate,
     user: UserDep,
     user_service: UserServiceDep
 ) -> CurrentUserResponse:
-    """Changes attributes of user to the new ones"""
+    """Updates current user's attributes.
+        
+    *Returns*: CurrentUserResponse object"""
     return await user_service.update_user(user=user, data=data)
 
 
-@router.get("/users/me")
+@router.get(
+    "/users/me", 
+    tags=["Users"],
+    response_model=CurrentUserResponse
+)
 async def get_current_user(
     user: UserDep
-    ) -> CurrentUserResponse:
-    """Returns user that was found by JWT access token. 
-    The balance is measured in rubles"""
+) -> CurrentUserResponse:
+    """Fetches the user with ID found in JWT access token.
+        
+    *Returns*: CurrentUserResponse object"""
     return user
 
 
 @router.get(
     "/users/{username}", 
-    response_model=UserResponse
-    )
+    response_model=UserResponse,
+    tags=["Users"]
+)
 async def get_user(
     username: str, user_service: UserServiceDep
 ) -> UserResponse:
-    """Returns user from the db with specified username."""
+    """Fetches the user with the specified username.
+        
+    *Returns*: UserResponse object"""
     return await user_service.get_user_by_username(username)
 
 
-@router.get("/users")
+@router.get(
+    "/users", 
+    tags=["Users"],
+    response_model=list[UserResponse]
+)
 async def get_users(
     skip_limit: SkipLimitParams, user_service: UserServiceDep
 ) -> list[UserResponse]:
-    """Returns all users from db."""
+    """Fetches the users from the database.
+        
+    *Returns*: list of UserResponse objects"""
     skip, limit = skip_limit
     return await user_service.get_users(skip, limit)
 
@@ -210,14 +260,17 @@ async def get_users(
 @router.delete(
     "/users/me", 
     status_code=status.HTTP_204_NO_CONTENT,
-    )
+    tags=["Users"]
+)
 async def delete_current_user(
     user_id: UserIdDep,
     redis: RedisDep,
     user_service: UserServiceDep,
     bg_tasks: BackgroundTasks
 ) -> None:
-    """Deletes user."""
+    """Deletes the current user and his files.
+        
+    *Returns*: None"""
     await user_service.delete_user(
         user_id=user_id, redis=redis, bg_tasks=bg_tasks
     )

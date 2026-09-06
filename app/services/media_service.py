@@ -14,7 +14,7 @@ from app.schemas.media import (
 from app.schemas.file import UploadPresignResponse
 
 from app.storage.protocol import ObjectStorage
-from app.uow.base import UnitOfWork
+from app.uow.protocol import UnitOfWork
 
 from app.core.exceptions import (
     user_not_found_exception, 
@@ -123,8 +123,9 @@ class MediaService:
             generate_image_variants.delay(
                 settings.USER_AVATAR_BUCKET, new_key
             )
-            return MediaConfirmResponse(url=self.storage.build_public_url(
-                settings.USER_AVATAR_BUCKET, new_key
+            return MediaConfirmResponse(
+                url=self.storage.build_public_url(
+                    settings.USER_AVATAR_BUCKET, new_key
                 )
             )
         except EndpointConnectionError:

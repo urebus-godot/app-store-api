@@ -15,7 +15,7 @@ class ReviewDB(BaseReview, table=True):
     created_at: datetime = Field(
         sa_type=TIMESTAMP(timezone=True),
         default_factory=lambda: datetime.now(timezone.utc)
-        )
+    )
 
     author_id: UUID = Field(foreign_key="users.id", ondelete="CASCADE")
     author: "UserDB" = Relationship(back_populates="reviews")

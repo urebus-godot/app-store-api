@@ -16,7 +16,7 @@ from app.schemas.file import DownloadPresignResponse, UploadPresignResponse
 
 from app.storage.protocol import ObjectStorage
 
-from app.uow.base import UnitOfWork
+from app.uow.protocol import UnitOfWork
 from app.utils.files import validate_and_get_extension
 
 ALLOWED_ARCHIVE_CONTENT_TYPES = {
@@ -147,7 +147,6 @@ class AppArchiveService:
         self, app_id: UUID, user_id: UUID
     ) -> None:
         async with self.uow:
-            logger.info("Deleting app archive")
             app = await self.uow.app_repo.get_app(app_id)
 
             if app.publisher_id != user_id:

@@ -13,12 +13,10 @@ from app.repo.user_repo import UserRepository
 from app.repo.finance_repo import FinanceRepository
 from app.repo.app_cover_repo import AppCoverRepository
 
-from app.uow.base import UnitOfWork
-
 logger = logging.getLogger("uow.orm")
 
 
-class OrmUnitOfWork(UnitOfWork):
+class OrmUnitOfWork:
     def __init__(
         self, 
         session_factory: async_sessionmaker[AsyncSession]

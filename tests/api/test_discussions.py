@@ -1,5 +1,4 @@
 import asyncio
-from logging import Logger
 import json
 
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -40,8 +39,7 @@ async def websocket(
     test_discussion_2: DiscussionDB, 
     test_user: UserDB,
     db_session: AsyncSession, 
-    session_factory: async_sessionmaker[AsyncSession],
-    logger: Logger
+    session_factory: async_sessionmaker[AsyncSession]
 ):
     transport = ASGIWebSocketTransport(app)
     app.dependency_overrides[get_redis] = lambda: fake_redis
@@ -63,7 +61,7 @@ async def websocket(
             ) as websocket:
                 yield websocket
     except RuntimeError:
-        logger.error("WebSocket disconnected")
+        pass
 
 
 @pytest_asyncio.fixture

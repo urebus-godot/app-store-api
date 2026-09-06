@@ -56,8 +56,10 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.API_TITLE,
     summary=settings.API_DESC,
-    debug=settings.DEBUG,
     version=settings.API_VERSION,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    debug=settings.DEBUG,
     lifespan=lifespan,
     exception_handlers={
         ResponseValidationError: response_validation_error_handler,
@@ -71,38 +73,36 @@ app.add_middleware(RequestLoggerMiddleware)
 
 app.include_router(
     user_router.router, 
-    prefix="/api/v1", 
-    tags=["User"]
+    prefix="/api/v1"
 )
 
 app.include_router(
     app_router.router, 
     prefix="/api/v1", 
-    tags=["Application"]
+    tags=["Applications"]
 )
 
 app.include_router(
     review_router.router, 
     prefix="/api/v1", 
-    tags=["Review"]
+    tags=["Reviews"]
 )
 
 app.include_router(
     purchase_router.router, 
-    prefix="/api/v1", 
-    tags=["Purchase"]
+    prefix="/api/v1"
 )
 
 app.include_router(
     discussion_router.router, 
     prefix="/api/v1", 
-    tags=["Discussion"]
+    tags=["Discussions"]
 )
 
 app.include_router(
     finance_router.router, 
     prefix="/api/v1",
-    tags=["Finance"]
+    tags=["Finances"]
 )
 
 app.include_router(

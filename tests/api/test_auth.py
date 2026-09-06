@@ -42,7 +42,7 @@ class TestLogin:
         jti = refresh_token_data["jti"]
         response = await real_auth_client.post("/api/v1/users/logout")
         data = response.json()
-        print(f"\n\n{data=}\n\n")
+        
         assert response.status_code == 200
         assert "message" in data
         assert await fake_redis.exists(f"blacklist:{jti}")
@@ -54,14 +54,13 @@ class TestRefresh:
         self,
         real_auth_client: AsyncClient,
         refresh_token_data: dict[str, str],
-        fake_redis: FakeRedis,
-        logger
+        fake_redis: FakeRedis
     ):
         refresh_token_data["token"]
         jti = refresh_token_data["jti"]
-        logger.error("\n\n\n\nSending request...")
+
         response = await real_auth_client.post("/api/v1/users/refresh")
-        logger.error("\nResponse: \n\n", response.json())
+
         assert response.status_code == 200
         assert "refresh_token" in response.json()
         assert await fake_redis.exists(f"blacklist:{jti}")

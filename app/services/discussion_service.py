@@ -32,7 +32,7 @@ from app.schemas.ws_events import (
 
 from app.ws.discussion_manager import DiscussionWebsocketManager
 
-from app.uow.orm import UnitOfWork
+from app.uow.protocol import UnitOfWork
 
 logger = logging.getLogger("services.discussion")
 
@@ -82,17 +82,23 @@ class DiscussionService:
             messages=discussion.messages[skip : skip + limit]
         )
 
-    async def get_app_discussions(self, app_id: UUID) -> list[DiscussionDB]:
+    async def get_app_discussions(
+        self, app_id: UUID,
+        skip: int, limit: int
+    ) -> list[DiscussionDB]:
         async with self.uow:
             discussions = await self.uow.discussion_repo.get_app_discussions(
-                app_id
+                app_id=app_id, skip=skip, limit=limit
             )
         return discussions
 
-    async def get_user_discussions(self, user_id: UUID) -> list[DiscussionDB]:
+    async def get_user_discussions(
+        self, user_id: UUID,
+        skip: int, limit: int
+    ) -> list[DiscussionDB]:
         async with self.uow:
             discussions = await self.uow.discussion_repo.get_user_discussions(
-                user_id
+                user_id=user_id, skip=skip, limit=limit
             )
         return discussions
 

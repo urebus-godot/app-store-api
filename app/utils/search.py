@@ -7,8 +7,7 @@ SearchQuery = Annotated[
     str,
     Query(
         default=None,
-        description="Enter keywords separated by 1 space",
-        max_length=300,
+        description="Enter keywords separated by 1 space"
     ),
 ]
 

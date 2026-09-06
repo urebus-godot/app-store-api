@@ -37,8 +37,8 @@ target_metadata = SQLModel.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
-def get_url() -> str:
-    return os.getenv("DB_URL")
+def get_db_url() -> str:
+    return os.getenv("LOCAL_DB_URL")
 
 
 def run_migrations_offline() -> None:
@@ -53,7 +53,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = get_url()
+    url = get_db_url()
     context.configure(
         url=url,
         target_metadata=target_metadata,

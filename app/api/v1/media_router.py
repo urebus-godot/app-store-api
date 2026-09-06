@@ -27,6 +27,11 @@ async def request_avatar_upload_url(
     user_id: UserIdDep,
     media_service: MediaServiceDep,
 ) -> UploadPresignResponse:
+    """Requests URL to upload the user avatar to MinIO storage.
+    
+    *Returns*: 
+    UploadPresignResponse object containing
+    upload URL, avatar object key, and the expiration time"""
     return await media_service.presign_avatar_upload(
         user_id=user_id, content_type=payload.content_type
     )
@@ -38,6 +43,11 @@ async def confirm_avatar_upload(
     media_service: MediaServiceDep,
     bg_tasks: BackgroundTasks
 ) -> MediaConfirmResponse:
+    """Confirms that the user avatar file has been uploaded to MinIO storage,
+    makes it public, and generates image variants using Celery workers.
+    
+    *Returns*: 
+    MediaConfirmResponse object containing URL to download user avatar"""
     return await media_service.confirm_avatar_upload(
         user_id=user_id, bg_tasks=bg_tasks
     )
@@ -54,6 +64,11 @@ async def request_icon_upload_url(
     user_id: UserIdDep,
     media_service: MediaServiceDep,
 ) -> UploadPresignResponse:
+    """Requests URL to upload the app icon to MinIO storage.
+    
+    *Returns*: 
+    UploadPresignResponse object containing
+    upload URL, app icon object key, and the expiration time"""
     return await media_service.presign_icon_upload(
         app_id=app_id, user_id=user_id, content_type=payload.content_type
     )
@@ -68,6 +83,11 @@ async def confirm_icon_upload(
     media_service: MediaServiceDep,
     bg_tasks: BackgroundTasks
 ) -> MediaConfirmResponse:
+    """Confirms that the app icon file has been uploaded to MinIO storage,
+    makes it public, and generates image variants using Celery workers.
+    
+    *Returns*: 
+    MediaConfirmResponse object containing URL to download app icon"""
     return await media_service.confirm_icon_upload(
         app_id=app_id, user_id=user_id, bg_tasks=bg_tasks
     )
@@ -82,6 +102,11 @@ async def request_cover_upload_url(
     user_id: UserIdDep,
     media_service: MediaServiceDep,
 ) -> UploadPresignResponse:
+    """Requests URL to upload the app cover to MinIO storage.
+    
+    *Returns*: 
+    UploadPresignResponse object containing
+    upload URL, app cover object key, and the expiration time"""
     return await media_service.presign_cover_upload(
         app_id=app_id, user_id=user_id, content_type=payload.content_type
     )
@@ -96,6 +121,11 @@ async def confirm_cover_upload(
     user_id: UserIdDep,
     media_service: MediaServiceDep,
 ) -> AppCoverResponse:
+    """Confirms that the app cover file has been uploaded to MinIO storage,
+    makes it public, and generates image variants using Celery workers.
+    
+    *Returns*: 
+    AppCoverResponse object containing URL to download app cover"""
     return await media_service.confirm_cover_upload(
         app_id=app_id, user_id=user_id, object_key=payload.object_key
     )
@@ -109,6 +139,7 @@ async def list_covers(
     app_id: UUID,
     media_service: MediaServiceDep,
 ) -> AppCoverListResponse:
+    """Returns app covers"""
     skip, limit = skip_limit
     return await media_service.list_covers(
         app_id=app_id, 
@@ -127,6 +158,7 @@ async def delete_cover(
     media_service: MediaServiceDep,
     bg_tasks: BackgroundTasks
 ) -> None:
+    """Deletes app cover and its variants using BackgroundTasks"""
     await media_service.delete_cover(
         app_id=app_id, 
         user_id=user_id, 

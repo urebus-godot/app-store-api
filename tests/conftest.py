@@ -223,7 +223,7 @@ async def auth_client(
             }
             return rates[currency]
 
-        async def get(self, url: str, params: dict):
+        async def get(self, _: str, params: dict):
             data = {
                 "date": "2026-01-01",
                 "base": "RUB",
@@ -237,8 +237,10 @@ async def auth_client(
 
     app.dependency_overrides[get_current_user] = lambda: test_user
     app.dependency_overrides[get_current_user_id] = lambda: test_user.id
-    app.dependency_overrides[get_admin_password] = lambda: "adminpass"
-    app.dependency_overrides[get_finance_api_client] = lambda: MockFinanceAPIClient()
+    app.dependency_overrides[get_admin_password] = lambda: "testpass"
+    app.dependency_overrides[get_finance_api_client] = (
+        lambda: MockFinanceAPIClient()
+    )
 
     transport = ASGITransport(app)
     async with AsyncClient(
@@ -313,15 +315,15 @@ async def publisher_client(
         data={
             "sub": str(test_publisher.id), 
             "roles": json.dumps(["publisher"])
-            },
+        },
         secret_key=settings.TEST_ACCESS_SECRET_KEY
     )
     async with AsyncClient(
         transport=transport,
         base_url="http://tests",
-        headers={"Authorization": 
-            f"Bearer {token}"
-    },
+        headers={
+            "Authorization": f"Bearer {token}"
+        },
     ) as ac:
         yield ac
 

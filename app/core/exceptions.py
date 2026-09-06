@@ -104,31 +104,37 @@ no_profile_pic_exception = HTTPException(
 incorrect_creds_exception = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
     detail="Incorrect username or password",
-    headers={"WWW-Authenticate": "Bearer"},
+    headers={"WWW-Authenticate": "Bearer"}
 )
 
 invalid_refresh_token_exception = HTTPException(
-    status.HTTP_401_UNAUTHORIZED, "Invalid refresh token"
+    status.HTTP_401_UNAUTHORIZED, 
+    "Invalid refresh token",
+    headers={"WWW-Authenticate": "Bearer"}
 )
 
 invalid_access_token_exception = HTTPException(
     status.HTTP_401_UNAUTHORIZED, 
-    "Invalid access token"
+    "Invalid access token",
+    headers={"WWW-Authenticate": "Bearer"}
 )
 
 invalid_token_payload_exception = HTTPException(
     status.HTTP_401_UNAUTHORIZED, 
-    "Invalid token payload"
+    "Invalid token payload",
+    headers={"WWW-Authenticate": "Bearer"}
 )
 
 token_expired_exception = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
     detail="Token has expired",
+    headers={"WWW-Authenticate": "Bearer"}
 )
 
 incorrect_password_exception = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
     detail="Password is incorrect",
+    headers={"WWW-Authenticate": "Bearer"}
 )
 
 

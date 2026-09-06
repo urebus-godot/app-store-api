@@ -14,7 +14,7 @@ from app.models.review import ReviewDB
 
 from app.services.app_service import AppService
 
-from app.uow.orm import UnitOfWork
+from app.uow.protocol import UnitOfWork
 from app.task_queue.tasks.db_tasks import update_app_rating
 
 

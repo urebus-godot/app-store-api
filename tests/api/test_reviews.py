@@ -105,8 +105,7 @@ class TestReviews:
         test_app_2: AppDB,
         request_data: dict[str, Any],
         expected_status_code: int,
-        create_purchase: bool,
-        logger
+        create_purchase: bool
     ):
         if create_purchase:
             purchase = PurchaseDB(
@@ -125,16 +124,10 @@ class TestReviews:
                 "/api/v1/carts/checkout"
             )
 
-        response = await auth_client.get(
-            "/api/v1/apps/purchased/me"
-        )
-        logger.info(f"\n\n\nPurchased apps: {response.json()}\n\n")
-
         response = await auth_client.post(
             f"/api/v1/reviews/{test_app_2.id}",
             json=request_data,
         )
-        logger.critical(f"\n\n\n{response.json()}\n\n\n")
         assert response.status_code == expected_status_code
 
     async def test_create_review_app_not_exists(
@@ -145,7 +138,7 @@ class TestReviews:
             json={
                 "rating": 5,
                 "subject": "So Good!",
-                "content": "This app is so good for coding with bf!",
+                "content": "This app is so good for coding!",
             },
         )
         assert response.status_code == 404
@@ -204,7 +197,6 @@ class TestReviews:
         get_response = await auth_client.get(
             f"/api/v1/reviews/{test_app_2.id}"
         )
-        print(f"\n\nReviews before delete{get_response.json()}\n\n")
 
         delete_response = await auth_client.delete(
             f"/api/v1/reviews/{review.id}"
@@ -214,7 +206,6 @@ class TestReviews:
         get_response = await auth_client.get(
             f"/api/v1/reviews/{test_app_2.id}"
         )
-        print(f"\n\nReviews after delete{get_response.json()}\n\n")
         assert len(get_response.json()) == 0
 
     async def test_delete_review_no_rights(

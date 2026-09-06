@@ -53,7 +53,7 @@ class RateLimiter:
         identifier: str,    
         scope: Literal["user", "ip"],    
         window_seconds: int = settings.WINDOW_SECONDS, 
-        limit: int = settings.REQUEST_LIMIT,
+        limit: int = settings.REQUEST_LIMIT_IP,
     ) -> RateLimitResult:
         key = f"rate_limit:{scope}:{identifier}"
         now = time.time()
