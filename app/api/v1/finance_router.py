@@ -86,7 +86,7 @@ async def get_transfer_history(
 
 @router.get(
     "/finance/me/balance",
-    response_model=Union[dict[str, Any], JSONResponse]
+    response_class=JSONResponse
 )
 async def get_balance(
     user: UserDep,
@@ -95,7 +95,7 @@ async def get_balance(
         AsyncClient, Depends(get_finance_api_client)
     ],
     currency: CurrencyType = CurrencyType.RUB,
-) -> dict[str, Any] | JSONResponse:
+) -> JSONResponse:
     """Calls an external API to convert the user's balance 
     from rubles to the specified currency.
     

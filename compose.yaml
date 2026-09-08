@@ -11,6 +11,7 @@ services:
     restart: unless-stopped
     volumes:
       - db_data:/var/lib/postgresql/data
+      - ./postgresql/postgresql.conf:/etc/postgresql/postgresql.conf
     networks:
       - app_network
     healthcheck:
@@ -19,7 +20,27 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-  
+
+  pgbouncer:
+    image: edoburu/pgbouncer
+    container_name: pgbouncer
+    environment:
+      DATABASES: "mydb=host=postgres port=5432 dbname=mydb user=app_user password=secret"
+      POOL_MODE: transaction
+      DEFAULT_POOL_SIZE: 20
+    volumes:
+      - ./postgresql/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+    ports:
+      - "6432:6432"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost", "-p", "6432"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   redis:
     image: redis:7
     ports:
@@ -147,25 +168,25 @@ services:
     networks:
       - app_network
 
-  minio_client:
-    image: minio/mc:latest
-    container_name: minio_client
-    depends_on:
-      - minio
-    entrypoint: >
-      /bin/sh -c "
-      until mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD}; do sleep 1; done;
-      mc mb --ignore-existing user-avatars;
-      mc mb --ignore-existing app-icons;
-      mc mb --ignore-existing app-covers;
-      mc mb --ignore-existing app-archives;
-      mc anonymous set download user-avatars;
-      mc anonymous set download app-icons;
-      mc anonymous set download app-covers;
-      exit 0;
-      "
-    networks:
-      - app_network
+  #minio_client:
+  #  image: minio/mc:latest
+  #  container_name: minio_client
+  #  depends_on:
+  #    - minio
+  #  entrypoint: >
+  #    /bin/sh -c "
+  #    until mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD}; do sleep 1; done;
+  #    mc mb --ignore-existing user-avatars;
+  #    mc mb --ignore-existing app-icons;
+  #    mc mb --ignore-existing app-covers;
+  #    mc mb --ignore-existing app-archives;
+  #    mc anonymous set download user-avatars;
+  #    mc anonymous set download app-icons;
+  #    mc anonymous set download app-covers;
+  #    exit 0;
+  #    "
+  #  networks:
+  #    - app_network
 
 
 networks:

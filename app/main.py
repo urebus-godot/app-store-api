@@ -132,20 +132,22 @@ async def health_check(
     redis: RedisDep,
     session: SessionDep
 ) -> dict[str, str]:
-    unhealthy_response = JSONResponse(
-        {"status": "Unhealthy"},
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE
-    )
     try:
         redis_response = await redis.ping()
         db_response = await session.exec(text("SELECT 1"))
 
-        if not redis_response or not db_response:
-            return unhealthy_response
+        if not redis_response:
+            return JSONResponse(
+            content={"status": "Unhealthy", "detail": "Connection to Redis failed"},
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
         
         return {"status": "Healthy"}
-    except Exception:
-        return unhealthy_response
+    except Exception as e:
+        return JSONResponse(
+        content={"status": "Unhealthy", "detail": str(e)},
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE
+    )
 
 
 if __name__ == "__main__":
