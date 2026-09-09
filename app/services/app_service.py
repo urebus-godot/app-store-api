@@ -17,6 +17,7 @@ from app.schemas.app import (
 from app.models.app import GameGenre, AppDB
 
 from app.services.media_service import MediaService
+from app.repo.app_repo import AppRepository
 
 from app.utils.search import format_keywords
 
@@ -31,17 +32,20 @@ class AppService:
     def __init__(
         self, 
         media_service: MediaService,
+        app_repo: AppRepository,
         uow: UnitOfWork,
         storage: ObjectStorage
     ):
         self.uow = uow
         self.storage = storage
         self.media_service = media_service
+        self.app_repo = app_repo
 
     async def upload_app(
         self, data: AppRequest, publisher_id: UUID
     ) -> AppDB:
         async with self.uow:
+            data.keywords = format_keywords(data.keywords)
             app = await self.uow.app_repo.upload_app(data, publisher_id)
             await self.uow.commit()
 
@@ -71,13 +75,12 @@ class AppService:
         return app
 
     async def get_app(self, id: UUID) -> AppDB:
-        async with self.uow:
-            app = await self.uow.app_repo.get_public_app(id)
+        app = await self.app_repo.get_public_app(id)
 
-            if not app:
-                raise app_not_found_exception
+        if not app:
+            raise app_not_found_exception
 
-            return app
+        return app
 
     async def get_apps(
         self, 
@@ -85,14 +88,13 @@ class AppService:
         limit: Optional[int] = None, 
         search_query: Optional[str] = None
     ) -> list[AppDB]:
-        async with self.uow:
-            if search_query is None:
-                apps = await self.uow.app_repo.get_apps(skip, limit)
-            else:
-                apps = await self.uow.app_repo.get_apps_by_keywords(
-                    keywords=format_keywords(search_query.split()),
-                    skip=skip, limit=limit
-                )
+        if search_query is None:
+            apps = await self.app_repo.get_apps(skip, limit)
+        else:
+            apps = await self.app_repo.get_apps_by_keywords(
+                keywords=format_keywords(search_query.split()),
+                skip=skip, limit=limit
+            )
 
         return apps
 
@@ -100,10 +102,9 @@ class AppService:
         self, user_id: UUID,
         skip: int, limit: int
     ) -> list[AppDB]:
-        async with self.uow:
-            purchased_apps = await self.uow.app_repo.get_purchased_apps(
-                user_id, skip, limit
-            )
+        purchased_apps = await self.app_repo.get_purchased_apps(
+            user_id, skip, limit
+        )
         return purchased_apps
 
     async def get_publisher_apps(
@@ -112,22 +113,42 @@ class AppService:
         user_id: UUID, 
         public_only: bool = True
     ) -> list[AppDB]:
-        async with self.uow:
-            user = await self.uow.user_repo.get_user_by_id(user_id)
+        user = await self.uow.user_repo.get_user_by_id(user_id)
 
-            if user is None:
-                raise user_not_found_exception
+        if user is None:
+            raise user_not_found_exception
 
-            publisher_apps = await self.uow.app_repo.get_publisher_apps(
-                skip=skip, 
-                limit=limit,
-                user_id=user_id, 
-                public_only=public_only
-            )
+        publisher_apps = await self.uow.app_repo.get_publisher_apps(
+            skip=skip, 
+            limit=limit,
+            user_id=user_id, 
+            public_only=public_only
+        )
 
         return publisher_apps
 
     async def get_games(
+        self,
+        skip: int,
+        limit: int,
+        search_query: Optional[str] = None,
+        only_public: bool = True,
+    ) -> list[AppDB]:
+        async with self.uow:
+            if search_query is None:
+                games = await self.uow.app_repo.get_games(
+                    skip=skip, limit=limit, 
+                    only_public=only_public
+                    )
+            else:
+                games = await self.uow.app_repo.get_games_by_keywords(
+                    keywords=format_keywords(search_query.split()), 
+                    skip=skip, limit=limit
+                    )
+
+        return games
+
+    async def get_games_with_genre(
         self,
         skip: int,
         limit: int,
@@ -141,13 +162,13 @@ class AppService:
                     genre=genre, 
                     skip=skip, limit=limit, 
                     only_public=only_public
-                    )
+                )
             else:
                 games = await self.uow.app_repo.get_games_by_keywords(
                     genre=genre, 
                     keywords=format_keywords(search_query.split()), 
                     skip=skip, limit=limit
-                    )
+                )
 
         return games
 

@@ -1,5 +1,6 @@
 from uuid import UUID
 from typing import Optional
+import logging
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
@@ -12,6 +13,9 @@ from app.base_models.app import (
 )
 from app.schemas.app import AppRequest, GameRequest, AppUpdate
 from app.models.purchase import PurchaseDB
+
+
+logger = logging.getLogger("repo.app")
 
 
 class AppRepository:
@@ -30,7 +34,7 @@ class AppRepository:
         app = AppDB(
             **data.model_dump(), 
             publisher_id=user_id
-            )
+        )
 
         if isinstance(data, GameRequest):
             app.category = AppCategory.GAME
@@ -68,7 +72,7 @@ class AppRepository:
         stmt = select(AppDB).where(
             AppDB.id == id,
             AppDB.public
-            )
+        )
 
         app = (
             await self.session.exec(stmt.options(*self.load_attrs))
@@ -165,10 +169,10 @@ class AppRepository:
 
     async def get_games(
         self,
-        genre: Optional[GameGenre],
         skip: int,
         limit: int,
         only_public: bool = True,
+        genre: Optional[GameGenre] = None,
     ) -> list[AppDB]:
         stmt = (
             select(AppDB)
@@ -191,16 +195,17 @@ class AppRepository:
 
     async def get_games_by_keywords(
         self,
-        genre: Optional[GameGenre],
         keywords: list[str],
         skip: int,
-        limit: int
+        limit: int,
+        genre: Optional[GameGenre] = None,
     ) -> list[AppDB]:
+        logger.info(keywords)
         stmt = (
             select(AppDB)
             .where(
                 AppDB.public,
-                AppDB.category == AppCategory.GAME, 
+                #AppDB.category == AppCategory.GAME, 
                 AppDB.keywords.overlap(keywords)
                 )
             .order_by(AppDB.published_at.desc())
@@ -213,7 +218,7 @@ class AppRepository:
 
         games = (
             await self.session.exec(stmt.options(*self.load_attrs))
-            ).all()
+        ).all()
 
         return games
 

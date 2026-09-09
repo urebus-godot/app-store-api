@@ -154,17 +154,38 @@ async def get_apps(
 async def get_games(
     skip_limit: SkipLimitParams,
     app_service: AppServiceDep,
+    search_query: Optional[SearchQuery] = None
+) -> list[GameResponseWithPublisher]:
+    """Fetches games from the database.
+    Returns games whose keywords match the 
+    *search_query* parameter if specified
+
+    *Returns*: list of GameResponseWithPublisher objects"""
+    skip, limit = skip_limit
+    games = await app_service.get_games(
+        search_query=search_query, skip=skip, limit=limit
+    )
+    return games
+
+
+@router.get(
+    "/games/with_genre",
+    response_model=list[GameResponseWithPublisher]
+)
+async def get_games_with_genre(
+    skip_limit: SkipLimitParams,
+    app_service: AppServiceDep,
     search_query: Optional[SearchQuery] = None,
     genre: Optional[GameGenre] = None,
 ) -> list[GameResponseWithPublisher]:
     """Fetches games from the database.
     Returns games whose keywords match the 
     *search_query* parameter if specified.
-    If *genre* is specified only games of that genre are returned.
+    Only games of specified genre are returned.
     
     *Returns*: list of GameResponseWithPublisher objects"""
     skip, limit = skip_limit
-    games = await app_service.get_games(
+    games = await app_service.get_games_with_genre(
         search_query=search_query, genre=genre, skip=skip, limit=limit
     )
     return games

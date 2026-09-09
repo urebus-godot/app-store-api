@@ -17,7 +17,7 @@ class UserDB(BaseUser, table=True):
 
     id: UUID = Field(
         default_factory=uuid4, primary_key=True
-        )
+    )
 
     hashed_password: str
     roles: list["UserRole"] = Field(
@@ -27,11 +27,11 @@ class UserDB(BaseUser, table=True):
     registered_at: datetime = Field(
         sa_type=TIMESTAMP(timezone=True),
         default_factory=lambda: datetime.now(timezone.utc)
-        )
+    )
     birth_date: Optional[date] = Field(
         default=None,
         sa_type=DATE()
-        )
+    )
     
     balance: Decimal = Field(default=0, ge=0)
 

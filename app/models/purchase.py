@@ -13,7 +13,7 @@ class PurchaseDB(SQLModel, table=True):
     purchased_at: datetime = Field(
         sa_type=TIMESTAMP(timezone=True),
         default_factory=lambda: datetime.now(timezone.utc)
-        )
+    )
 
     user_id: UUID = Field(foreign_key="users.id", primary_key=True)
     app_id: UUID = Field(foreign_key="apps.id", primary_key=True)
@@ -29,7 +29,7 @@ class CartItem(SQLModel, table=True):
     added_at: datetime = Field(
         sa_type=TIMESTAMP(timezone=True),
         default_factory=lambda: datetime.now(timezone.utc)
-        )
+    )
 
     cart_id: UUID = Field(foreign_key="carts.id", ondelete="CASCADE")
     app_id: UUID = Field(foreign_key="apps.id", ondelete="CASCADE")
@@ -53,4 +53,4 @@ class CartDB(SQLModel, table=True):
     created_at: datetime = Field(
         sa_type=TIMESTAMP(timezone=True),
         default_factory=lambda: datetime.now(timezone.utc)
-        )
+    )

@@ -12,7 +12,7 @@ class TransferDB(BaseTransfer, table=True):
 
     id: UUID = Field(
         primary_key=True, default_factory=uuid4
-        )
+    )
     user_id: UUID = Field(foreign_key="users.id", ondelete="CASCADE")
     user: "UserDB" = Relationship(
         back_populates="transfers"
@@ -20,5 +20,5 @@ class TransferDB(BaseTransfer, table=True):
     made_at: datetime = Field(
         sa_type=TIMESTAMP(timezone=True),
         default_factory=lambda: datetime.now(timezone.utc)
-        )
+    )
     operation_type: OperationType
