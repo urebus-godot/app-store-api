@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import traceback
 
 from fastapi import FastAPI, status
 from fastapi.responses import JSONResponse
@@ -13,6 +14,7 @@ import httpx
 from httpx import AsyncClient
 
 from app.middleware.request_logger import RequestLoggerMiddleware
+
 from app.core.exception_handlers import (
     response_validation_error_handler,
     request_error_handler,
@@ -31,9 +33,11 @@ from app.api.v1 import (
     review_router,
     user_router,
     discussion_router,
-    finance_router
+    finance_router,
+    server_router
 )
 from app.db.redis import connect_to_redis_client
+
 
 setup_logging()
 
@@ -70,6 +74,11 @@ app = FastAPI(
 )
 
 app.add_middleware(RequestLoggerMiddleware)
+
+
+app.include_router(
+    server_router.router
+)
 
 app.include_router(
     user_router.router, 
@@ -117,6 +126,7 @@ app.include_router(
     tags=["Media"]
 )
 
+
 cors = CORSMiddleware(
     app=app,
     allow_origins=["*"],
@@ -125,29 +135,6 @@ cors = CORSMiddleware(
     allow_credentials=True,
     #expose_headers=["X-RateLimit-Remaining"]
 )
-
-
-@app.get("/health", tags=["Server"])
-async def health_check(
-    redis: RedisDep,
-    session: SessionDep
-) -> dict[str, str]:
-    try:
-        redis_response = await redis.ping()
-        db_response = await session.exec(text("SELECT 1"))
-
-        if not redis_response:
-            return JSONResponse(
-            content={"status": "Unhealthy", "detail": "Connection to Redis failed"},
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE
-        )
-        
-        return {"status": "Healthy"}
-    except Exception as e:
-        return JSONResponse(
-        content={"status": "Unhealthy", "detail": str(e)},
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE
-    )
 
 
 if __name__ == "__main__":

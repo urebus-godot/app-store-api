@@ -9,7 +9,12 @@ from app.core.config import settings
 
 engine = create_async_engine(
     url=settings.DB_URL, 
-    echo=settings.DB_OUTPUT
+    echo=settings.DB_OUTPUT,
+    max_overflow=0,
+    connect_args={
+        "statement_cache_size": 0,
+        "prepared_statement_cache_size": 0
+    }
 )
 
 session_factory = async_sessionmaker(

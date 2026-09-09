@@ -11,7 +11,6 @@ services:
     restart: unless-stopped
     volumes:
       - db_data:/var/lib/postgresql/data
-      - ./postgresql/postgresql.conf:/etc/postgresql/postgresql.conf
     networks:
       - app_network
     healthcheck:
@@ -24,21 +23,25 @@ services:
   pgbouncer:
     image: edoburu/pgbouncer
     container_name: pgbouncer
+    restart: unless-stopped
     environment:
-      DATABASES: "mydb=host=postgres port=5432 dbname=mydb user=app_user password=secret"
+      DATABASE_URL: "postgres://postgres:postgres@db:5432/db"
       POOL_MODE: transaction
       DEFAULT_POOL_SIZE: 20
-    volumes:
-      - ./postgresql/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      MIN_POOL_SIZE: 5
+      MAX_CLIENT_CONN: 500
+      AUTH_TYPE: scram-sha-256
     ports:
-      - "6432:6432"
+      - "6432:5432"
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - app_network
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost", "-p", "6432"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "ви", "-h", "localhost", "-p", "6432"]
+      interval: 5s
+      timeout: 3s
       retries: 5
 
   redis:
@@ -76,6 +79,7 @@ services:
       - type: bind
         source: media
         target: /src/media
+
     restart: always
     env_file:
       - .env
@@ -127,9 +131,14 @@ services:
       - type: bind
         source: ./app
         target: /src/app
+      - type: bind
+        source: ./.env
+        target: /src/.env
     depends_on:
       db:
         condition: service_healthy
+      #pgbouncer:
+      #  condition: service_healthy
     restart: unless-stopped
     env_file:
       - .env
