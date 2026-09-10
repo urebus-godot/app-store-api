@@ -7,7 +7,6 @@ from app.api.deps import (
     UserIdDep,
     UserDep,
     SkipLimitParams,
-    SendEmailDep,
     rate_limit
 )
 from app.schemas.purchase import (

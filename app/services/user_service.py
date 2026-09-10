@@ -3,7 +3,7 @@ from uuid import UUID
 import logging
 import json
 
-from fastapi import BackgroundTasks, Request
+from fastapi import BackgroundTasks, Request, HTTPException, status
 from pydantic import EmailStr
 from jwt.exceptions import DecodeError
 import jwt
@@ -25,10 +25,15 @@ from app.core.exceptions import (
     already_has_role_exception,
     incorrect_creds_exception,
     user_data_used_exception,
-    invalid_refresh_token_exception
+    invalid_refresh_token_exception,
+    token_expired_exception
 )
 from app.core.security import verify_password, get_password_hash
-from app.core.auth import create_token_pair, create_access_token
+from app.core.auth import (
+    create_token_pair, 
+    create_access_token, 
+    revoke_all_user_tokens
+)
 from app.core.config import settings
 
 from app.utils.time import get_time_string
@@ -150,6 +155,67 @@ class UserService:
             await redis.delete(f"refresh_token:{jti}")
         except DecodeError:
             raise invalid_refresh_token_exception
+
+    async def refresh_tokens(
+        self,
+        refresh_token: str, 
+        redis: Redis,
+        access_secret_key: str,
+        refresh_secret_key: str
+    ) -> dict[str, str]:
+        try:
+            payload = jwt.decode(
+                refresh_token,
+                refresh_secret_key,
+                algorithms=settings.JWT_ALGORITHM,
+            )
+        except jwt.InvalidTokenError:
+            raise invalid_refresh_token_exception
+        except jwt.ExpiredSignatureError:
+            raise token_expired_exception
+        
+        if payload.get("type") != "refresh":
+            raise HTTPException(
+                status.HTTP_401_UNAUTHORIZED, 
+                "Wrong token type"
+            )
+
+        jti = payload.get("jti")
+        user_id = payload.get("sub")
+        family_id = payload.get("family_id")
+
+        token_blacklisted = await redis.exists(f"blacklist:{jti}")
+
+        if token_blacklisted:
+            await revoke_all_user_tokens(user_id, redis)
+            raise HTTPException(
+                status.HTTP_401_UNAUTHORIZED,
+                "Token reuse detected. All sessions revoked",
+            )
+        stored_family = await redis.get(f"refresh_token:{jti}")
+        if isinstance(stored_family, bytes):
+            stored_family = stored_family.decode()
+
+        if stored_family is None or stored_family != family_id:
+            raise HTTPException(
+                status.HTTP_401_UNAUTHORIZED, 
+                "Refresh token not found or invalid"
+            )
+
+        remaining_ttl = await redis.ttl(f"refresh_token:{jti}")
+        await redis.set(f"blacklist:{jti}", "1", ex=max(remaining_ttl, 1))
+        await redis.delete(f"refresh_token:{jti}")
+
+        user = await self.get_user_by_id(user_id)
+        new_tokens = await create_token_pair(
+            data={
+                "sub": user_id, "roles": json.dumps(user.roles)
+            }, 
+            redis=redis,
+            access_secret_key=access_secret_key,
+            refresh_secret_key=refresh_secret_key
+        )
+        return new_tokens
 
     async def set_role(
         self, user_id: UUID, role: UserRole, secret_key: str

@@ -1,5 +1,4 @@
 from uuid import UUID
-from typing import Optional
 from collections import defaultdict
 from decimal import Decimal
 import logging

@@ -2,19 +2,15 @@ from uuid import uuid4
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 import logging
-import json
 
-from fastapi import HTTPException, status
 import jwt
 
 from app.utils.time import get_refresh_token_expire
 
 from app.core.config import settings
 from app.core.exceptions import (
-    invalid_refresh_token_exception,
     InvalidTokenError,
     TokenExpiredError,
-    token_expired_exception
 )
 from app.db.redis import Redis
 
@@ -113,62 +109,3 @@ async def revoke_all_user_tokens(user_id: str, redis: Redis) -> None:
         await redis.delete(f"refresh_token:{jti_str}")
 
     await redis.delete(f"user_tokens:{user_id}")
-
-
-async def refresh_tokens(
-    refresh_token: str, 
-    redis: Redis,
-    access_secret_key: str,
-    refresh_secret_key: str,
-    user_service
-) -> dict[str, str]:
-    try:
-        payload = jwt.decode(
-            refresh_token,
-            refresh_secret_key,
-            algorithms=settings.JWT_ALGORITHM,
-        )
-        logger.info(f"Decoded refresh token: \n {payload = }")
-    except jwt.InvalidTokenError as e:
-        raise invalid_refresh_token_exception
-    except jwt.ExpiredSignatureError as e:
-        raise token_expired_exception
-    
-    if payload.get("type") != "refresh":
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Wrong token type")
-
-    jti = payload.get("jti")
-    user_id = payload.get("sub")
-    family_id = payload.get("family_id")
-
-    token_blacklisted = await redis.exists(f"blacklist:{jti}")
-
-    if token_blacklisted:
-        await revoke_all_user_tokens(user_id, redis)
-        raise HTTPException(
-            status.HTTP_401_UNAUTHORIZED,
-            "Token reuse detected. All sessions revoked",
-        )
-    stored_family = await redis.get(f"refresh_token:{jti}")
-    if isinstance(stored_family, bytes):
-        stored_family = stored_family.decode()
-
-    if stored_family is None or stored_family != family_id:
-        raise HTTPException(
-            status.HTTP_401_UNAUTHORIZED, "Refresh token not found or invalid"
-        )
-
-    remaining_ttl = await redis.ttl(f"refresh_token:{jti}")
-    await redis.set(f"blacklist:{jti}", "1", ex=max(remaining_ttl, 1))
-    await redis.delete(f"refresh_token:{jti}")
-
-    user = await user_service.get_user_by_id(user_id)
-    new_tokens = await create_token_pair(
-        data={
-            "sub": user_id, "roles": json.dumps(user.roles)
-        }, 
-        redis=redis,
-        access_secret_key=access_secret_key,
-        refresh_secret_key=refresh_secret_key
-    )
-    return new_tokens

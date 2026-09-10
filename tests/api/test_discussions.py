@@ -152,7 +152,7 @@ class TestDiscussion:
 
         assert response.status_code == 404
 
-    async def test_get_discussions(
+    async def test_get_discussion(
         self, auth_client: AsyncClient, test_discussion: DiscussionDB
     ):
         response = await auth_client.get(
@@ -306,8 +306,7 @@ class TestWebSocket:
         self,
         websocket: AsyncWebSocketSession,
     ):
-        await websocket.send_json({"type": "wrong_type"})
-        response = await asyncio.wait_for(websocket.receive_json(), timeout=2)
-
-        assert response["type"] == "error"
-        assert "Invalid message" in response["detail"]
+        with pytest.raises(WebSocketDisconnect) as exc_info:
+            await websocket.send_json({"type": "wrong_type"})
+            await asyncio.wait_for(websocket.receive_json(), timeout=2)
+        assert exc_info.value.code == status.WS_1008_POLICY_VIOLATION

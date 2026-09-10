@@ -41,12 +41,14 @@ class AppService:
         self.media_service = media_service
         self.app_repo = app_repo
 
-    async def upload_app(
+    async def create_app(
         self, data: AppRequest, publisher_id: UUID
     ) -> AppDB:
         async with self.uow:
-            data.keywords = format_keywords(data.keywords)
-            app = await self.uow.app_repo.upload_app(data, publisher_id)
+            if data.keywords is not None:
+                data.keywords = format_keywords(data.keywords)
+                
+            app = await self.uow.app_repo.create_app(data, publisher_id)
             await self.uow.commit()
 
         return app

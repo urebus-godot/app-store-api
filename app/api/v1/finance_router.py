@@ -1,6 +1,6 @@
 from decimal import Decimal
 from uuid import UUID
-from typing import Annotated, Any, Union
+from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
@@ -17,14 +17,17 @@ from app.api.deps import (
     SkipLimitParams,
     RedisDep,
     get_finance_api_client
-    )
+)
 
 router = APIRouter(
     dependencies=[Depends(rate_limit)]
 )
 
 
-@router.post("/transfers/balance")
+@router.post(
+    "/transfers/balance",
+    response_model=TransferResponse
+)
 async def top_up_balance(
     data: TransferRequest,
     user_id: UserIdDep,
@@ -36,7 +39,7 @@ async def top_up_balance(
     *Returns*: TransferResponse object"""
     return await finance_service.create_transfer_to_balance(
         data, user_id
-        )
+    )
 
 
 @router.post("/promo_codes")
@@ -53,10 +56,13 @@ async def enter_promo_code(
     and received balance"""
     return await finance_service.process_promo_code(
         user_id, promo_code, redis
-        )
+    )
 
 
-@router.post("/transfers/withdrawal")
+@router.post(
+    "/transfers/withdrawal",
+    response_model=TransferResponse
+)
 async def withdraw_funds_to_card(
     data: TransferRequest,
     user_id: UserIdDep,
@@ -84,10 +90,7 @@ async def get_transfer_history(
     return await finance_service.get_transfers(user_id, *skip_limit)
 
 
-@router.get(
-    "/finance/me/balance",
-    response_class=JSONResponse
-)
+@router.get("/finance/me/balance")
 async def get_balance(
     user: UserDep,
     finance_service: FinanceServiceDep,
@@ -101,7 +104,7 @@ async def get_balance(
     
     *Returns*: dict object containing the user's 
     balance in the specified currency if the call was successful; 
-    otherwise, returns JSONResponse object with details."""
+    otherwise, returns dict object with error detail."""
     result = await finance_service.convert_rubles(
         float(user.balance), 
         currency, 

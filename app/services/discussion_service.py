@@ -72,7 +72,7 @@ class DiscussionService:
     async def get_discussion(
         self, id: UUID, skip: int = 0, limit: int = 10
     ) -> DiscussionResponse:
-        discussion = await self.uow.discussion_repo.get_discussion(id)
+        discussion = await self.discussion_repo.get_discussion(id)
         
         if discussion is None:
             raise discussion_not_found_exception

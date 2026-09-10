@@ -54,9 +54,12 @@ async def ws_discussion(
     discussion_manager: DiscussionManagerDep,
     secret_key: AccessSecretKeyDep
 ) -> None:
-    """Websocket endpoint of the discussion with specified ID.
+    """WebSocket endpoint of the discussion with specified ID.
     It allows users to send and receive messages in real time.
-    The first message sent by user must contain JWT access token."""
+    The first message sent by user must contain JWT access token 
+    in format {"type": "auth", "token": "access-token"}.
+    
+    *Returns*: None"""
     await websocket.accept()
     try:
         logger.info("Awaiting data from websocket...")
@@ -67,8 +70,9 @@ async def ws_discussion(
         msg_type = ws_data.get("type", None)
 
         if msg_type is None or msg_type != "auth":
-            await websocket.send_json(
-                ErrorEvent(detail="Invalid message").model_dump(mode="json")
+            await websocket.close(
+                code=status.WS_1008_POLICY_VIOLATION,
+                reason="Wrong message type"
             )
             return
         
@@ -77,7 +81,7 @@ async def ws_discussion(
 
         if not user:
             await websocket.close(
-                code=status.WS_1008_POLICY_VIOLATION,
+                code=status.WS_1003_UNSUPPORTED_DATA,
                 reason="User not found"
             )
 
@@ -104,7 +108,7 @@ async def ws_discussion(
     
     if discussion is None:
         await websocket.close(
-            code=status.WS_1008_POLICY_VIOLATION,
+            code=status.WS_1003_UNSUPPORTED_DATA,
             reason="Discussion not found"
         )
         return
@@ -181,7 +185,7 @@ async def get_discussion(
 @router.get(
     "/discussions/app/{app_id}",
     dependencies=[Depends(rate_limit)],
-    response_model=ShortDiscussionResponse
+    response_model=list[ShortDiscussionResponse]
 )
 async def get_app_discussions(
     app_id: UUID, 
@@ -233,7 +237,7 @@ async def delete_discussion(
     await discussion_service.delete_discussion(id, user_id)
 
 
-# ------ Message routes ------
+# ------ Message routes ------ 
 
 @router.post(
     "/discussions/{discussion_id}/messages",

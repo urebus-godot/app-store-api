@@ -25,7 +25,6 @@ from app.api.deps import (
     check_admin_password,
     require_role
 )
-from app.core import auth
 from app.utils.time import get_refresh_token_expire
 
 from app.schemas.user import (
@@ -111,7 +110,7 @@ async def logout(
     user_service: UserServiceDep,
     redis: RedisDep,
 ) -> None:
-    """Adds the user's refresh token to the blacklist 
+    """Adds the user's refresh token to the Redis blacklist
     and deletes it from Redis.
     
     *Returns*: None"""
@@ -134,12 +133,11 @@ async def refresh_tokens(
         
     *Returns*: TokenResponse object"""
     refresh_token = request.cookies.get("refresh_token")
-    tokens = await auth.refresh_tokens(
+    tokens = await user_service.refresh_tokens(
         refresh_token=refresh_token, 
         redis=redis, 
         access_secret_key=access_secret_key,
         refresh_secret_key=refresh_secret_key,
-        user_service=user_service
     )
     return TokenResponse(
         access_token=tokens["access_token"],

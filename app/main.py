@@ -1,12 +1,9 @@
 from contextlib import asynccontextmanager
-import traceback
 
-from fastapi import FastAPI, status
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import ResponseValidationError
 
-from sqlalchemy import text
 
 import botocore.exceptions as boto_exceptions
 
@@ -24,7 +21,7 @@ from app.core.exception_handlers import (
 from app.core.logging import setup_logging
 from app.core.config import settings
 
-from app.api.deps import RedisDep, SessionDep, get_object_storage
+from app.api.deps import get_object_storage
 from app.api.v1 import (
     app_archive_router,
     app_router,

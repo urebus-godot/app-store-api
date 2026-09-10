@@ -52,7 +52,7 @@ async def upload_app(
     """Creates app and adds it to the database.
     
     *Returns*: AppResponse object"""
-    app = await app_service.upload_app(data, publisher_id)
+    app = await app_service.create_app(data, publisher_id)
     return app
 
 
@@ -69,7 +69,7 @@ async def upload_game(
     """Creates app and adds it to the database as game.
     
     *Returns*: GameResponse object"""
-    game = await app_service.upload_app(data, publisher_id)
+    game = await app_service.create_app(data, publisher_id)
     return game
 
 

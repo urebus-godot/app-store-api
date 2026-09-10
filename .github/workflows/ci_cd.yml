@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  test:
+  tests-and-linting:
     runs-on: ubuntu-latest
 
     strategy:
@@ -30,10 +30,10 @@ jobs:
           --health-retries 5
 
     steps:
-      - name: Download code
+      - name: Download project code
         uses: actions/checkout@v4
 
-      - name: Install uv
+      - name: Install UV
         uses: astral-sh/setup-uv@v3
         with:
           version: "0.11.28"
@@ -46,21 +46,22 @@ jobs:
         run: uv sync --locked
 
       - name: Run tests
-        run: uv run pytest -s -v
+        run: uv run pytest
 
       - name: Check code with Ruff
-        run: uv run ruff check app
+        run: uv run ruff check app tests
   
   build-and-push:
-    needs: test
+    needs: tests-and-linting
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
 
     permissions:
       contents: read
       packages: write
+
     steps:
-      - name: Checkout code
+      - name: Download project code
         uses: actions/checkout@v4
       
       - name: Login to Github Container Registry

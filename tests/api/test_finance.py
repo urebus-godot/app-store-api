@@ -8,7 +8,7 @@ from app.models.user import UserDB
 
 class TestFinance:
     @pytest.mark.parametrize(
-        argnames=["amount", "expected_balance", "expected_status_code"],
+        argnames=["amount", "expected_amount", "expected_status_code"],
         argvalues=[
             [1_000, "1000", 200],
             [1_000_000_000, "1000000000", 200],
@@ -21,7 +21,7 @@ class TestFinance:
         self,
         auth_client: AsyncClient,
         amount: float,
-        expected_balance: str,
+        expected_amount: str,
         expected_status_code: int,
     ):
         response = await auth_client.post(
@@ -30,13 +30,14 @@ class TestFinance:
         )
         assert response.status_code == expected_status_code
         if response.status_code == 200:
-            assert response.json()["new_balance"] == expected_balance
+            assert response.json()["operation_type"] == "balance top-up"
+            assert response.json()["amount"] == expected_amount
 
     @pytest.mark.parametrize(
-        argnames=["amount", "expected_balance", "expected_status_code"],
+        argnames=["amount", "expected_amount", "expected_status_code"],
         argvalues=[
-            [1_000, "9000", 200],
-            [1_000_000_000, "10000", 400],
+            [1_000, "1000", 200],
+            [1_000_000_000, "1000000000", 400],
             [0, "0", 422],
             [-1_000, "0", 422],
         ],
@@ -47,7 +48,7 @@ class TestFinance:
         db_session: AsyncSession,
         test_user: UserDB,
         amount: float,
-        expected_balance: str,
+        expected_amount: str,
         expected_status_code: int
     ):
         test_user.balance = 10000
@@ -59,7 +60,8 @@ class TestFinance:
         )
         assert response.status_code == expected_status_code
         if response.status_code == 200:
-            assert response.json()["new_balance"] == expected_balance
+            assert response.json()["amount"] == expected_amount
+            assert response.json()["operation_type"] == "withdrawal to card"
 
     async def test_get_transfer_history(
         self,

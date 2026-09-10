@@ -30,7 +30,7 @@ class AppRepository:
             selectinload(AppDB.publisher),
         )
 
-    async def upload_app(self, data: AppRequest, user_id: UUID) -> AppDB:
+    async def create_app(self, data: AppRequest, user_id: UUID) -> AppDB:
         app = AppDB(
             **data.model_dump(), 
             publisher_id=user_id
