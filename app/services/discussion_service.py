@@ -8,6 +8,7 @@ from app.core.exceptions import (
     app_not_found_exception
 )
 from app.services.app_service import AppService
+from app.repo.discussion_repo import DiscussionRepository
 
 from app.models.discussion import (
     DiscussionDB,
@@ -41,10 +42,12 @@ class DiscussionService:
     def __init__(
         self, 
         app_service: AppService,
+        discussion_repo: DiscussionRepository,
         uow: UnitOfWork
     ):
         self.app_service = app_service
         self.uow = uow
+        self.discussion_repo = discussion_repo
 
     async def create_discussion(
         self,
@@ -69,11 +72,10 @@ class DiscussionService:
     async def get_discussion(
         self, id: UUID, skip: int = 0, limit: int = 10
     ) -> DiscussionResponse:
-        async with self.uow:
-            discussion = await self.uow.discussion_repo.get_discussion(id)
-            
-            if discussion is None:
-                raise discussion_not_found_exception
+        discussion = await self.uow.discussion_repo.get_discussion(id)
+        
+        if discussion is None:
+            raise discussion_not_found_exception
 
         return DiscussionResponse(
             id=discussion.id,
@@ -86,20 +88,18 @@ class DiscussionService:
         self, app_id: UUID,
         skip: int, limit: int
     ) -> list[DiscussionDB]:
-        async with self.uow:
-            discussions = await self.uow.discussion_repo.get_app_discussions(
-                app_id=app_id, skip=skip, limit=limit
-            )
+        discussions = await self.discussion_repo.get_app_discussions(
+            app_id=app_id, skip=skip, limit=limit
+        )
         return discussions
 
     async def get_user_discussions(
         self, user_id: UUID,
         skip: int, limit: int
     ) -> list[DiscussionDB]:
-        async with self.uow:
-            discussions = await self.uow.discussion_repo.get_user_discussions(
-                user_id=user_id, skip=skip, limit=limit
-            )
+        discussions = await self.discussion_repo.get_user_discussions(
+            user_id=user_id, skip=skip, limit=limit
+        )
         return discussions
 
     async def delete_discussion(

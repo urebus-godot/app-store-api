@@ -13,6 +13,8 @@ from app.schemas.review import ReviewRequest
 from app.models.review import ReviewDB
 
 from app.services.app_service import AppService
+from app.repo.review_repo import ReviewRepository
+from app.repo.app_repo import AppRepository
 
 from app.uow.protocol import UnitOfWork
 from app.task_queue.tasks.db_tasks import update_app_rating
@@ -22,10 +24,14 @@ class ReviewService:
     def __init__(
         self, 
         app_service: AppService,
-        uow: UnitOfWork
+        uow: UnitOfWork,
+        review_repo: ReviewRepository,
+        app_repo: AppRepository
     ):
         self.app_service = app_service
         self.uow = uow
+        self.review_repo = review_repo
+        self.app_repo = app_repo
 
     async def create_review(
         self, 
@@ -63,6 +69,7 @@ class ReviewService:
         return review
 
     async def get_review(self, id: UUID) -> ReviewDB:
+        raise NotImplementedError()
         async with self.uow:
             review = await self.uow.review_repo.get_review(id)
 
@@ -76,25 +83,23 @@ class ReviewService:
         app_id: UUID,
         skip: int, limit: int
     ) -> list[ReviewDB]:
-        async with self.uow:
-            app = await self.uow.app_repo.get_app(app_id)
+        app = await self.app_repo.get_app(app_id)
 
-            if app is None:
-                raise app_not_found_exception
+        if app is None:
+            raise app_not_found_exception
 
-            app_reviews = await self.uow.review_repo.get_app_reviews(
-                app_id, skip, limit
-            )
+        app_reviews = await self.review_repo.get_app_reviews(
+            app_id, skip, limit
+        )
         return app_reviews
 
     async def get_user_reviews(
         self, user_id: UUID, 
         skip: int, limit: int
     ) -> list[ReviewDB]:
-        async with self.uow:
-            user_reviews = await self.uow.review_repo.get_user_reviews(
-                user_id, skip, limit
-            )
+        user_reviews = await self.review_repo.get_user_reviews(
+            user_id, skip, limit
+        )
         return user_reviews
 
     async def delete_review(

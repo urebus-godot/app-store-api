@@ -47,20 +47,15 @@ async def add_app_to_cart(
 async def purchase_apps_in_cart(
     user: UserDep,
     bg_tasks: BackgroundTasks,
-    purchase_service: PurchaseServiceDep,
-    sends_email: SendEmailDep
+    purchase_service: PurchaseServiceDep
 ) -> list[AppResponse | GameResponse]:
     """Purchases all the apps added in the user's cart
     and sends an email to the user, 
     if there are sufficient funds in the account.
     
     *Returns*: list of AppResponse objects that has been purchased"""
-    if sends_email:
-        return await purchase_service.purchase_apps_in_cart(
-            user_id=user.id, user_email=user.email, bg_tasks=bg_tasks
-            )
     return await purchase_service.purchase_apps_in_cart(
-        user_id=user.id, user_email=None, bg_tasks=bg_tasks
+        user_id=user.id, bg_tasks=bg_tasks
         )
 
 

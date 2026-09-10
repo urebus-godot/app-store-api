@@ -26,6 +26,8 @@ from app.core.exceptions import (
 from app.services.app_service import AppService
 from app.services.user_service import UserService
 
+from app.repo.purchase_repo import PurchaseRepository
+
 from app.models.app import AppDB
 from app.models.purchase import PurchaseDB, CartItem, CartDB
 from app.schemas.purchase import CartResponse
@@ -39,12 +41,14 @@ class PurchaseService:
         redis: Redis,
         app_service: AppService,
         user_service: UserService,
+        purchase_repo: PurchaseRepository,
         uow: UnitOfWork
     ):
         self.redis = redis
         self.app_service = app_service
         self.user_service = user_service
         self.uow = uow
+        self.purchase_repo = purchase_repo
 
     async def get_or_create_cart(
         self, user_id: UUID, 
@@ -92,10 +96,9 @@ class PurchaseService:
     async def get_purchase_history(
         self, user_id: UUID, skip: int, limit: int
     ) -> list[PurchaseDB]:
-        async with self.uow:
-            purchases = await self.uow.purchase_repo.get_purchases(
-                user_id, skip, limit
-            )
+        purchases = await self.purchase_repo.get_purchases(
+            user_id, skip, limit
+        )
         return purchases
 
     async def add_app_to_cart(
@@ -139,13 +142,10 @@ class PurchaseService:
     async def purchase_apps_in_cart(
         self, 
         user_id: UUID,
-        user_email: Optional[str],
         bg_tasks: BackgroundTasks,
         
     ) -> list[AppDB]:
         async with self.uow:
-            logger.info("Start purchasing apps")
-            
             user = await self.uow.user_repo.get_user_by_id(
                 user_id, for_update=True
                 )

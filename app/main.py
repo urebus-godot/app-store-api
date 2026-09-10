@@ -129,11 +129,10 @@ app.include_router(
 
 cors = CORSMiddleware(
     app=app,
-    allow_origins=["*"],
+    allow_origins=["https://frontend.ru"],
     allow_methods=["*"],
     allow_headers=["*"],
-    allow_credentials=True,
-    #expose_headers=["X-RateLimit-Remaining"]
+    allow_credentials=True
 )
 
 

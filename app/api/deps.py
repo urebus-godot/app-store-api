@@ -226,18 +226,28 @@ def get_user_repo(session: SessionDep) -> UserRepository:
 def get_user_service(
     app_service: AppServiceDep,
     uow: UnitOfWorkDep,
-    storage: ObjectStorageDep
+    storage: ObjectStorageDep,
+    user_repo: UserRepoDep
 ) -> UserService:
-    return UserService(app_service=app_service, uow=uow, storage=storage)
+    return UserService(
+        app_service=app_service, 
+        uow=uow, 
+        storage=storage,
+        user_repo=user_repo
+    )
 
 
 def get_finance_repo(session: SessionDep) -> FinanceRepository:
     return FinanceRepository(session)
 
 def get_finance_service(
-    uow: UnitOfWorkDep
+    uow: UnitOfWorkDep,
+    finance_repo: FinanceRepoDep
 ) -> FinanceService:
-    return FinanceService(uow)
+    return FinanceService(
+        uow=uow, 
+        finance_repo=finance_repo
+    )
 
 
 def get_app_repo(session: SessionDep) -> AppRepository:
@@ -246,12 +256,14 @@ def get_app_repo(session: SessionDep) -> AppRepository:
 def get_app_service(
     uow: UnitOfWorkDep,
     storage: ObjectStorageDep,
-    media_service: MediaServiceDep
+    media_service: MediaServiceDep,
+    app_repo: AppRepoDep
 ) -> AppService:
     return AppService(
         uow=uow, 
         storage=storage,
-        media_service=media_service
+        media_service=media_service,
+        app_repo=app_repo
     )
 
 
@@ -262,9 +274,16 @@ def get_review_repo(
 
 def get_review_service(
     app_service: AppServiceDep,
-    uow: UnitOfWorkDep
+    uow: UnitOfWorkDep,
+    review_repo: ReviewRepoDep,
+    app_repo: AppRepoDep
 ) -> ReviewService:
-    return ReviewService(app_service, uow)
+    return ReviewService(
+        app_service=app_service, 
+        uow=uow,
+        review_repo=review_repo,
+        app_repo=app_repo
+    )
 
 
 def get_purchase_repo(
@@ -276,10 +295,15 @@ def get_purchase_service(
     redis: RedisDep, 
     app_service: AppServiceDep, 
     user_service: UserServiceDep,
+    purchase_repo: PurchaseRepoDep,
     uow: UnitOfWorkDep
 ) -> PurchaseService:
     return PurchaseService(
-        redis, app_service, user_service, uow
+        redis=redis, 
+        app_service=app_service, 
+        user_service=user_service, 
+        uow=uow,
+        purchase_repo=purchase_repo
     )
 
 
@@ -288,9 +312,16 @@ def get_discussion_repo(session: SessionDep) -> DiscussionRepository:
 
 def get_discussion_service(
     app_service: AppServiceDep,
+    discussion_repo: Annotated[
+        DiscussionRepoDep, Depends(get_discussion_repo)
+    ],
     uow: UnitOfWorkDep
 ) -> DiscussionService:
-    return DiscussionService(app_service, uow)
+    return DiscussionService(
+        app_service=app_service, 
+        uow=uow,
+        discussion_repo=discussion_repo
+    )
 
 def get_discussion_manager(redis: RedisDep) -> DiscussionWebsocketManager:
     return DiscussionWebsocketManager(redis)

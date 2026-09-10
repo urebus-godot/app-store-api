@@ -113,12 +113,12 @@ class AppService:
         user_id: UUID, 
         public_only: bool = True
     ) -> list[AppDB]:
-        user = await self.uow.user_repo.get_user_by_id(user_id)
+        user = await self.user_repo.get_user_by_id(user_id)
 
         if user is None:
             raise user_not_found_exception
 
-        publisher_apps = await self.uow.app_repo.get_publisher_apps(
+        publisher_apps = await self.app_repo.get_publisher_apps(
             skip=skip, 
             limit=limit,
             user_id=user_id, 
@@ -134,17 +134,16 @@ class AppService:
         search_query: Optional[str] = None,
         only_public: bool = True,
     ) -> list[AppDB]:
-        async with self.uow:
-            if search_query is None:
-                games = await self.uow.app_repo.get_games(
-                    skip=skip, limit=limit, 
-                    only_public=only_public
-                    )
-            else:
-                games = await self.uow.app_repo.get_games_by_keywords(
-                    keywords=format_keywords(search_query.split()), 
-                    skip=skip, limit=limit
-                    )
+        if search_query is None:
+            games = await self.app_repo.get_games(
+                skip=skip, limit=limit, 
+                only_public=only_public
+                )
+        else:
+            games = await self.app_repo.get_games_by_keywords(
+                keywords=format_keywords(search_query.split()), 
+                skip=skip, limit=limit
+                )
 
         return games
 
@@ -156,19 +155,18 @@ class AppService:
         genre: Optional[GameGenre] = None,
         only_public: bool = True,
     ) -> list[AppDB]:
-        async with self.uow:
-            if search_query is None:
-                games = await self.uow.app_repo.get_games(
-                    genre=genre, 
-                    skip=skip, limit=limit, 
-                    only_public=only_public
-                )
-            else:
-                games = await self.uow.app_repo.get_games_by_keywords(
-                    genre=genre, 
-                    keywords=format_keywords(search_query.split()), 
-                    skip=skip, limit=limit
-                )
+        if search_query is None:
+            games = await self.app_repo.get_games(
+                genre=genre, 
+                skip=skip, limit=limit, 
+                only_public=only_public
+            )
+        else:
+            games = await self.app_repo.get_games_by_keywords(
+                genre=genre, 
+                keywords=format_keywords(search_query.split()), 
+                skip=skip, limit=limit
+            )
 
         return games
 
@@ -176,18 +174,16 @@ class AppService:
         self, 
         skip: int, limit: int
     ) -> list[AppDB]:
-        async with self.uow:
-            games = await self.uow.app_repo.get_top_games(skip, limit)
+        games = await self.app_repo.get_top_games(skip, limit)
         return games
 
     async def get_top_games_genre(
         self, genre: Optional[GameGenre], 
         skip: int, limit: int
     ) -> list[AppDB]:
-        async with self.uow:
-            games = await self.uow.app_repo.get_top_games_genre(
-                genre, skip, limit
-            )
+        games = await self.app_repo.get_top_games_genre(
+            genre, skip, limit
+        )
         return games
 
     async def delete_app_with_its_files(

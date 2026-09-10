@@ -16,6 +16,7 @@ from app.schemas.user import UserRequest, UserUpdate, UserRoleResponse
 from app.schemas.token import LoginResponse
 
 from app.services.app_service import AppService
+from app.repo.user_repo import UserRepository
 
 from app.core.exceptions import (
     user_not_found_exception,
@@ -45,11 +46,13 @@ class UserService:
         self, 
         app_service: AppService,
         uow: UnitOfWork,
-        storage: ObjectStorage
+        storage: ObjectStorage,
+        user_repo: UserRepository
     ):
         self.app_service = app_service
         self.uow = uow
         self.storage = storage
+        self.user_repo = user_repo
 
     async def username_registered(self, username: str) -> bool:
         return await self.uow.user_repo.username_registered(username)
@@ -198,29 +201,26 @@ class UserService:
     async def get_user_by_username(
         self, username: str
     ) -> Optional[UserDB]:
-        async with self.uow:
-            user = await self.uow.user_repo.get_user_by_username(username)
+        user = await self.user_repo.get_user_by_username(username)
 
-            if user is None:
-                raise user_not_found_exception
+        if user is None:
+            raise user_not_found_exception
 
-            return user
+        return user
 
     async def get_user_by_id(
         self, id: UUID
     ) -> Optional[UserDB]:
-        async with self.uow:
-            user = await self.uow.user_repo.get_user_by_id(id)
+        user = await self.user_repo.get_user_by_id(id)
 
-            if user is None:
-                raise user_not_found_exception
+        if user is None:
+            raise user_not_found_exception
 
-            return user
+        return user
 
     async def get_users(self, skip: int, limit: int) -> list[UserDB]:
-        async with self.uow:
-            users = await self.uow.user_repo.get_users(skip, limit)
-            return users
+        users = await self.user_repo.get_users(skip, limit)
+        return users
 
     async def delete_user(
         self, 

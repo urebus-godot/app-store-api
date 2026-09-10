@@ -204,12 +204,17 @@ async def get_app_discussions(
     response_model=list[ShortDiscussionResponse]
 )
 async def get_my_discussions(
-    user_id: UserIdDep, discussion_service: DiscussionServiceDep
+    user_id: UserIdDep, 
+    skip_limit: SkipLimitParams,
+    discussion_service: DiscussionServiceDep
 ) -> list[ShortDiscussionResponse]:
     """Fetches discussions created by the current user from the database.
 
     *Returns*: list of ShortDiscussionResponse objects"""
-    return await discussion_service.get_user_discussions(user_id)
+    skip, limit = skip_limit
+    return await discussion_service.get_user_discussions(
+        user_id=user_id, skip=skip, limit=limit
+    )
 
 
 @router.delete(

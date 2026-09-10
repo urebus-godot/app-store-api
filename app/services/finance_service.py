@@ -6,11 +6,14 @@ from fastapi.responses import JSONResponse
 from fastapi import status
 
 from redis.asyncio import Redis
+
 from app.uow.protocol import UnitOfWork
+
 from app.core.exceptions import (
     insufficient_funds_exception,
     invalld_promo_code_exception
 )
+from app.repo.finance_repo import FinanceRepository
 
 from app.schemas.finance import TransferRequest
 from app.models.finance import TransferDB
@@ -20,9 +23,11 @@ from app.base_models.finance import CurrencyType
 class FinanceService:
     def __init__(
         self, 
-        uow: UnitOfWork
+        uow: UnitOfWork,
+        finance_repo: FinanceRepository
     ):
         self.uow = uow
+        self.finance_repo = finance_repo
 
     async def create_promo_code(
         self, 
@@ -91,10 +96,9 @@ class FinanceService:
         user_id: UUID,
         skip: int, limit: int
     ) -> list[TransferDB]:
-        async with self.uow:
-            transfers = await self.uow.finance_repo.get_transfers(
-                user_id, skip, limit
-            )
+        transfers = await self.finance_repo.get_transfers(
+            user_id, skip, limit
+        )
         return transfers
 
     async def convert_rubles(
