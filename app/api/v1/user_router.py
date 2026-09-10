@@ -12,6 +12,8 @@ from fastapi import (
 )
 from fastapi.security import OAuth2PasswordRequestForm
 
+from app.core.config import settings
+
 from app.api.deps import (
     UserDep,
     UserIdDep,
@@ -25,7 +27,7 @@ from app.api.deps import (
     check_admin_password,
     require_role
 )
-from app.utils.time import get_refresh_token_expire
+from app.utils.time import get_refresh_token_expire, days_to_seconds
 
 from app.schemas.user import (
     UserRequest,
@@ -61,7 +63,7 @@ async def register_user(
     return await user_service.register_user(data)
 
 
-@router.post("/users/login", tags=["Auth"])
+@router.post("/auth/login", tags=["Auth"])
 async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     user_service: UserServiceDep,
@@ -87,25 +89,25 @@ async def login(
         access_secret_key=access_secret_key,
         refresh_secret_key=refresh_secret_key
     )
-
     response.set_cookie(
         key="refresh_token",
         value=login_response.refresh_token,
         httponly=True,
         secure=True,
-        expires=get_refresh_token_expire()
+        samesite="lax",
+        max_age=days_to_seconds(settings.REFRESH_TOKEN_EXPIRE_DAYS)
     )
-
     return login_response
 
 
 @router.post(
-    "/users/logout", 
+    "/auth/logout", 
     tags=["Auth"],
     status_code=status.HTTP_204_NO_CONTENT
 )
 async def logout(
     request: Request,
+    response: Response,
     secret_key: RefreshSecretKeyDep,
     user_service: UserServiceDep,
     redis: RedisDep,
@@ -114,16 +116,20 @@ async def logout(
     and deletes it from Redis.
     
     *Returns*: None"""
-    refresh_token = request.cookies.pop("refresh_token", None)
+    refresh_token = request.cookies.get("refresh_token", None)
     await user_service.logout(refresh_token, redis, secret_key)
+    response.delete_cookie(
+        key="refresh_token", httponly=True, secure=True, samesite="lax"
+    )
 
 
 @router.post(
-    "/users/refresh", 
+    "/auth/refresh", 
     tags=["Auth"]
 )
 async def refresh_tokens(
     request: Request,
+    response: Response,
     access_secret_key: AccessSecretKeyDep,
     refresh_secret_key: RefreshSecretKeyDep,
     redis: RedisDep,
@@ -138,6 +144,14 @@ async def refresh_tokens(
         redis=redis, 
         access_secret_key=access_secret_key,
         refresh_secret_key=refresh_secret_key,
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=tokens["refresh_token"],
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=days_to_seconds(settings.REFRESH_TOKEN_EXPIRE_DAYS)
     )
     return TokenResponse(
         access_token=tokens["access_token"],

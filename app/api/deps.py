@@ -59,7 +59,7 @@ from app.ws.discussion_manager import (
     DiscussionWebsocketManager
 )
 
-oauth_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/login")
+oauth_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 optional_oauth_scheme = OAuth2PasswordBearer(
     tokenUrl="/api/v1/users/login",
     auto_error=False

@@ -39,7 +39,7 @@ def create_access_token(
 async def create_refresh_token(
     user_id: str, secret_key: str, redis: Redis
 ) -> str:
-    """Create a refresh token for the user."""
+    """Create a refresh token for the user and adds it to the Redis"""
     jti = str(uuid4())
     family_id = str(uuid4())
     expire = get_refresh_token_expire()
@@ -83,7 +83,9 @@ async def create_token_pair(
 def decode_access_token(
     token: str, secret_key: str
 ) -> dict:
-    """Decode and validate a JWT access token."""
+    """Decode and validate a JWT access token.
+    
+    *Raises*: TokenExpiredError, InvalidTokenError"""
     try:
         payload = jwt.decode(
             token, 

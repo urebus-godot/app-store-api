@@ -12,7 +12,7 @@ class TestLogin:
         self, client: AsyncClient, test_user: UserDB, fake_redis: FakeRedis
     ):
         response = await client.post(
-            "/api/v1/users/login",
+            "/api/v1/auth/login",
             data={"username": "testUser", "password": "testPassword"},
         )
         data = response.json()
@@ -25,7 +25,7 @@ class TestLogin:
         self, client: AsyncClient, test_user: UserDB
     ):
         response = await client.post(
-            "/api/v1/users/login",
+            "/api/v1/auth/login",
             data={"username": "testUser", "password": "TestPassword"},
         )
 
@@ -40,7 +40,7 @@ class TestLogin:
     ):
         refresh_token_data["token"]
         jti = refresh_token_data["jti"]
-        response = await real_auth_client.post("/api/v1/users/logout")
+        response = await real_auth_client.post("/api/v1/auth/logout")
 
         assert response.status_code == 204
         assert await fake_redis.exists(f"blacklist:{jti}")
@@ -57,7 +57,7 @@ class TestRefresh:
         refresh_token_data["token"]
         jti = refresh_token_data["jti"]
 
-        response = await real_auth_client.post("/api/v1/users/refresh")
+        response = await real_auth_client.post("/api/v1/auth/refresh")
 
         assert response.status_code == 200
         assert "refresh_token" in response.json()
@@ -73,9 +73,9 @@ class TestRefresh:
         refresh_token_data["token"]
         jti = refresh_token_data["jti"]
 
-        response = await real_auth_client.post("/api/v1/users/refresh")
+        response = await real_auth_client.post("/api/v1/auth/refresh")
 
-        repeat_response = await real_auth_client.post("/api/v1/users/refresh")
+        repeat_response = await real_auth_client.post("/api/v1/auth/refresh")
         repeat_data = repeat_response.json()
 
         assert response.status_code == 200
@@ -97,7 +97,7 @@ class TestRefresh:
             expires_delta=timedelta(seconds=0)
             )
         response = await real_auth_client.post(
-            "/api/v1/users/refresh",
+            "/api/v1/auth/refresh",
             cookies={"refresh_token": token}
         )
         assert response.status_code == 401
