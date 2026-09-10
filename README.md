@@ -40,18 +40,18 @@ RESTful API for a computer software online store. It is designed for publishing 
 ├── app/                    # App code
 │   └── api/v1              # Endpoints, routers
 │       └── dependencies.py # FastAPI dependency injection
-│───├── base_models/        # Base SQLModel models
+│───── base_models/         # Base SQLModel models
 │   ├── core/               # Configuration, auth, security, logging
 │   ├── db/                 # PostgreSQL, Redis connections and configuration, Redis rate limiter
 │   ├── middleware/         # FastAPI middleware
-│   ├── models/             # SQLModel db models
+│   ├── models/             # SQLModel table models
+│   ├── repo/               # Interaction with the database
 │   ├── schemas/            # SQLModel schemas
-│   ├── service/            # Business logic
-│   ├── repo/               # Interaction with the db
-│   ├── uow/                # Unit of Work class
-│   ├── utils/              # Utility functions (datetime, size units conversion, email sending)
+│   ├── services/           # Business logic
 │   ├── storage/            # Interaction with MinIO S3 storage
 │   ├── task_queue/         # Celery configuration and tasks
+│   ├── uow/                # Unit of Work class
+│   ├── utils/              # Utility functions (datetime, size units conversion, email sending)
 │   ├── ws/                 # WebSockets connection managers
 │   └── main.py             # FastAPI entry point
 ├── migrations/             # Alembic migrations
@@ -130,5 +130,5 @@ ruff check
 Run the database migrations:
 ``` bash
 alembic revision -m "Changes of this migration" --autogenerate
-alembic upgrade head
+alembic upgrade heah
 ```
