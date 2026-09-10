@@ -27,7 +27,7 @@ from app.api.deps import (
     check_admin_password,
     require_role
 )
-from app.utils.time import get_refresh_token_expire, days_to_seconds
+from app.utils.time import days_to_seconds
 
 from app.schemas.user import (
     UserRequest,
