@@ -53,7 +53,7 @@ class OrmUnitOfWork:
         await self.session.rollback()
         logger.debug("Rolled transaction back")
 
-    async def add(self, object: SQLModel) -> None:
+    def add(self, object: SQLModel) -> None:
         self.session.add(object)
 
     async def delete(self, object: SQLModel) -> None:

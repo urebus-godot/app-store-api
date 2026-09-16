@@ -1,10 +1,20 @@
 services:
-  db:
+  test_db:
     image: postgres:16-alpine
+    container_name: db
     ports:
-      - "5432:5432"
+      - "6432:5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: test_db
-    container_name: db
+
+  test_minio:
+    image: minio/minio:latest
+    container_name: minio
+    command: server /data
+    ports:
+      - "9000:9000"
+    environment:
+      MINIO_ROOT_USER: test-key
+      MINIO_ROOT_PASSWORD: test-key

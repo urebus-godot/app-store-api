@@ -32,7 +32,7 @@ async def add_app_to_cart(
     user_id: UserIdDep,
     purchase_service: PurchaseServiceDep
 ) -> CartItemResponse:
-    """Adds app to the user's cart and creates CartItem object.
+    """Adds app to the user's cart and creates CartItemDB object.
     
     *Returns*: CartItemResponse object"""
     return await purchase_service.add_app_to_cart(app_id, user_id)
@@ -105,7 +105,7 @@ async def remove_app_from_cart(
     user_id: UserIdDep,
     purchase_service: PurchaseServiceDep
 ) -> None:
-    """Deletes CartItem object of the app 
+    """Deletes CartItemDB object of the app 
     with the specified id from the user's cart.
     
     *Returns*: None"""

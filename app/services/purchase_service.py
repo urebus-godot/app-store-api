@@ -4,7 +4,7 @@ from decimal import Decimal
 import logging
 
 from redis.asyncio import Redis
-from fastapi import BackgroundTasks
+from fastapi import BackgroundTasks, status, HTTPException
 
 from app.uow.protocol import UnitOfWork
 from app.utils.email_send import send_email
@@ -15,7 +15,6 @@ from app.core.exceptions import (
     insufficient_funds_exception,
     app_purchased_exception,
     app_in_cart_exception,
-    app_published_exception,
     empty_cart_exception,
     app_not_in_cart_exception,
     app_not_found_exception,
@@ -28,7 +27,7 @@ from app.services.user_service import UserService
 from app.repo.purchase_repo import PurchaseRepository
 
 from app.models.app import AppDB
-from app.models.purchase import PurchaseDB, CartItem, CartDB
+from app.models.purchase import PurchaseDB, CartItemDB, CartDB
 from app.schemas.purchase import CartResponse
 
 logger = logging.getLogger("services.purchase")
@@ -102,7 +101,7 @@ class PurchaseService:
 
     async def add_app_to_cart(
         self, app_id: UUID, user_id: UUID, 
-    ) -> CartItem:
+    ) -> CartItemDB:
         async with self.uow:
             user_cart = await self.get_or_create_cart(user_id)
             app = await self.uow.app_repo.get_app(app_id)
@@ -124,7 +123,10 @@ class PurchaseService:
                 raise app_in_cart_exception
 
             if app.publisher_id == user_id:
-                raise app_published_exception
+                raise HTTPException(
+                    status.HTTP_409_CONFLICT, 
+                    "You can't purchase app published by you"
+                )
             
             if app.archive_key is None:
                 raise no_app_archive_exception
@@ -146,8 +148,8 @@ class PurchaseService:
     ) -> list[AppDB]:
         async with self.uow:
             user = await self.uow.user_repo.get_user_by_id(
-                user_id, for_update=True
-                )
+                user_id
+            )
             cart = await self.uow.purchase_repo.get_cart(user.id)
             
             if cart is None or not cart.items:
@@ -160,7 +162,7 @@ class PurchaseService:
             for item in cart.items:
                 purchased = await self.uow.purchase_repo.get_purchase(
                     item.app_id, user.id
-                    )
+                )
                 if purchased:
                     logger.info(
                         f"App {item.app_id} is already purchased, skipping"

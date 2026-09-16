@@ -5,14 +5,14 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, desc, delete
 from sqlalchemy.orm import selectinload
 
-from app.models.purchase import CartDB, PurchaseDB, CartItem
+from app.models.purchase import CartDB, PurchaseDB, CartItemDB
 
 
 class PurchaseRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
         self.load_attrs = (
-            selectinload(CartDB.items).selectinload(CartItem.app),
+            selectinload(CartDB.items).selectinload(CartItemDB.app),
             selectinload(CartDB.user),
         )
 
@@ -62,13 +62,16 @@ class PurchaseRepository:
 
     async def get_cart_item(
         self, cart_id: UUID, app_id: UUID
-    ) -> Optional[CartItem]:
+    ) -> Optional[CartItemDB]:
         item = (
             await self.session.exec(
-                select(CartItem)
-                .where(CartItem.cart_id == cart_id, CartItem.app_id == app_id)
+                select(CartItemDB)
+                .where(
+                    CartItemDB.cart_id == cart_id, 
+                    CartItemDB.app_id == app_id
+                )
                 .options(
-                    selectinload(CartItem.app), selectinload(CartItem.cart)
+                    selectinload(CartItemDB.app), selectinload(CartItemDB.cart)
                 )
             )
         ).first()
@@ -94,8 +97,8 @@ class PurchaseRepository:
         self,
         cart: CartDB,
         app_id: UUID,
-    ) -> CartItem:
-        cart_item = CartItem(
+    ) -> CartItemDB:
+        cart_item = CartItemDB(
             cart_id=cart.id, 
             app_id=app_id
             )
@@ -104,7 +107,7 @@ class PurchaseRepository:
 
         return cart_item
 
-    async def add_purchase(self, user_id: UUID, item: CartItem) -> None:
+    async def add_purchase(self, user_id: UUID, item: CartItemDB) -> None:
         purchase = PurchaseDB(
             user_id=user_id, 
             app_id=item.app_id, 
@@ -113,7 +116,7 @@ class PurchaseRepository:
         self.session.add(purchase)
 
     async def remove_item_from_cart(
-        self, item: CartItem
+        self, item: CartItemDB
     ) -> None:
         await self.session.delete(item)
 

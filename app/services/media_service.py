@@ -4,7 +4,7 @@ import logging
 from botocore.exceptions import EndpointConnectionError
 from fastapi import HTTPException, status, BackgroundTasks
 
-from app.models.app_cover import AppCover
+from app.models.app_cover import AppCoverDB
 
 from app.schemas.media import (
     AppCoverListResponse, 
@@ -23,7 +23,7 @@ from app.core.exceptions import (
     app_cover_not_found_exception,
     file_too_large_exception,
     file_not_found_exception,
-    no_load_exception
+    no_data_to_confirm_exception
     )
 from app.core.config import settings
 from app.utils.files import validate_and_get_extension, to_megabytes
@@ -43,10 +43,16 @@ class MediaService:
     def __init__(
         self, 
         storage: ObjectStorage, 
-        uow: UnitOfWork
+        uow: UnitOfWork,
+        minio_endpoint_url: str,
+        minio_access_key: str,
+        minio_secret_key: str,
     ) -> None:
         self.storage = storage
-        self.uow = uow
+        self.uow = uow       
+        self.minio_endpoint_url = minio_endpoint_url
+        self.minio_access_key = minio_access_key
+        self.minio_secret_key = minio_secret_key
 
     async def presign_avatar_upload(
         self, user_id: UUID, content_type: str
@@ -77,7 +83,8 @@ class MediaService:
         )
 
     async def confirm_avatar_upload(
-        self, user_id: UUID, bg_tasks: BackgroundTasks
+        self, 
+        user_id: UUID, bg_tasks: BackgroundTasks
     ) -> MediaConfirmResponse:
         try:
             async with self.uow:
@@ -87,7 +94,7 @@ class MediaService:
                     raise user_not_found_exception
 
                 if user.pending_avatar_key is None:
-                    raise no_load_exception
+                    raise no_data_to_confirm_exception
 
                 size = await self.storage.object_size(
                     settings.USER_AVATAR_BUCKET, user.pending_avatar_key
@@ -121,7 +128,10 @@ class MediaService:
                 logger.info(f"Deleting {old_key = }...")
 
             generate_image_variants.delay(
-                settings.USER_AVATAR_BUCKET, new_key
+                settings.USER_AVATAR_BUCKET, new_key,
+                self.minio_endpoint_url, 
+                self.minio_access_key,
+                self.minio_secret_key
             )
             return MediaConfirmResponse(
                 url=self.storage.build_public_url(
@@ -133,8 +143,6 @@ class MediaService:
                 status.HTTP_504_GATEWAY_TIMEOUT,
                 "Could not connect to the endpoint URL"
             )
-
-    # ---------- Иконка приложения (одна, заменяемая) ----------
 
     async def presign_icon_upload(
         self, app_id: UUID, user_id: UUID, content_type: str
@@ -175,7 +183,7 @@ class MediaService:
             app = await self.uow.app_repo.get_app(app_id)
 
             if app is None or app.pending_icon_key is None:
-                raise no_load_exception
+                raise no_data_to_confirm_exception
 
             if app.publisher_id != user_id:
                 raise no_rights_exception
@@ -209,7 +217,10 @@ class MediaService:
             )
 
         generate_image_variants.delay(
-            settings.APP_ICON_BUCKET, new_key
+            settings.APP_ICON_BUCKET, new_key,
+            self.minio_endpoint_url, 
+            self.minio_access_key,
+            self.minio_secret_key
         )
 
         return MediaConfirmResponse(
@@ -217,8 +228,6 @@ class MediaService:
                 settings.APP_ICON_BUCKET, new_key
             )
         )
-
-    # ---------- Обложки приложения (МНОГО на одно приложение) ----------
 
     async def presign_cover_upload(
         self, app_id: UUID, user_id: UUID, content_type: str
@@ -280,7 +289,7 @@ class MediaService:
                 )
                 raise file_too_large_exception
 
-            cover = AppCover(
+            cover = AppCoverDB(
                 app_id=app_id, object_key=object_key
                 )
             self.uow.add(cover)
@@ -288,7 +297,10 @@ class MediaService:
             cover_id = cover.id
 
         generate_image_variants.delay(
-            settings.APP_COVER_BUCKET, object_key
+            settings.APP_COVER_BUCKET, object_key,
+            self.minio_endpoint_url, 
+            self.minio_access_key,
+            self.minio_secret_key
         )
 
         return AppCoverResponse(

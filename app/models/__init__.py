@@ -26,7 +26,7 @@ from app.schemas.discussion import (
 from app.models.discussion import DiscussionDB, MessageDB
 from app.models.review import ReviewDB
 from app.models.finance import TransferDB
-from app.models.purchase import CartDB, CartItem, PurchaseDB
+from app.models.purchase import CartDB, CartItemDB, PurchaseDB
 from app.models.user import UserDB
 
 __all__ = [
@@ -35,7 +35,7 @@ __all__ = [
     ReviewDB, 
     TransferDB, 
     CartDB, 
-    CartItem,
+    CartItemDB,
     PurchaseDB, 
     UserDB
 ]

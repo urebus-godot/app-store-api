@@ -56,7 +56,7 @@ file_not_found_exception = HTTPException(
     "File not found in storage"
 )
 
-no_load_exception = HTTPException(
+no_data_to_confirm_exception = HTTPException(
     status.HTTP_404_NOT_FOUND,
     "No data in storage to confirm"
 )
@@ -146,8 +146,8 @@ app_not_found_exception = HTTPException(
 )
 
 app_not_purchased_exception = HTTPException(
-    status.HTTP_400_BAD_REQUEST, 
-    "Application must be purchased"
+    status.HTTP_403_FORBIDDEN, 
+    "Application not purchased"
 )
 
 insufficient_funds_exception = HTTPException(
@@ -176,11 +176,6 @@ app_purchased_exception = HTTPException(
 app_in_cart_exception = HTTPException(
     status.HTTP_409_CONFLICT, 
     "Application has already been added to the cart"
-)
-
-app_published_exception = HTTPException(
-    status.HTTP_400_BAD_REQUEST, 
-    "Application is published by you"
 )
 
 empty_cart_exception = HTTPException(
@@ -224,5 +219,5 @@ discussion_not_found_exception = HTTPException(
 
 invalld_promo_code_exception = HTTPException(
     status.HTTP_404_NOT_FOUND, 
-    "Promo code has expired or is invalid"
+    "Promo code expired or invalid"
 )

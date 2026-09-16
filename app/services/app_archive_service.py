@@ -8,7 +8,7 @@ from app.core.exceptions import (
     no_rights_exception,
     app_not_found_exception,
     file_not_found_exception,
-    no_load_exception
+    no_data_to_confirm_exception
 )
 from app.core.config import settings
 
@@ -52,6 +52,7 @@ class AppArchiveService:
 
         async with self.uow:
             app = await self.uow.app_repo.get_app(app_id)
+            logger.info(f"Get app {app.pending_archive_key = }")
 
             if app is None:
                 raise app_not_found_exception
@@ -87,17 +88,19 @@ class AppArchiveService:
                 raise no_rights_exception
             
             if app.pending_archive_key is None:
-                raise no_load_exception
+                raise no_data_to_confirm_exception
 
-            exists = await self.storage.object_exists(
+            file_exists = await self.storage.object_exists(
                 settings.APP_ARCHIVE_BUCKET, app.pending_archive_key
             )
-            if not exists:
+            if not file_exists:
                 raise file_not_found_exception
 
             old_key = app.archive_key
             app.archive_key = app.pending_archive_key
             app.pending_archive_key = None
+
+            logger.info(f"Set archive key {old_key = }; {app.archive_key = }")
 
             await self.uow.commit()
 
@@ -122,13 +125,13 @@ class AppArchiveService:
                 )
             
             if app.publisher_id != user_id:
-                has_purchase = await (
+                app_purchased = await (
                 self.uow.purchase_repo
                 .user_purchased_app(
                     user_id=user_id, app_id=app_id
                     )
                 )
-                if not has_purchase:
+                if not app_purchased:
                     raise app_not_purchased_exception
 
             archive_key = app.archive_key
@@ -141,7 +144,7 @@ class AppArchiveService:
         return DownloadPresignResponse(
             download_url=download_url, 
             expires_in=settings.DOWNLOAD_TTL_SECONDS
-            )
+        )
 
     async def delete_app_archive(
         self, app_id: UUID, user_id: UUID
@@ -153,7 +156,7 @@ class AppArchiveService:
                 raise no_rights_exception
             
             if app.pending_archive_key is None:
-                raise no_load_exception
+                raise no_data_to_confirm_exception
 
             await self.storage.delete_object(
                 settings.APP_ARCHIVE_BUCKET, 

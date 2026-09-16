@@ -112,7 +112,7 @@ app.include_router(
 
 app.include_router(
     app_archive_router.router, 
-    prefix="/api/v1/files/apps/{app_id}", 
+    prefix="/api/v1/app_archives/{app_id}", 
     tags=["App archives"]
 )
 

@@ -92,7 +92,7 @@ class TestReviews:
                     "subject": "bad review",
                     "content": "this review is bad"
                 },
-                400,
+                403,
                 False
             ],
         ]
@@ -154,7 +154,7 @@ class TestReviews:
                 "content": "My app is so great!",
             },
         )
-        assert response.status_code == 400
+        assert response.status_code == 409
 
     async def test_get_app_reviews(
         self,

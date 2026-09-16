@@ -21,7 +21,7 @@ class PurchaseDB(SQLModel, table=True):
     price: Decimal
 
 
-class CartItem(SQLModel, table=True):
+class CartItemDB(SQLModel, table=True):
     __tablename__ = "cart_items"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
@@ -46,7 +46,7 @@ class CartDB(SQLModel, table=True):
         foreign_key="users.id", unique=True, ondelete="CASCADE"
     )
     user: "UserDB" = Relationship(back_populates="cart")
-    items: list["CartItem"] = Relationship(
+    items: list["CartItemDB"] = Relationship(
         back_populates="cart",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )

@@ -19,7 +19,12 @@ def validate_and_get_extension(
     allowed_content_types: dict[str, str],
     content_type: str
 ) -> str:
+    """Retrieves and returns the extension based on the content type.
+    
+    *Raises*: HTTException if the content type isn't valid."""
     extension = allowed_content_types.get(content_type)
+
     if extension is None:
         raise invalid_file_exception
+    
     return extension

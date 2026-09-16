@@ -6,15 +6,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlalchemy import pool
 from sqlmodel import SQLModel
 from alembic import context
-import alembic_postgresql_enum
 
-from app.models.app import AppDB
-from app.models.user import UserDB
-from app.models.review import ReviewDB
-from app.models.discussion import DiscussionDB, MessageDB
-from app.models.purchase import CartDB, PurchaseDB, CartItem
-from app.models.finance import TransferDB
-from app.models.app_cover import AppCover
 
 
 # this is the Alembic Config object, which provides

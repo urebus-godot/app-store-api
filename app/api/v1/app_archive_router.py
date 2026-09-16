@@ -16,7 +16,7 @@ router = APIRouter(
 
 
 @router.post(
-    "/archive/upload_url"
+    "/upload_url"
 )
 async def request_app_archive_upload_url(
     app_id: UUID,
@@ -38,7 +38,7 @@ async def request_app_archive_upload_url(
 
 
 @router.post(
-    "/archive/confirm", 
+    "/confirm", 
     status_code=status.HTTP_204_NO_CONTENT
 )
 async def confirm_app_archive_upload(
@@ -55,7 +55,7 @@ async def confirm_app_archive_upload(
     )
 
 
-@router.get("/archive/download_url")
+@router.get("/download_url")
 async def request_app_archive_download_url(
     app_id: UUID,
     user_id: UserIdDep,

@@ -18,6 +18,7 @@ x/
 htmlcov/
 media/
 certs/
+files/
 
 *.sql
 *.sh

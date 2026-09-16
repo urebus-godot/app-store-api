@@ -23,8 +23,8 @@ class Settings(BaseSettings):
 
     DB_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/db"
     TEST_DB_URL: str = (
-        "postgresql+asyncpg://postgres:postgres@localhost:5432/test_db"
-        )
+        "postgresql+asyncpg://postgres:postgres@localhost:6432/test_db"
+    )
 
     REDIS_URL: str = "redis://redis:6379/0"
 
@@ -32,8 +32,8 @@ class Settings(BaseSettings):
     RESULT_BACKEND_URL: str = "redis://redis:6379/0"
     WORKER_DB_URL: str = "postgresql+psycopg://postgres:postgres@db:5432/db"
     TEST_WORKER_DB_URL: str = (
-        "postgresql+psycopg://postgres:postgres@localhost:5432/test_db"
-        )
+        "postgresql+psycopg://postgres:postgres@localhost:6432/test_db"
+    )
 
     WINDOW_SECONDS: int = 60
     REQUEST_LIMIT_IP: int = 15
@@ -54,10 +54,10 @@ class Settings(BaseSettings):
 
     TEST_ACCESS_SECRET_KEY: str = (
         "4a834639b4bee7011b42f243748c17f13c7aa211a86a06843b5683376e8f35d8"
-        )
+    )
     TEST_REFRESH_SECRET_KEY: str = (
         "5ab55156e7460135f49653aa4ad50f768d0771201e236cfa986542c6b48f4b2c"
-        )
+    )
 
     JWT_ALGORITHM: str = "HS256"
 
@@ -79,6 +79,10 @@ class Settings(BaseSettings):
     MINIO_INTERNAL_ENDPOINT: str = "http://minio:9000"
     MINIO_PUBLIC_ENDPOINT: str = "http://localhost:9000"
 
+    MINIO_TEST_INTERNAL_ENDPOINT: str = "http://localhost:9000"
+    MINIO_TEST_PUBLIC_ENDPOINT: str = "http://localhost:9000"
+    MINIO_TEST_KEY: str = "test-key"
+
     APP_ARCHIVE_BUCKET: str = "app-archives"
     APP_COVER_BUCKET: str = "app-covers"
     APP_ICON_BUCKET: str = "app-icons"
@@ -90,6 +94,7 @@ class Settings(BaseSettings):
         APP_ICON_BUCKET: True, 
         USER_AVATAR_BUCKET: True
     }
+    "Key is bucket's name, value determines whether it is public"
  
     THUMBNAIL_SIZE: tuple[int, int] = (128, 128)
     MEDIUM_SIZE: tuple[int, int] = (640, 640)

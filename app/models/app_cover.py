@@ -5,7 +5,7 @@ from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 
 
-class AppCover(SQLModel, table=True):
+class AppCoverDB(SQLModel, table=True):
     __tablename__ = "app_covers"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)

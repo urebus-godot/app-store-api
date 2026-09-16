@@ -20,7 +20,7 @@ router = APIRouter(
 
 
 @router.post(
-    "/users/me/avatar/upload-url"
+    "/users/me/avatar/upload_url"
 )
 async def request_avatar_upload_url(
     payload: UploadPresignRequest,
@@ -37,7 +37,10 @@ async def request_avatar_upload_url(
     )
 
 
-@router.post("/users/me/avatar/confirm")
+@router.post(
+    "/users/me/avatar/confirm",
+    status_code=status.HTTP_201_CREATED
+)
 async def confirm_avatar_upload(
     user_id: UserIdDep,
     media_service: MediaServiceDep,
@@ -49,14 +52,13 @@ async def confirm_avatar_upload(
     *Returns*: 
     MediaConfirmResponse object containing URL to download user avatar"""
     return await media_service.confirm_avatar_upload(
-        user_id=user_id, bg_tasks=bg_tasks
+        user_id=user_id, bg_tasks=bg_tasks,
+        
     )
 
 
-# ---------- Иконка приложения ----------
-
 @router.post(
-    "/apps/{app_id}/icon/upload-url"
+    "/apps/{app_id}/icon/upload_url"
 )
 async def request_icon_upload_url(
     app_id: UUID,
@@ -75,7 +77,8 @@ async def request_icon_upload_url(
 
 
 @router.post(
-    "/apps/{app_id}/icon/confirm"
+    "/apps/{app_id}/icon/confirm",
+    status_code=status.HTTP_201_CREATED
 )
 async def confirm_icon_upload(
     app_id: UUID,
@@ -94,7 +97,7 @@ async def confirm_icon_upload(
 
 
 @router.post(
-    "/apps/{app_id}/covers/upload-url",
+    "/apps/{app_id}/covers/upload_url",
 )
 async def request_cover_upload_url(
     app_id: UUID,
@@ -114,6 +117,7 @@ async def request_cover_upload_url(
 
 @router.post(
     "/apps/{app_id}/covers/confirm",
+    status_code=status.HTTP_201_CREATED
 )
 async def confirm_cover_upload(
     app_id: UUID,

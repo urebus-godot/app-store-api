@@ -5,9 +5,13 @@ from functools import lru_cache
 import logging
 import json
 
+from botocore.config import Config
+
 from redis.asyncio import Redis
+
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 from fastapi import Depends, Query, Request, Response
 from fastapi.security import OAuth2PasswordBearer
  
@@ -53,7 +57,6 @@ from app.services.app_archive_service import AppArchiveService
 from app.services.media_service import MediaService
 
 from app.storage.minio_repo import MinioStorage
-from app.storage.protocol import ObjectStorage
 
 from app.ws.discussion_manager import (
     DiscussionWebsocketManager
@@ -334,8 +337,20 @@ async def get_unit_of_work(
 
 
 @lru_cache
-def get_object_storage() -> ObjectStorage:
-    return MinioStorage()
+def get_object_storage() -> MinioStorage:
+    return MinioStorage(
+        dict(
+            aws_access_key_id=settings.MINIO_ACCESS_KEY,
+            aws_secret_access_key=settings.MINIO_SECRET_KEY,
+            config=Config(
+                signature_version="s3v4", 
+                s3={'addressing_style': 'path'}
+                ),
+            region_name="us-east-1",
+            internal_endpoint=settings.MINIO_INTERNAL_ENDPOINT,
+            public_endpoint=settings.MINIO_PUBLIC_ENDPOINT
+        )
+    )
 
 
 def get_app_archive_service(
@@ -349,7 +364,12 @@ def get_media_service(
     uow: UnitOfWorkDep, 
     storage: ObjectStorageDep
 ) -> MediaService:
-    return MediaService(storage=storage, uow=uow)
+    return MediaService(
+        storage=storage, uow=uow,
+        minio_endpoint_url=settings.MINIO_INTERNAL_ENDPOINT,
+        minio_access_key=settings.MINIO_ACCESS_KEY,
+        minio_secret_key=settings.MINIO_SECRET_KEY,
+    )
 
 
 def get_finance_api_client(request: Request):
@@ -402,7 +422,7 @@ DiscussionManagerDep = Annotated[
 ]
 
 ObjectStorageDep = Annotated[
-    ObjectStorage, Depends(get_object_storage)
+    MinioStorage, Depends(get_object_storage)
 ]
 
 RedisDep = Annotated[Redis, Depends(get_redis)]

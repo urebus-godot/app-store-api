@@ -4,7 +4,7 @@ import pytest_asyncio
 
 from app.models.user import UserDB
 from app.models.app import AppDB
-from app.models.purchase import CartDB, CartItem, PurchaseDB
+from app.models.purchase import CartDB, CartItemDB, PurchaseDB
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -15,8 +15,8 @@ async def test_cart(
     test_app_2_paid: AppDB,
 ):
     cart = CartDB(user_id=test_user.id)
-    item_1 = CartItem(cart_id=cart.id, app_id=test_app_2.id)
-    item_2 = CartItem(cart_id=cart.id, app_id=test_app_2_paid.id)
+    item_1 = CartItemDB(cart_id=cart.id, app_id=test_app_2.id)
+    item_2 = CartItemDB(cart_id=cart.id, app_id=test_app_2_paid.id)
 
     db_session.add(cart)
     db_session.add_all([item_1, item_2])
@@ -87,7 +87,7 @@ class TestPurchases:
         response = await auth_client.post(
             f"/api/v1/carts/my/{test_app.id}"
         )
-        assert response.status_code == 400
+        assert response.status_code == 409
 
     async def test_remove_item_from_cart(
         self,

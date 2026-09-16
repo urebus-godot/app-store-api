@@ -45,6 +45,14 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked
 
+      - name: Start MinIO
+        run: |
+          docker run -d -p 9000:9000 \
+            -e MINIO_ROOT_USER=test-key \
+            -e MINIO_ROOT_PASSWORD=test-key \
+            minio/minio server /data
+          until curl -sf http://localhost:9000/minio/health/live; do sleep 1; done
+
       - name: Run tests
         run: uv run pytest
 

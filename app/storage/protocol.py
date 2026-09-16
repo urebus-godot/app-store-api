@@ -34,6 +34,9 @@ class ObjectStorage(Protocol):
     def build_public_url(self, bucket: str, key: str) -> str:
         ...
 
+    async def delete_bucket(self, bucket_name: str) -> None:
+        ...
+
     async def delete_object(self, bucket: str, key: str) -> None:
         ...
 

@@ -10,6 +10,8 @@ import logging
 import logging.config
 import json
 
+from botocore.client import Config
+
 from sqlalchemy.ext.asyncio import (
     create_async_engine, async_sessionmaker
     )
@@ -36,10 +38,18 @@ from app.api.deps import (
     rate_limit,
     get_session_factory,
     get_admin_password,
-    get_finance_api_client
+    get_finance_api_client,
+    get_object_storage,
+    get_media_service
 )
 from app.core.auth import create_access_token
 from app.core.security import get_password_hash
+
+from app.uow.orm import OrmUnitOfWork
+
+from app.services.media_service import MediaService
+
+from app.storage.minio_repo import MinioStorage
 
 from app.main import app
 
@@ -47,7 +57,6 @@ from app.main import app
 test_user_data = {
     "username": "testUser",
     "hashed_password": get_password_hash("testPassword"),
-    #"email": "user@example.com",
     "birth_date": date(year=1980, month=4, day=1)
 }
 
@@ -134,7 +143,7 @@ async def db_session(session_factory):
         yield session
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def fake_redis() -> AsyncGenerator[FakeRedis, None, None]:
     redis = FakeRedis(server=FakeServer())
     yield redis
@@ -142,7 +151,7 @@ async def fake_redis() -> AsyncGenerator[FakeRedis, None, None]:
     await redis.aclose()
 
 
-@pytest_asyncio.fixture(scope="function", autouse=True)
+@pytest_asyncio.fixture(scope="session", autouse=True)
 def setup_test_celery():
     from app.task_queue.celery_app import celery_app
     celery_app.conf.update(
@@ -150,6 +159,22 @@ def setup_test_celery():
         task_eager_propagates=True,
         broker_url="memory://",
         result_backend="cache+memory://"
+    )
+
+
+@pytest_asyncio.fixture(scope="session")
+def object_storage() -> MinioStorage:
+    return MinioStorage(
+        options=dict(
+            aws_access_key_id=settings.MINIO_TEST_KEY,
+            aws_secret_access_key=settings.MINIO_TEST_KEY,
+            config=Config(
+                signature_version="s3v4"
+            ),
+            region_name="us-east-1",
+            internal_endpoint=settings.MINIO_TEST_INTERNAL_ENDPOINT,
+            public_endpoint=settings.MINIO_TEST_PUBLIC_ENDPOINT
+        ),
     )
 
 
@@ -206,7 +231,8 @@ async def auth_client(
     fake_redis: FakeRedis,
     test_user: UserDB,
     refresh_token_data: dict[str, str],
-    access_token: str
+    access_token: str,
+    object_storage: MinioStorage
 ):
     override_general_deps(
         db_session,
@@ -241,6 +267,14 @@ async def auth_client(
     app.dependency_overrides[get_finance_api_client] = (
         lambda: MockFinanceAPIClient()
     )
+    app.dependency_overrides[get_media_service] = lambda: MediaService(
+        storage=object_storage, 
+        uow=OrmUnitOfWork(session_factory),
+        minio_endpoint_url=settings.MINIO_TEST_INTERNAL_ENDPOINT,
+        minio_access_key=settings.MINIO_TEST_KEY,
+        minio_secret_key=settings.MINIO_TEST_KEY,
+    )
+    app.dependency_overrides[get_object_storage] = lambda: object_storage
 
     transport = ASGITransport(app)
     async with AsyncClient(
@@ -379,6 +413,19 @@ async def rate_limited_auth_client(
         yield ac
 
     app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture(scope="class")
+async def minio_client(object_storage: MinioStorage):
+    """Fixture of httpx.AsyncClient used to sending requests to MinIO."""
+    for bucket_name, public in settings.BUCKETS.items():
+        await object_storage.create_bucket(bucket_name, public)
+
+    async with AsyncClient() as ac:
+        yield ac
+
+    for bucket_name, _ in settings.BUCKETS.items():
+        await object_storage.delete_bucket(bucket_name)
 
 
 # ----- Token fixtures -----

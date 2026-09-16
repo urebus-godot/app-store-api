@@ -69,10 +69,7 @@ class UserRepository:
             select(UserDB)
             .where(UserDB.id == id)
             .options(*self.load_attrs)
-                )
-        if for_update:
-            stmt = stmt.with_for_update()
-            
+        )
         user = (await self.session.exec(stmt)).one_or_none()
 
         return user

@@ -7,11 +7,12 @@ x/
 .github/
 htmlcov/
 .github/
-.git
-.coverage
-.uv
+files/
+.git/
 
-.gitignore
-README.md
+*.coverage
+*.uv
+*.gitignore
+*.md
 *.sh
 *.txt

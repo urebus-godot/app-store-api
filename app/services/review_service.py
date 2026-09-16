@@ -46,10 +46,12 @@ class ReviewService:
 
             if app.publisher_id == user_id:
                 raise HTTPException(
-                    status.HTTP_400_BAD_REQUEST,
-                    "You can't create review to your own app",
+                    status.HTTP_409_CONFLICT,
+                    "You can't create review to app published by you",
                 )
-            if await self.uow.review_repo.user_created_review(user_id, app_id):
+            if await self.uow.review_repo.user_created_review(
+                user_id, app_id
+            ):
                 raise HTTPException(
                     status.HTTP_409_CONFLICT,
                     "You already created review to this app",
