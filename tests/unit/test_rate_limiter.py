@@ -9,13 +9,11 @@ class TestRateLimiter:
     async def test_rate_limit(
         self,
         rate_limited_client: AsyncClient,
-        fake_redis: FakeRedis,
-        logger
+        fake_redis: FakeRedis
     ):
-        logger.info("Start Rate Limit Test")
         request_count = settings.REQUEST_LIMIT_IP
         for _ in range(request_count):
-            response = await rate_limited_client.get(
+            await rate_limited_client.get(
                 "/api/v1/apps"
             )
 
@@ -32,13 +30,12 @@ class TestRateLimiter:
         self,
         rate_limited_auth_client: AsyncClient,
         fake_redis: FakeRedis,
-        test_user: UserDB,
-        logger
+        test_user: UserDB
     ):
         request_count = settings.REQUEST_LIMIT_USER
 
         for _ in range(request_count):
-            response = await rate_limited_auth_client.get(
+            await rate_limited_auth_client.get(
                 "/api/v1/users"
             )
 
