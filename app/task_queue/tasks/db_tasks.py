@@ -49,13 +49,13 @@ def update_app_rating(app_id: str) -> None:
         session.commit()
 
 
-@celery_app.task(name="db_tasks.check_for_users_birthday")
-def check_for_users_birthday() -> list[str]:
+@celery_app.task(name="db_tasks.send_promo_codes_to_users")
+def send_promo_codes_to_users() -> list[str]:
     """
-    Finds users whose birth_date attribute matches the current date,
+    Finds users whose *birth_date* attribute matches the current date,
     stores promo codes for them in Redis and sends them emails.
 
-    Returns generated promo codes.
+    *Returns*: list of generated promo codes.
     """
     with SessionLocal() as session:
         now = datetime.now()

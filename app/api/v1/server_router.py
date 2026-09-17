@@ -20,7 +20,7 @@ async def health_check(
     session: SessionDep
 ) -> dict[str, str]:
     """Performs a health check by attempting to connect 
-    to Redis and Postgres database.
+    to Redis and Postgres databases.
     
     *Returns*: dict object containing status 
     and error detail if it occurred."""

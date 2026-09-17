@@ -16,8 +16,8 @@ from app.core.exceptions import (
 from app.repo.finance_repo import FinanceRepository
 
 from app.schemas.finance import TransferRequest
-from app.models.finance import TransferDB
-from app.base_models.finance import CurrencyType
+from app.models.transfer import TransferDB
+from app.base_models.transfer import CurrencyType
 
 
 class FinanceService:
@@ -114,7 +114,7 @@ class FinanceService:
             "/rates",
             params={"quotes": to_currency, "base": "RUB"}
         )
-        data = api_response.json()
+        data = api_response.json()[0]
         if api_response.status_code >= 400:
             return JSONResponse(
                 content=data,

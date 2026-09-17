@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from sqlmodel import Field, Relationship
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 
-from app.base_models.finance import BaseTransfer, OperationType
+from app.base_models.transfer import BaseTransfer, OperationType
 
 
 class TransferDB(BaseTransfer, table=True):

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from app.base_models.finance import BaseTransfer, OperationType
+from app.base_models.transfer import BaseTransfer, OperationType
 
 
 class TransferRequest(BaseTransfer):

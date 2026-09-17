@@ -76,13 +76,11 @@ class TestRefresh:
         response = await real_auth_client.post("/api/v1/auth/refresh")
 
         repeat_response = await real_auth_client.post("/api/v1/auth/refresh")
-        repeat_data = repeat_response.json()
+        data = repeat_response.json()
 
         assert response.status_code == 200
-        assert (
-            repeat_data["detail"]
-            == "Token reuse detected. All sessions revoked"
-        )
+        assert repeat_response.status_code == 401
+        assert "token reuse detected" in data["detail"].lower()
         assert await fake_redis.exists(f"blacklist:{jti}")
         assert not await fake_redis.exists(f"user_tokens:{test_user.id}")
 

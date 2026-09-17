@@ -40,7 +40,6 @@ def generate_image_variants(
     client = get_boto3_client(
         endpoint_url, access_key, secret_key
     )
-
     try:
         response = client.get_object(Bucket=bucket, Key=object_key)
         original_bytes = response["Body"].read()

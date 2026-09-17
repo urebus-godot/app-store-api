@@ -20,16 +20,6 @@ celery_app = Celery(
 
 redis_client = connect_to_sync_redis_client()
 
-
-@setup_logging_signal.connect
-def configure_celery_logging(*args, **kwargs):
-    setup_logging()
-
-@worker_shutdown_signal.connect
-def on_worker_shutdown(*args, **kwargs):
-    redis_client.close_conn()
-
-
 celery_app.autodiscover_tasks(
     [
         f"{BASE_TASK_PATH}.db_tasks", 
@@ -38,18 +28,27 @@ celery_app.autodiscover_tasks(
 )
 
 celery_app.conf.update(
-    task_serializer='json',
-    accept_content=['json'],
-    result_serializer='json',
-    timezone='Europe/Moscow',
+    task_serializer="json",
+    accept_content=["json"],
+    result_serializer="json",
+    timezone="Europe/Moscow",
     enable_utc=True,
 )
 
 celery_app.conf.beat_schedule = {
-    "check_for_users_birthday_everyday": {
-        "task": "tasks.check_for_users_birthday",
-        "schedule": crontab(hour=12, minute=0)
+    "send_promo_codes_to_users_everyday": {
+        "task": "db_tasks.send_promo_codes_to_users",
+        "schedule": crontab(hour="12", minute="0")
     }
 }
 
 logger = logging.getLogger("task_queue.celery_app")
+
+
+@setup_logging_signal.connect
+def configure_celery_logging(*args, **kwargs):
+    setup_logging()
+
+@worker_shutdown_signal.connect
+def on_worker_shutdown(*args, **kwargs):
+    redis_client.close_conn()

@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, desc
 
-from app.models.finance import TransferDB
+from app.models.transfer import TransferDB
 from app.schemas.finance import TransferRequest, OperationType
 from app.models.user import UserDB
 

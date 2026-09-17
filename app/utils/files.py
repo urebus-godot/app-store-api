@@ -11,8 +11,8 @@ def to_bytes(size_megabytes: int) -> float:
 
 
 def variant_key(object_key: str, suffix: str) -> str:
-    stem = object_key.rsplit(".", 1)[0]
-    return f"{stem}_{suffix}.webp"
+    name = object_key.rsplit(".", 1)[0]
+    return f"{name}_{suffix}.webp"
 
 
 def validate_and_get_extension(

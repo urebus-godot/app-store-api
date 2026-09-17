@@ -39,7 +39,7 @@ services:
     networks:
       - app_network
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "ви", "-h", "localhost", "-p", "6432"]
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "db", "-h", "localhost", "-p", "5432"]
       interval: 5s
       timeout: 3s
       retries: 5

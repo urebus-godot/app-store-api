@@ -36,7 +36,7 @@ def timeout_error_handler(
     logger.error(f"Timeout exception: {exception}")
     return JSONResponse(
         status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-        content={"message": "Response timeout expired"},
+        content={"message": "Response timeout"},
     )
 
 

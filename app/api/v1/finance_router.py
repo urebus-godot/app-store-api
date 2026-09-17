@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from httpx import AsyncClient
 
 from app.schemas.finance import TransferRequest, TransferResponse
-from app.base_models.finance import CurrencyType
+from app.base_models.transfer import CurrencyType
 
 from app.api.deps import (
     UserDep, 

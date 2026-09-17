@@ -107,7 +107,7 @@ app.include_router(
 app.include_router(
     finance_router.router, 
     prefix="/api/v1",
-    tags=["Finances"]
+    tags=["Finance"]
 )
 
 app.include_router(

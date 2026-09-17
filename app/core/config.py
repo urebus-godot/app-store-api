@@ -72,7 +72,7 @@ class Settings(BaseSettings):
     MAX_NAME_LEN: int = 64
 
     LOGGING_LEVEL: int = logging.DEBUG
-    LOG_FILE_PATH: Optional[str] = None#"app_logs.log"
+    LOG_FILE_PATH: Optional[str] = None
 
     MINIO_ACCESS_KEY: str = "secret"
     MINIO_SECRET_KEY: str = "secret"
@@ -109,9 +109,9 @@ class Settings(BaseSettings):
     MAX_AVATAR_ICON_SIZE_MB: int = 5
     MAX_COVER_SIZE_MB: int = 10
 
-    MAIL_USERNAME: str = "satalovserge"
+    MAIL_USERNAME: str = "username"
     MAIL_PASSWORD: str = "secret"
-    MAIL_FROM: str = "satalovserge@gmail.com"
+    MAIL_FROM: str = "user@gmail.com"
     MAIL_PORT: int = 587
     MAIL_SERVER: str = "smtp.gmail.com"
     MAIL_FROM_NAME: str = "satalovserge"

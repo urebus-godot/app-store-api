@@ -250,12 +250,12 @@ async def auth_client(
             return rates[currency]
 
         async def get(self, _: str, params: dict):
-            data = {
+            data = [{
                 "date": "2026-01-01",
                 "base": "RUB",
                 "quote": params["quotes"],
                 "rate": self.get_rate(params["quotes"])
-            }
+            }]
             return Response(
                 status_code=200, 
                 json=data

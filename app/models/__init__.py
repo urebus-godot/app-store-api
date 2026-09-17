@@ -25,9 +25,10 @@ from app.schemas.discussion import (
 )
 from app.models.discussion import DiscussionDB, MessageDB
 from app.models.review import ReviewDB
-from app.models.finance import TransferDB
+from app.models.transfer import TransferDB
 from app.models.purchase import CartDB, CartItemDB, PurchaseDB
 from app.models.user import UserDB
+from app.models.app_cover import AppCoverDB
 
 __all__ = [
     DiscussionDB, 
@@ -37,7 +38,8 @@ __all__ = [
     CartDB, 
     CartItemDB,
     PurchaseDB, 
-    UserDB
+    UserDB,
+    AppCoverDB
 ]
 
 UserResponse.model_rebuild()
