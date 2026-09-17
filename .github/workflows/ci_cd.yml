@@ -28,6 +28,21 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      minio:
+        image: minio/minio:RELEASE.2024-01-11T07-46-16Z
+        ports:
+          - 9000:9000
+          - 9001:9001
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadminpassword
+
+        options: >-
+          server /data --console-address ":9001"
+        options: --health-cmd "curl -f http://localhost:9000/minio/health/live || exit 1"
+                 --health-interval 10s
+                 --health-timeout 5s
+                 --health-retries 3
 
     steps:
       - name: Download project code
@@ -44,14 +59,6 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --locked
-
-      - name: Start MinIO
-        run: |
-          docker run -d -p 9000:9000 --name minio \
-            -e MINIO_ROOT_USER=test-key \
-            -e MINIO_ROOT_PASSWORD=test-key \
-            minio/minio:latest server /data
-          until curl -sf http://localhost:9000/minio/health/live; do sleep 1; done
 
       - name: Run tests
         run: uv run pytest
