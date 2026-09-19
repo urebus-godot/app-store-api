@@ -7,14 +7,15 @@ from sqlalchemy import pool
 from sqlmodel import SQLModel
 from alembic import context
 
+from app.core.config import settings
 
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
+config.set_main_option("sqlalchemy.url", settings.LOCAL_DB_URL)
+
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
@@ -29,9 +30,6 @@ target_metadata = SQLModel.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
-def get_db_url() -> str:
-    return os.getenv("LOCAL_DB_URL")
-
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -45,9 +43,9 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = get_db_url()
+    db_url = config.get_main_option("sqlalchemy.url")
     context.configure(
-        url=url,
+        url=db_url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},

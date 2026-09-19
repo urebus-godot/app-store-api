@@ -40,7 +40,6 @@ def build_logging_config(
                 "datefmt": "%H:%M:%S",
             },
             "json": {
-                # pip/uv install python-json-logger
                 "()": "pythonjsonlogger.json.JsonFormatter",
                 "format": (
                     "%(asctime)s %(levelname)s %(name)s "
@@ -80,7 +79,8 @@ def build_logging_config(
                 },
         },
     }
-
+import sys
+sys.stderr
 
 def setup_logging(
     env: Literal["local", "production"] = "local", 

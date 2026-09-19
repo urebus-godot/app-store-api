@@ -166,14 +166,14 @@ def setup_test_celery():
 def object_storage() -> MinioStorage:
     return MinioStorage(
         options=dict(
-            aws_access_key_id=settings.MINIO_TEST_KEY,
-            aws_secret_access_key=settings.MINIO_TEST_KEY,
+            aws_access_key_id=settings.TEST_MINIO_USER,
+            aws_secret_access_key=settings.TEST_MINIO_PASSWORD,
             config=Config(
                 signature_version="s3v4"
             ),
             region_name="us-east-1",
-            internal_endpoint=settings.MINIO_TEST_INTERNAL_ENDPOINT,
-            public_endpoint=settings.MINIO_TEST_PUBLIC_ENDPOINT
+            internal_endpoint=settings.TEST_MINIO_INTERNAL_ENDPOINT,
+            public_endpoint=settings.TEST_MINIO_PUBLIC_ENDPOINT
         ),
     )
 
@@ -270,9 +270,9 @@ async def auth_client(
     app.dependency_overrides[get_media_service] = lambda: MediaService(
         storage=object_storage, 
         uow=OrmUnitOfWork(session_factory),
-        minio_endpoint_url=settings.MINIO_TEST_INTERNAL_ENDPOINT,
-        minio_access_key=settings.MINIO_TEST_KEY,
-        minio_secret_key=settings.MINIO_TEST_KEY,
+        minio_endpoint_url=settings.TEST_MINIO_INTERNAL_ENDPOINT,
+        minio_access_key=settings.TEST_MINIO_USER,
+        minio_secret_key=settings.TEST_MINIO_PASSWORD,
     )
     app.dependency_overrides[get_object_storage] = lambda: object_storage
 

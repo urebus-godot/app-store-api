@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     TEST_DB_URL: str = (
         "postgresql+asyncpg://postgres:postgres@localhost:6432/test_db"
     )
+    LOCAL_DB_URL: str = (
+        "postgresql+asyncpg://postgres:postgres@localhost:5432/db"
+    )
 
     REDIS_URL: str = "redis://redis:6379/0"
 
@@ -74,14 +77,15 @@ class Settings(BaseSettings):
     LOGGING_LEVEL: int = logging.DEBUG
     LOG_FILE_PATH: Optional[str] = None
 
-    MINIO_ACCESS_KEY: str = "secret"
-    MINIO_SECRET_KEY: str = "secret"
+    MINIO_ACCESS_KEY: str = "access-key"
+    MINIO_SECRET_KEY: str = "secret-key"
     MINIO_INTERNAL_ENDPOINT: str = "http://minio:9000"
     MINIO_PUBLIC_ENDPOINT: str = "http://localhost:9000"
 
-    MINIO_TEST_INTERNAL_ENDPOINT: str = "http://localhost:9000"
-    MINIO_TEST_PUBLIC_ENDPOINT: str = "http://localhost:9000"
-    MINIO_TEST_KEY: str = "test-key"
+    TEST_MINIO_INTERNAL_ENDPOINT: str = "http://localhost:9000"
+    TEST_MINIO_PUBLIC_ENDPOINT: str = "http://localhost:9000"
+    TEST_MINIO_USER: str = "test-user"
+    TEST_MINIO_PASSWORD: str = "test-password"
 
     APP_ARCHIVE_BUCKET: str = "app-archives"
     APP_COVER_BUCKET: str = "app-covers"
@@ -110,8 +114,8 @@ class Settings(BaseSettings):
     MAX_COVER_SIZE_MB: int = 10
 
     MAIL_USERNAME: str = "username"
-    MAIL_PASSWORD: str = "secret"
-    MAIL_FROM: str = "user@gmail.com"
+    MAIL_PASSWORD: str = "password"
+    MAIL_FROM: str = "username@gmail.com"
     MAIL_PORT: int = 587
     MAIL_SERVER: str = "smtp.gmail.com"
     MAIL_FROM_NAME: str = "satalovserge"

@@ -1,47 +1,74 @@
-import traceback
-import logging
+import time
 
 from fastapi import status, APIRouter
 from fastapi.responses import JSONResponse
 
 from sqlalchemy import text
 
+from app.task_queue.celery_app import celery_app
+
 from app.api.deps import RedisDep, SessionDep
 
 
 router = APIRouter(tags=["Server"])
 
-logger = logging.getLogger("api.v1.server_router")
+
+@router.get("/live")
+async def liveness_probe() -> dict:
+    """Liveness probe: checks whether the FastAPI app is running
+    
+    *Returns*: dict object containing status and timestamp"""
+    return {"status": "ok", "timestamp": time.time()}
 
 
-@router.get("/health")
-async def health_check(
+@router.get("/ready")
+async def readiness_probe(
     redis: RedisDep,
     session: SessionDep
 ) -> dict[str, str]:
-    """Performs a health check by attempting to connect 
-    to Redis and Postgres databases.
+    """Readiness probe: Checks the availability of services 
+    on which the app depends.
     
-    *Returns*: dict object containing status 
-    and error detail if it occurred."""
-    try:
-        redis_response = await redis.ping()
-        db_response = await session.exec(text("SELECT 1"))
+    *Returns*: JSONResponse object containing status of dependencies"""
+    status_code = status.HTTP_200_OK
+    service_statuses = {
+        "db": "unknown",
+        "redis": "unknown",
+        "celery": "unknown"
+    }
 
-        if not redis_response:
-            return JSONResponse(
-            content={
-                "status": "Unhealthy", 
-                "detail": "Connection to Redis failed"
-            },
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE
-        )
-        
-        return {"status": "Healthy"}
+    try:
+        await session.exec(text("SELECT 1"))
+        service_statuses["db"] = "ok"
     except Exception as e:
-        error_string = traceback.format_exc()
-        logger.error(error_string)
-        return JSONResponse(
-            content={"status": "Unhealthy", "detail": str(e)},
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE
-        )
+        service_statuses["db"] = f"error: {e}"
+        status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+
+    try:
+        await redis.ping()
+        service_statuses["redis"] = "ok"
+    except Exception as e:
+        service_statuses["redis"] = f"error: {e}"
+        status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+
+    try:
+        inspect = celery_app.control.inspect(timeout=1.0)
+        active_workers = inspect.active()
+
+        if active_workers:
+            service_statuses["celery"] = "ok"
+        else:
+            service_statuses["celery"] = "error: No active workers found"
+            status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    except Exception as e:
+        service_statuses["celery"] = f"error: {e}"
+        status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+
+    return JSONResponse(
+        content={
+            "status": "ok" if status_code == status.HTTP_200_OK else "error",
+            "services": service_statuses,
+            "timestamp": time.time()
+        },
+        status_code=status_code
+    )
