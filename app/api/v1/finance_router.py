@@ -1,5 +1,4 @@
 from decimal import Decimal
-from uuid import UUID
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
