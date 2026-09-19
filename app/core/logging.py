@@ -79,8 +79,6 @@ def build_logging_config(
                 },
         },
     }
-import sys
-sys.stderr
 
 def setup_logging(
     env: Literal["local", "production"] = "local", 

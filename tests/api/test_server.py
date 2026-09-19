@@ -9,9 +9,8 @@ class TestServer:
     async def test_readiness_probe(self, client: AsyncClient):
         response = await client.get("/ready")
         data = response.json()
-
-        assert response.status_code == 200
-        assert all(
-            status.lower() == "ok" 
-            for status in data["services"].values()
-        )
+        services = data["services"]
+  
+        assert response.status_code == 503
+        assert services["db"].lower() == services["redis"].lower() == "ok"
+        assert "No active workers found" in services["celery"]

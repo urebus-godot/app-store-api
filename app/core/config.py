@@ -139,7 +139,7 @@ class Settings(BaseSettings):
     LOGIN_TEMPLATE: str = """
     <body>
         <h3>
-            If it wasn't you, then change the password immediately!
+            If that wasn't you, change your password immediately.
             <hr>
             <h2>Details</h2>
             <p><b>IP address: <i>%s</i></b></p>
@@ -154,7 +154,7 @@ class Settings(BaseSettings):
             Happy birthday, %s! You receive a promo code as a gift. 
             Enter it to top up your balance.
             <p><b>Promo code: <i>%s</i></b></p>
-            <p><b>Amount: <i>%s</i></b></p>
+            <p><b>Amount: <i>%s rubles</i></b></p>
             <p><b>Time of issue: <i>%s</i></b></p>
             <p><b>Expiration time: <i>%s</i></b></p>
         </h3>

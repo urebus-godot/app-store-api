@@ -75,7 +75,7 @@ def send_promo_codes_to_users() -> list[str]:
             if user.email is not None:
                 redis = redis_client.redis
                 balance = 500
-                code = uuid4()
+                code = uuid4().hex
                 codes.append(code)
 
                 redis.set(

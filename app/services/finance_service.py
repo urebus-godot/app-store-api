@@ -46,7 +46,7 @@ class FinanceService:
     async def process_promo_code(
         self, 
         user_id: UUID,
-        code: UUID, 
+        code: str, 
         redis: Redis
     ) -> dict[str, Decimal]:
         async with self.uow:

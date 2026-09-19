@@ -43,8 +43,8 @@ async def top_up_balance(
 
 
 @router.post("/promo_codes")
-async def enter_promo_code(
-    promo_code: UUID,
+async def activate_promo_code(
+    promo_code: str,
     user_id: UserIdDep,
     redis: RedisDep,
     finance_service: FinanceServiceDep
