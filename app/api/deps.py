@@ -169,7 +169,7 @@ async def rate_limit(
             request.client.host,
             scope="ip",
         )
-        response.headers["X-RateLimit-Remaining-IP-Address"] = (
+        response.headers["X-RateLimit-Remaining"] = (
             str(ip_result.remaining_requests))
         if not ip_result.allowed:
             raise too_many_requests_exception
@@ -180,7 +180,7 @@ async def rate_limit(
             limit=settings.REQUEST_LIMIT_USER,
             window_seconds=60,
         )
-        response.headers["X-RateLimit-Remaining-User"] = (
+        response.headers["X-RateLimit-Remaining"] = (
             str(user_result.remaining_requests))
         if not user_result.allowed:
             raise too_many_requests_exception

@@ -208,6 +208,7 @@ async def client(
     session_factory: async_sessionmaker[AsyncSession],
     fake_redis: FakeRedis
 ):
+    """Фикстура AsyncClient без авторизации."""
     override_general_deps(
         db_session, 
         session_factory,
@@ -217,8 +218,8 @@ async def client(
     transport = ASGITransport(app)
     async with AsyncClient(
         transport=transport, 
-        base_url="http://tests"
-        ) as ac:
+        base_url="http://test"
+    ) as ac:
         yield ac
 
     app.dependency_overrides.clear()
@@ -234,6 +235,8 @@ async def auth_client(
     access_token: str,
     object_storage: MinioStorage
 ):
+    """Фикстура AsyncClient c передачей 
+    Authorization заголовка и refresh_token в куках."""
     override_general_deps(
         db_session,
         session_factory,
@@ -279,7 +282,7 @@ async def auth_client(
     transport = ASGITransport(app)
     async with AsyncClient(
         transport=transport,
-        base_url="http://tests",
+        base_url="http://test",
         headers={"Authorization": f"Bearer {access_token}"},
         cookies={"refresh_token": refresh_token_data["token"]},
     ) as ac:
@@ -293,6 +296,9 @@ async def auth_client_2(
     auth_client: AsyncClient,
     test_user_2: UserDB
 ):
+    """Фикстура AsyncClient c передачей 
+    Authorization заголовка и refresh_token в куках.
+    Используется, когда нужен второй пользователь."""
     app.dependency_overrides[get_current_user] = lambda: test_user_2
     app.dependency_overrides[get_current_user_id] = lambda: test_user_2.id
     data = {"sub": str(test_user_2.id), "roles": json.dumps(["user"])}
@@ -315,6 +321,10 @@ async def real_auth_client(
     access_token: str,
     refresh_token_data: dict[str, str],
 ):
+    """Фикстура AsyncClient c передачей 
+    Authorization заголовка и refresh_token в куках
+    без подмены зависимости get_current_user 
+    для проверки аутентификации с JWT."""
     override_general_deps(
         db_session, 
         session_factory,
@@ -324,7 +334,7 @@ async def real_auth_client(
     transport = ASGITransport(app)
     async with AsyncClient(
         transport=transport,
-        base_url="http://tests",
+        base_url="http://test",
         headers={"Authorization": f"Bearer {access_token}"},
         cookies={"refresh_token": refresh_token_data["token"]},
     ) as ac:
@@ -340,6 +350,9 @@ async def publisher_client(
     fake_redis: FakeRedis,
     test_publisher: UserDB,
 ):
+    """Фикстура AsyncClient c передачей 
+    Authorization заголовка и refresh_token в куках.
+    Пользователь имеет роль 'publisher'."""
     override_general_deps(db_session, session_factory, fake_redis)
     app.dependency_overrides[get_current_user] = lambda: test_publisher
     app.dependency_overrides[get_current_user_id] = lambda: test_publisher.id
@@ -354,7 +367,7 @@ async def publisher_client(
     )
     async with AsyncClient(
         transport=transport,
-        base_url="http://tests",
+        base_url="http://test",
         headers={
             "Authorization": f"Bearer {token}"
         },
@@ -370,18 +383,20 @@ async def rate_limited_client(
     session_factory: async_sessionmaker[AsyncSession],
     fake_redis: FakeRedis
 ):
+    """Фикстура AsyncClient без авторизации для 
+    тестирования ограничения запросов через Redis."""
     override_general_deps(
         db_session, 
         session_factory,
         fake_redis,
         False
-        )
+    )
 
     transport = ASGITransport(app)
     async with AsyncClient(
         transport=transport, 
-        base_url="http://tests"
-        ) as ac:
+        base_url="http://test"
+    ) as ac:
         yield ac
 
     app.dependency_overrides.clear()
@@ -395,6 +410,8 @@ async def rate_limited_auth_client(
     test_user: UserDB,
     access_token: str
 ):
+    """Фикстура AsyncClient без авторизации для 
+    тестирования ограничения запросов через Redis."""
     override_general_deps(
         db_session, 
         session_factory,
@@ -406,9 +423,9 @@ async def rate_limited_auth_client(
 
     transport = ASGITransport(app)
     async with AsyncClient(
-        transport=transport, 
-        base_url="http://tests",
-        headers={"Authorization": f"Bearer {access_token}"}
+            transport=transport, 
+            base_url="http://test",
+            headers={"Authorization": f"Bearer {access_token}"}
         ) as ac:
         yield ac
 
@@ -417,7 +434,7 @@ async def rate_limited_auth_client(
 
 @pytest_asyncio.fixture(scope="class")
 async def minio_client(object_storage: MinioStorage):
-    """Fixture of httpx.AsyncClient used to sending requests to MinIO."""
+    """Фикстура AsyncClient для отправки запросов в MinIO."""
     for bucket_name, public in settings.BUCKETS.items():
         await object_storage.create_bucket(bucket_name, public)
 

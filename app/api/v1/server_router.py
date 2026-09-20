@@ -9,7 +9,6 @@ from app.task_queue.celery_app import celery_app
 
 from app.api.deps import RedisDep, SessionDep
 
-
 router = APIRouter(tags=["Server"])
 
 

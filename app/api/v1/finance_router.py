@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from httpx import AsyncClient
 
-from app.schemas.finance import TransferRequest, TransferResponse
+from app.schemas.transfer import TransferRequest, TransferResponse
 from app.base_models.transfer import CurrencyType
 
 from app.api.deps import (
@@ -53,7 +53,7 @@ async def activate_promo_code(
 
     *Returns*: dict object containing new user's balance 
     and received balance"""
-    return await finance_service.process_promo_code(
+    return await finance_service.activate_promo_code(
         user_id, promo_code, redis
     )
 

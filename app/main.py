@@ -70,6 +70,16 @@ app = FastAPI(
 )
 
 app.add_middleware(RequestLoggerMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://localhost:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=[
+        "X-RateLimit-Remaining",
+    ],
+    allow_credentials=True
+)
 
 
 app.include_router(
@@ -120,15 +130,6 @@ app.include_router(
     media_router.router, 
     prefix="/api/v1/media", 
     tags=["Media"]
-)
-
-
-cors = CORSMiddleware(
-    app=app,
-    allow_origins=["https://frontend.ru"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-    allow_credentials=True
 )
 
 

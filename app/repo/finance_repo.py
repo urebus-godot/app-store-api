@@ -5,7 +5,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, desc
 
 from app.models.transfer import TransferDB
-from app.schemas.finance import TransferRequest, OperationType
+from app.schemas.transfer import TransferRequest, OperationType
 from app.models.user import UserDB
 
 
@@ -49,15 +49,13 @@ class FinanceRepository:
         user_id: UUID,
         skip: int, limit: int
     ) -> list[TransferDB]:
-        statement = (
+        stmt = (
             select(TransferDB)
             .where(TransferDB.user_id == user_id)
             .order_by(desc(TransferDB.made_at))
             .offset(skip).limit(limit)
-            )
+        )
 
-        transfers = (await self.session.exec(
-            statement
-        )).all()
+        transfers = (await self.session.exec(stmt)).all()
 
         return transfers

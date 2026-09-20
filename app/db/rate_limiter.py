@@ -1,5 +1,5 @@
 import time
-import uuid
+from uuid import uuid4
 from typing import Literal
 from dataclasses import dataclass
 
@@ -55,9 +55,13 @@ class RateLimiter:
         window_seconds: int = settings.WINDOW_SECONDS, 
         limit: int = settings.REQUEST_LIMIT_IP,
     ) -> RateLimitResult:
+        """Выполняет проверку в Redis, 
+        превышен ли лимит запросов через скрипт Lua.
+        
+        *Возвращает*: RateLimitResult"""
         key = f"rate_limit:{scope}:{identifier}"
         now = time.time()
-        member = f"{now}:{uuid.uuid4().hex}"
+        member = f"{now}:{uuid4().hex}"
 
         allowed, remaining_requests = await self.script(
             keys=[key],

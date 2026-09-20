@@ -47,7 +47,7 @@ def boto_client_error_handler(
     return JSONResponse(
         status_code=status.HTTP_502_BAD_GATEWAY,
         content={
-            "message": 
-            "Boto client error occurred", "errors": exception.errors()
+            "message": "Boto client error occurred", 
+            "errors": exception.errors()
         },
     )

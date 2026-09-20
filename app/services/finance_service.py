@@ -15,7 +15,7 @@ from app.core.exceptions import (
 )
 from app.repo.finance_repo import FinanceRepository
 
-from app.schemas.finance import TransferRequest
+from app.schemas.transfer import TransferRequest
 from app.models.transfer import TransferDB
 from app.base_models.transfer import CurrencyType
 
@@ -43,14 +43,14 @@ class FinanceService:
             )
         return str(code)
 
-    async def process_promo_code(
+    async def activate_promo_code(
         self, 
         user_id: UUID,
         code: str, 
         redis: Redis
     ) -> dict[str, Decimal]:
         async with self.uow:
-            amount = await redis.get(name=f"promo_codes:{code}")
+            amount = await redis.get(f"promo_codes:{code}")
 
             if amount is None:
                 raise invalld_promo_code_exception
