@@ -24,9 +24,9 @@ async def request_app_archive_upload_url(
     user_id: UserIdDep,
     file_service: AppArchiveServiceDep,
 ) -> UploadPresignResponse:
-    """Requests URL to upload the app archive file to MinIO storage.
+    """Запрашивает URL для загрузки архива приложения в MinIO.
     
-    *Returns*: 
+    *Возвращает*: 
     UploadPresignResponse object containing
     upload URL, archive object key, and the expiration time"""
     return await file_service.presign_app_archive_upload(

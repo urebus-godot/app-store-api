@@ -643,7 +643,7 @@ async def test_apps(db_session: AsyncSession, test_user_2: UserDB):
             archive_key="test-archive-key"
         ),
         AppDB(
-            title="hidden test", 
+            title="private test", 
             keywords=[" Newkey "],
             publisher_id=test_user_2.id,
             public=False,
