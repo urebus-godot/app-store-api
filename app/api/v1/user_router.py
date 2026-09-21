@@ -75,7 +75,8 @@ async def login(
     access_secret_key: AccessSecretKeyDep,
     refresh_secret_key: RefreshSecretKeyDep,
 ) -> LoginResponse:
-    """Authenticates user and creates a pair of JWT access and refresh tokens.
+    """Authenticates user and creates a pair 
+    of JWT access and refresh tokens.
     Then sets refresh token cookie.
     
     *Returns*: LoginResponse object"""
@@ -159,7 +160,7 @@ async def refresh_tokens(
     )
 
 
-@router.post("/users/me/roles/publisher", tags=["Users"])
+@router.post("/users/me/roles/publisher", tags=["Roles"])
 async def set_publisher_role(
     user_id: UserIdDep,
     user_service: UserServiceDep,
@@ -176,7 +177,7 @@ async def set_publisher_role(
 @router.post(
     "/users/me/roles/admin",
     dependencies=[Depends(check_admin_password)],
-    tags=["Users"]
+    tags=["Roles"]
 )
 async def set_admin_role(
     user_id: UserIdDep,
@@ -195,7 +196,7 @@ async def set_admin_role(
 @router.post(
     "/users/{user_id}/roles",
     dependencies=[Depends(require_role(UserRole.ADMIN))],
-    tags=["Users"]
+    tags=["Roles"]
 )
 async def set_role_to_user(
     user_id: UUID,

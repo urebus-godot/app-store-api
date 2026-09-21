@@ -51,3 +51,11 @@ def boto_client_error_handler(
             "errors": exception.errors()
         },
     )
+
+
+exception_handlers = {
+    ResponseValidationError: response_validation_error_handler,
+    httpx.RequestError: request_error_handler,
+    httpx.ReadTimeout: timeout_error_handler,
+    boto_exceptions.ClientError: boto_client_error_handler
+}

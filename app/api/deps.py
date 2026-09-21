@@ -260,13 +260,15 @@ def get_app_service(
     uow: UnitOfWorkDep,
     storage: ObjectStorageDep,
     media_service: MediaServiceDep,
-    app_repo: AppRepoDep
+    app_repo: AppRepoDep,
+    redis: RedisDep
 ) -> AppService:
     return AppService(
         uow=uow, 
         storage=storage,
         media_service=media_service,
-        app_repo=app_repo
+        app_repo=app_repo,
+        redis=redis
     )
 
 

@@ -1,7 +1,9 @@
 from uuid import UUID
 from typing import Optional
+import json
 import logging
 
+from redis.asyncio import Redis
 from fastapi import HTTPException, status, BackgroundTasks
 
 from app.core.config import settings
@@ -12,7 +14,7 @@ from app.core.exceptions import (
 )
 
 from app.schemas.app import (
-    AppRequest, AppUpdate, GameUpdate, 
+    AppRequest, AppUpdate, GameUpdate, GameResponseWithPublisher
     )
 from app.models.app import GameGenre, AppDB
 
@@ -34,12 +36,14 @@ class AppService:
         media_service: MediaService,
         app_repo: AppRepository,
         uow: UnitOfWork,
-        storage: ObjectStorage
+        storage: ObjectStorage,
+        redis: Redis
     ):
         self.uow = uow
         self.storage = storage
         self.media_service = media_service
         self.app_repo = app_repo
+        self.redis = redis
 
     async def create_app(
         self, data: AppRequest, publisher_id: UUID
@@ -74,6 +78,7 @@ class AppService:
             app = await self.uow.app_repo.update_app(data, app)
             await self.uow.commit()
 
+        await self.redis.delete("top_games_cache")
         return app
 
     async def get_app(self, id: UUID) -> AppDB:
@@ -175,9 +180,32 @@ class AppService:
     async def get_top_games(
         self, 
         skip: int, limit: int
-    ) -> list[AppDB]:
-        games = await self.app_repo.get_top_games(skip, limit)
-        return games
+    ) -> list[GameResponseWithPublisher]:
+        cached_games = await self.redis.get("top_games_cache")
+
+        if cached_games is None:
+            games = await self.app_repo.get_top_games(skip, limit)
+            response_games = [
+                (GameResponseWithPublisher
+                .model_validate(game)
+                .model_dump(mode='json'))
+                for game in games
+            ]
+            json_games = json.dumps(response_games)
+            await self.redis.set(
+                name="top_games_cache", 
+                value=json_games,
+                ex=settings.CACHE_TTL_SECONDS
+            )
+            logger.info("Returning games from db")
+            return response_games
+
+        logger.info("Returning games from cache")
+        response_games = [
+            GameResponseWithPublisher.model_validate_json(game_json)
+            for game_json in cached_games
+        ]
+        return response_games[skip : skip + limit]
 
     async def get_top_games_genre(
         self, genre: Optional[GameGenre], 
@@ -223,6 +251,7 @@ class AppService:
             if not app.publisher_id == user_id:
                 raise no_rights_exception
 
+            await self.redis.delete("top_games_cache")
             await self.delete_app_with_its_files(app, bg_tasks)
             await self.uow.commit()
 
@@ -237,3 +266,5 @@ class AppService:
         )
         for app in apps:
             await self.delete_app_with_its_files(app, bg_tasks)
+
+        await self.redis.delete("top_games_cache")
