@@ -19,6 +19,7 @@ conn_config = ConnectionConfig(
 async def send_email(
     recipients: list[str], subject: str, body: str, subtype: str = "html"
 ):
+    return
     mail = FastMail(conn_config)
     message = MessageSchema(
         recipients=recipients,

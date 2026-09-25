@@ -260,6 +260,7 @@ def get_app_service(
     uow: UnitOfWorkDep,
     storage: ObjectStorageDep,
     media_service: MediaServiceDep,
+    user_repo: UserRepoDep,
     app_repo: AppRepoDep,
     redis: RedisDep
 ) -> AppService:
@@ -267,6 +268,7 @@ def get_app_service(
         uow=uow, 
         storage=storage,
         media_service=media_service,
+        user_repo=user_repo,
         app_repo=app_repo,
         redis=redis
     )
@@ -281,13 +283,15 @@ def get_review_service(
     app_service: AppServiceDep,
     uow: UnitOfWorkDep,
     review_repo: ReviewRepoDep,
-    app_repo: AppRepoDep
+    app_repo: AppRepoDep,
+    redis: RedisDep
 ) -> ReviewService:
     return ReviewService(
         app_service=app_service, 
         uow=uow,
         review_repo=review_repo,
-        app_repo=app_repo
+        app_repo=app_repo,
+        redis=redis
     )
 
 

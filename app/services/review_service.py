@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from redis.asyncio import Redis
 from fastapi import HTTPException, status
 
 from app.core.exceptions import (
@@ -26,12 +27,14 @@ class ReviewService:
         app_service: AppService,
         uow: UnitOfWork,
         review_repo: ReviewRepository,
-        app_repo: AppRepository
+        app_repo: AppRepository,
+        redis: Redis
     ):
         self.app_service = app_service
         self.uow = uow
         self.review_repo = review_repo
         self.app_repo = app_repo
+        self.redis = redis
 
     async def create_review(
         self, 
@@ -67,7 +70,8 @@ class ReviewService:
             await self.uow.commit()
  
         update_app_rating.delay(str(app_id))
- 
+        await self.redis.delete("top_games_cache")
+
         return review
 
     async def get_review(self, id: UUID) -> ReviewDB:
@@ -121,3 +125,4 @@ class ReviewService:
             
         app_id = str(review.app_id)
         update_app_rating.delay(app_id)
+        await self.redis.delete("top_games_cache")

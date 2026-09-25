@@ -20,6 +20,7 @@ from app.models.app import GameGenre, AppDB
 
 from app.services.media_service import MediaService
 from app.repo.app_repo import AppRepository
+from app.repo.user_repo import UserRepository
 
 from app.utils.search import format_keywords
 
@@ -35,6 +36,7 @@ class AppService:
         self, 
         media_service: MediaService,
         app_repo: AppRepository,
+        user_repo: UserRepository,
         uow: UnitOfWork,
         storage: ObjectStorage,
         redis: Redis
@@ -42,6 +44,7 @@ class AppService:
         self.uow = uow
         self.storage = storage
         self.media_service = media_service
+        self.user_repo = user_repo
         self.app_repo = app_repo
         self.redis = redis
 
@@ -202,8 +205,8 @@ class AppService:
 
         logger.info("Returning games from cache")
         response_games = [
-            GameResponseWithPublisher.model_validate_json(game_json)
-            for game_json in cached_games
+            GameResponseWithPublisher.model_validate_json(json.dumps(game_json))
+            for game_json in json.loads(cached_games)
         ]
         return response_games[skip : skip + limit]
 
