@@ -2,11 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.exceptions import ResponseValidationError
 
-import botocore.exceptions as boto_exceptions
-
-import httpx
 from httpx import AsyncClient
 
 from app.middleware.request_logger import RequestLoggerMiddleware
