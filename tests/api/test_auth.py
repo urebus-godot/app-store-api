@@ -57,7 +57,6 @@ class TestRefresh:
 
         response = await real_auth_client.post("/api/v1/auth/refresh")
 
-        print(f"\n\n{response.json()}\n\n")
         assert response.status_code == 200
         assert "refresh_token" in response.json()
         assert await fake_redis.exists(f"blacklist:{jti}")
