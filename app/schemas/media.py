@@ -17,6 +17,3 @@ class AppCoverResponse(BaseModel):
     url: str
     created_at: datetime
 
-
-class AppCoverListResponse(BaseModel):
-    covers: list[AppCoverResponse]

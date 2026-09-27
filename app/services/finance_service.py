@@ -71,7 +71,7 @@ class FinanceService:
             user = await self.uow.user_repo.get_user_by_id(user_id)
             transfer = await self.uow.finance_repo.create_transfer_to_balance(
                 data, user
-                )
+            )
             await self.uow.commit()
 
         return transfer

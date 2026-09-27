@@ -14,9 +14,9 @@ router = APIRouter(tags=["Server"])
 
 @router.get("/live")
 async def liveness_probe() -> dict:
-    """Liveness probe: checks whether the FastAPI app is running
+    """Liveness probe: проверяет, запущено и работает ли FastAPI приложение.
     
-    *Returns*: dict object containing status and timestamp"""
+    **Возвращает**: dict со статусом и временной меткой выполнения."""
     return {"status": "ok", "timestamp": time.time()}
 
 
@@ -25,10 +25,11 @@ async def readiness_probe(
     redis: RedisDep,
     session: SessionDep
 ) -> dict[str, str]:
-    """Readiness probe: Checks the availability of services 
-    on which the app depends.
+    """Readiness probe: проверяет состояние сервисов, 
+    от которых зависит API.
     
-    *Returns*: JSONResponse object containing status of dependencies"""
+    **Возвращает**: dict[str, str] со статусом, 
+    состоянием сервисов и временной меткой выполнения."""
     status_code = status.HTTP_200_OK
     service_statuses = {
         "db": "unknown",

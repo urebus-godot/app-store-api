@@ -26,9 +26,8 @@ async def request_app_archive_upload_url(
 ) -> UploadPresignResponse:
     """Запрашивает URL для загрузки архива приложения в MinIO.
     
-    *Возвращает*: 
-    UploadPresignResponse object containing
-    upload URL, archive object key, and the expiration time"""
+    **Возвращает**: 
+    UploadPresignResponse c URL для загрузки."""
     return await file_service.presign_app_archive_upload(
         app_id=app_id,
         publisher_id=user_id,
@@ -46,10 +45,10 @@ async def confirm_app_archive_upload(
     user_id: UserIdDep,
     file_service: AppArchiveServiceDep,
 ) -> None:
-    """Confirms that the app archive file has been uploaded to MinIO storage
-    and makes it downloadable to users.
+    """Подтверждает загрузку архива приложения в MinIO,
+    делая ключ объекта (pending_archive_key) действительным.
     
-    *Returns*: None"""
+    **Возвращает**: None"""
     await file_service.confirm_app_archive_upload(
         app_id=app_id, publisher_id=user_id
     )
@@ -61,11 +60,10 @@ async def request_app_archive_download_url(
     user_id: UserIdDep,
     file_service: AppArchiveServiceDep,
 ) -> DownloadPresignResponse:
-    """Requests URL of the app archive file uploaded to MinIO storage.
+    """Запрашивает URL для скачивания архива приложения в MinIO.
     
-    *Returns*:
-    DownloadPresignResponse object containing 
-    download URL and the expiration time"""
+    **Возвращает**: 
+    DownloadPresignResponse c URL для скачивания."""
     return await file_service.presign_app_archive_download(
         app_id=app_id, user_id=user_id,
     )

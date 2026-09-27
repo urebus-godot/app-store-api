@@ -32,10 +32,9 @@ async def top_up_balance(
     user_id: UserIdDep,
     finance_service: FinanceServiceDep
 ) -> TransferResponse:
-    """Increases user's balance by specified amount 
-    and adds transfer to the database.
+    """Пополняет баланс пользователя и создаёт перевод в базе данных.
     
-    *Returns*: TransferResponse object"""
+    **Возвращает**: TransferResponse"""
     return await finance_service.create_transfer_to_balance(
         data, user_id
     )
@@ -48,11 +47,10 @@ async def activate_promo_code(
     redis: RedisDep,
     finance_service: FinanceServiceDep
 ) -> dict[str, Decimal]:
-    """Increases user's balance and deletes the promo code
-    if it is stored in the Redis.
-
-    *Returns*: dict object containing new user's balance 
-    and received balance"""
+    """Пополняет баланс пользователя 
+    и удаляет промокод из Redi, если он валиден.
+    
+    **Возвращает**: dict[str, Decimal]"""
     return await finance_service.activate_promo_code(
         user_id, promo_code, redis
     )
@@ -67,10 +65,9 @@ async def withdraw_funds_to_card(
     user_id: UserIdDep,
     finance_service: FinanceServiceDep
 ) -> TransferResponse:
-    """Simulates a transfer from the user balance to a card linked 
-    to the user and adds it to the database.
-
-    *Returns*: TransferResponse object"""
+    """Симулирует вывод средств на карту и создаёт перевод в базе данных.
+    
+    **Возвращает**: TransferResponse"""
     return await finance_service.create_transfer_to_card(data, user_id)
 
 
@@ -83,9 +80,9 @@ async def get_transfer_history(
     skip_limit: SkipLimitParams,
     finance_service: FinanceServiceDep
 ) -> list[TransferResponse]:
-    """Fetches the current user's transfers from the database.
-
-    *Returns*: list of TransferResponse objects"""
+    """Находит переводы пользователя в базе данных.
+    
+    **Возвращает**: list[TransferResponse]"""
     return await finance_service.get_transfers(user_id, *skip_limit)
 
 
@@ -98,12 +95,14 @@ async def get_balance(
     ],
     currency: CurrencyType = CurrencyType.RUB,
 ) -> JSONResponse:
-    """Calls an external API to convert the user's balance 
-    from rubles to the specified currency.
+    """Возвращает баланс пользователя.
     
-    *Returns*: dict object containing the user's 
-    balance in the specified currency if the call was successful; 
-    otherwise, returns dict object with error detail."""
+    **Параметры** currency - валюта, в которой измеряется баланс 
+    ("RUB", "EUR", "USD", "GBP"). 
+    Если указана не "RUB", вызывает внешний API 
+    для конвертации валюты из рублей.
+
+    **Возвращает**: JSONResponse"""
     result = await finance_service.convert_rubles(
         float(user.balance), 
         currency, 

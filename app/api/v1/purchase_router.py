@@ -32,9 +32,10 @@ async def add_app_to_cart(
     user_id: UserIdDep,
     purchase_service: PurchaseServiceDep
 ) -> CartItemResponse:
-    """Adds app to the user's cart and creates CartItemDB object.
+    """Создаёт товар для корзины пользователя в базе данных, 
+    связанный с указанным приложением.
     
-    *Returns*: CartItemResponse object"""
+    **Возвращает**: CartItemResponse."""
     return await purchase_service.add_app_to_cart(app_id, user_id)
 
 
@@ -48,11 +49,11 @@ async def purchase_apps_in_cart(
     bg_tasks: BackgroundTasks,
     purchase_service: PurchaseServiceDep
 ) -> list[AppResponse | GameResponse]:
-    """Purchases all the apps added in the user's cart
-    and sends an email to the user, 
-    if there are sufficient funds in the account.
+    """Приобетение всех приложений, добавленных в корзину пользователя,
+    если на балансе достаточно средств, и создание покупок в базе данных.
     
-    *Returns*: list of AppResponse objects that has been purchased"""
+    **Возращает**: list[AppResponse | GameResponse] 
+    (список приобретённых приложений)."""
     return await purchase_service.purchase_apps_in_cart(
         user_id=user.id, bg_tasks=bg_tasks
         )
@@ -67,11 +68,10 @@ async def get_cart(
     user_id: UserIdDep,
     purchase_service: PurchaseServiceDep
 ) -> CartResponse:
-    """Fetches the user's cart. First, the cart is searched in Redis cache.
-    If it isn't found there, 
-    it is fetched from the database and written to Redis.
+    """Ищет корзину пользователя сначала в кеше, затем в базе данных,
+    или создаёт её при отсутствии.
     
-    *Returns*: CartResponse object with its items (CartItemResponse)"""
+    **Возращает**: CartResponse."""
     cart = await purchase_service.get_cart_for_user(user_id)
     return cart
 
@@ -86,9 +86,9 @@ async def get_purchase_history(
     skip_limit: SkipLimitParams,
     purchase_service: PurchaseServiceDep,
 ) -> list[PurchaseResponse]:
-    """Fetches all the user's purchases from the database
+    """Находит все покупки пользователя в базе данных.
     
-    *Returns*: list of PurchaseResponse objects"""
+    **Возращает**: list[PurchaseResponse]."""
     purchases = await purchase_service.get_purchase_history(
         user_id, *skip_limit
     )
@@ -105,10 +105,10 @@ async def remove_app_from_cart(
     user_id: UserIdDep,
     purchase_service: PurchaseServiceDep
 ) -> None:
-    """Deletes CartItemDB object of the app 
-    with the specified id from the user's cart.
+    """Удаляет товар корзины пользователя, 
+    связанный с указанным приложением, из базы данных.
     
-    *Returns*: None"""
+    **Возращает**: None."""
     await purchase_service.remove_item_from_cart(app_id, user_id)
 
 
@@ -121,7 +121,7 @@ async def clear_cart(
     user_id: UserIdDep,
     purchase_service: PurchaseServiceDep
 ) -> None:
-    """Deletes user's cart.
+    """Удаляет корзину пользователя из базы данных.
     
-    *Returns*: None"""
+    **Возращает**: None."""
     await purchase_service.delete_cart_by_user(user_id)

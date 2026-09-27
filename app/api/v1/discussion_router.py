@@ -54,12 +54,11 @@ async def ws_discussion(
     discussion_manager: DiscussionManagerDep,
     secret_key: AccessSecretKeyDep
 ) -> None:
-    """WebSocket endpoint of the discussion with specified ID.
-    It allows users to send and receive messages in real time.
-    The first message sent by user must contain JWT access token 
-    in format {"type": "auth", "token": "access-token"}.
+    """WebSockets эндпоинт для обмена сообщения в обсуждении 
+    в реальном времени. Первое сообщение должно содержать токен доступа
+    для аутентификации пользователя.
     
-    *Returns*: None"""
+    **Возвращает**: None"""
     await websocket.accept()
     try:
         logger.info("Awaiting data from websocket...")
@@ -155,9 +154,9 @@ async def create_discussion(
     user_id: UserIdDep,
     discussion_service: DiscussionServiceDep
 ) -> ShortDiscussionResponse:
-    """Creates the discussion and adds it to the database.
-
-    *Returns*: ShortDiscussionResponse object"""
+    """Создаёт обсуждение в базе данных.
+    
+    **Возвращает**: ShortDiscussionResponse"""
     return await discussion_service.create_discussion(
         data, user_id, app_id
     )
@@ -173,9 +172,9 @@ async def get_discussion(
     skip_limit: SkipLimitParams,
     discussion_service: DiscussionServiceDep
 ) -> DiscussionResponse:
-    """Fetches the discussion with the specified ID from the database.
-
-    *Returns*: DiscussionResponse object"""
+    """Находит обсуждение с указанным *id* в базе данных.
+    
+    **Возвращает**: DiscussionResponse"""
     skip, limit = skip_limit
     return await discussion_service.get_discussion(
         id=id, skip=skip, limit=limit
@@ -192,10 +191,9 @@ async def get_app_discussions(
     skip_limit: SkipLimitParams,
     discussion_service: DiscussionServiceDep
 ) -> list[ShortDiscussionResponse]:
-    """Fetches discussions for the app 
-    with the specified ID from the database.
-
-    *Returns*: list of ShortDiscussionResponse objects"""
+    """Находит обсуждения к приложению с указанным *id* в базе данных.
+    
+    **Возвращает**: list[ShortDiscussionResponse]"""
     skip, limit = skip_limit
     return await discussion_service.get_app_discussions(
         app_id=app_id, skip=skip, limit=limit
@@ -212,9 +210,9 @@ async def get_my_discussions(
     skip_limit: SkipLimitParams,
     discussion_service: DiscussionServiceDep
 ) -> list[ShortDiscussionResponse]:
-    """Fetches discussions created by the current user from the database.
-
-    *Returns*: list of ShortDiscussionResponse objects"""
+    """Находит обсуждения, созданные текущим пользователем, в базе данных.
+    
+    **Возвращает**: list[ShortDiscussionResponse]"""
     skip, limit = skip_limit
     return await discussion_service.get_user_discussions(
         user_id=user_id, skip=skip, limit=limit
@@ -231,9 +229,9 @@ async def delete_discussion(
     user_id: UserIdDep,
     discussion_service: DiscussionServiceDep
 ) -> None:
-    """Deletes discussion with the specified ID from the database.
-
-    *Returns*: None"""
+    """Удаляет обсуждение с указанным *id* из базы данных.
+    
+    **Возвращает**: list[ShortDiscussionResponse]"""
     await discussion_service.delete_discussion(id, user_id)
 
 
@@ -251,9 +249,10 @@ async def create_message(
     user_id: UserIdDep,
     discussion_service: DiscussionServiceDep
 ) -> MessageResponse:
-    """Creates the message for the discussion with the specified ID.
-
-    *Returns*: MessageResponse"""
+    """Создаёт сообщение к обсуждению с указанным *discussion_id* 
+    в базе данных.
+    
+    **Возвращает**: MessageResponse"""
     return await discussion_service.create_message(
         data, user_id, discussion_id
     )
@@ -269,7 +268,7 @@ async def delete_message(
     user_id: UserIdDep,
     discussion_service: DiscussionServiceDep
 ) -> None:
-    """Deletes the message with the specified ID from the database.
-
-    *Returns*: None"""
+    """Удаляет сообщение с указанным *id* из базы данных.
+    
+    **Возвращает**: None"""
     await discussion_service.delete_message(id, user_id)

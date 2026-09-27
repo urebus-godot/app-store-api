@@ -57,9 +57,9 @@ async def register_user(
     data: UserRequest, 
     user_service: UserServiceDep
 ) -> CurrentUserResponse:
-    """Creates new user and adds it to the database.
+    """Создаёт пользователя в базе данных.
     
-    *Returns*: CurrentUserResponse object"""
+    **Возвращает**: CurrentUserResponse"""
     return await user_service.register_user(data)
 
 
@@ -75,11 +75,11 @@ async def login(
     access_secret_key: AccessSecretKeyDep,
     refresh_secret_key: RefreshSecretKeyDep,
 ) -> LoginResponse:
-    """Authenticates user and creates a pair 
-    of JWT access and refresh tokens.
-    Then sets refresh token cookie.
+    """Выполняет вход пользователя в систему: 
+    аутентифицирует его, создаёт JWT refresh/access токены,
+    устанавливает *refresh_token* куки.
     
-    *Returns*: LoginResponse object"""
+    **Возвращает**: LoginResponse с refresh/access токенами."""
     login_response = await user_service.login(
         form_data.username,
         form_data.password,
@@ -113,10 +113,10 @@ async def logout(
     user_service: UserServiceDep,
     redis: RedisDep,
 ) -> None:
-    """Adds the user's refresh token to the Redis blacklist
-    and deletes it from Redis.
+    """Отзывает refresh токен пользователя, 
+    добавляет в чёрный список Redis и удаляет *refresh_token* куки.
     
-    *Returns*: None"""
+    **Возвращает**: None."""
     refresh_token = request.cookies.get("refresh_token", None)
     await user_service.logout(refresh_token, redis, secret_key)
     response.delete_cookie(
@@ -136,9 +136,10 @@ async def refresh_tokens(
     redis: RedisDep,
     user_service: UserServiceDep
 ) -> TokenResponse:
-    """Creates a new pair of JWT refresh and access tokens.
-        
-    *Returns*: TokenResponse object"""
+    """Создаёт новую пару JWT refresh/access токенов,
+    старый refresh токен отправляется в чёрный список Redis.
+    
+    **Возвращает**: TokenResponse."""
     refresh_token = request.cookies.get("refresh_token")
     tokens = await user_service.refresh_tokens(
         refresh_token=refresh_token, 
@@ -166,9 +167,9 @@ async def set_publisher_role(
     user_service: UserServiceDep,
     secret_key: AccessSecretKeyDep
 ) -> UserRoleResponse:
-    """Adds *publisher* role to the current user's roles.
-        
-    *Returns*: UserRoleResponse object"""
+    """Назначает пользователю роль "*издатель*" ("*publisher*").
+    
+    **Возвращает**: UserRoleResponse."""
     return await user_service.set_role(
         user_id, UserRole.PUBLISHER, secret_key
     )
@@ -184,10 +185,10 @@ async def set_admin_role(
     user_service: UserServiceDep,
     secret_key: AccessSecretKeyDep
 ) -> UserRoleResponse:
-    """Adds *admin* role to the current user's roles
-    if the entered password is correct.
-        
-    *Returns*: UserRoleResponse object"""
+    """Назначает пользователю роль "*администратор*" ("*admin*")
+    при совпадении введённого пароля.
+    
+    **Возвращает**: UserRoleResponse."""
     return await user_service.set_role(
         user_id, UserRole.ADMIN, secret_key
     )
@@ -204,10 +205,9 @@ async def set_role_to_user(
     user_service: UserServiceDep,
     secret_key: AccessSecretKeyDep
 ) -> UserRoleResponse:
-    """Adds the specified role to the user's with the specified ID roles
-    if the user has the admin role.
-        
-    *Returns*: UserRoleResponse object"""
+    """Назначает пользователю с указанным *id* указанную роль.
+
+    **Возвращает**: UserRoleResponse."""
     return await user_service.set_role(user_id, data.role, secret_key)
 
 
@@ -221,9 +221,9 @@ async def update_current_user(
     user: UserDep,
     user_service: UserServiceDep
 ) -> CurrentUserResponse:
-    """Updates current user's attributes.
-        
-    *Returns*: CurrentUserResponse object"""
+    """Обновляет атрибуты пользователя в базе данных.
+    
+    **Возвращает**: CurrentUserResponse."""
     return await user_service.update_user(user=user, data=data)
 
 
@@ -235,9 +235,9 @@ async def update_current_user(
 async def get_current_user(
     user: UserDep
 ) -> CurrentUserResponse:
-    """Fetches the user with ID found in JWT access token.
-        
-    *Returns*: CurrentUserResponse object"""
+    """Возвращает текущего пользователя.
+    
+    **Возвращает**: CurrentUserResponse."""
     return user
 
 
@@ -249,9 +249,9 @@ async def get_current_user(
 async def get_user(
     username: str, user_service: UserServiceDep
 ) -> UserResponse:
-    """Fetches the user with the specified username.
-        
-    *Returns*: UserResponse object"""
+    """Находит пользователя с указанным *id*.
+    
+    **Возвращает**: UserResponse."""
     return await user_service.get_user_by_username(username)
 
 
@@ -263,9 +263,9 @@ async def get_user(
 async def get_users(
     skip_limit: SkipLimitParams, user_service: UserServiceDep
 ) -> list[UserResponse]:
-    """Fetches the users from the database.
-        
-    *Returns*: list of UserResponse objects"""
+    """Находит пользователей в базе данных.
+    
+    **Возвращает**: list[UserResponse]."""
     skip, limit = skip_limit
     return await user_service.get_users(skip, limit)
 
@@ -281,9 +281,9 @@ async def delete_current_user(
     user_service: UserServiceDep,
     response: Response
 ) -> None:
-    """Deletes the current user and his files.
-        
-    *Returns*: None"""
+    """Находит пользователей в базе данных.
+    
+    **Возвращает**: None."""
     await user_service.delete_user(
         user_id=user_id, redis=redis
     )

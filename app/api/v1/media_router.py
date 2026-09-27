@@ -7,7 +7,6 @@ from app.api.deps import (
 )
 
 from app.schemas.media import (
-    AppCoverListResponse,
     AppCoverResponse,
     ConfirmCoverRequest,
     MediaConfirmResponse,
@@ -27,11 +26,10 @@ async def request_avatar_upload_url(
     user_id: UserIdDep,
     media_service: MediaServiceDep,
 ) -> UploadPresignResponse:
-    """Requests URL to upload the user avatar to MinIO storage.
+    """Запрашивает URL для загрузки аватара пользователя в MinIO.
     
-    *Returns*: 
-    UploadPresignResponse object containing
-    upload URL, avatar object key, and the expiration time"""
+    **Возвращает**: 
+    UploadPresignResponse c URL для загрузки."""
     return await media_service.presign_avatar_upload(
         user_id=user_id, content_type=payload.content_type
     )
@@ -45,11 +43,10 @@ async def confirm_avatar_upload(
     user_id: UserIdDep,
     media_service: MediaServiceDep,
 ) -> MediaConfirmResponse:
-    """Confirms that the user avatar file has been uploaded to MinIO storage,
-    makes it public, and generates image variants using Celery workers.
+    """Подтверждает загрузку аватара пользователя в MinIO,
+    делая ключ объекта (pending_avatar_key) действительным.
     
-    *Returns*: 
-    MediaConfirmResponse object containing URL to download user avatar"""
+    **Возвращает**: MediaConfirmResponse с URL для скачивания файлы."""
     return await media_service.confirm_avatar_upload(
         user_id=user_id
         
@@ -65,11 +62,10 @@ async def request_icon_upload_url(
     user_id: UserIdDep,
     media_service: MediaServiceDep,
 ) -> UploadPresignResponse:
-    """Requests URL to upload the app icon to MinIO storage.
+    """Запрашивает URL для загрузки иконки приложения в MinIO.
     
-    *Returns*: 
-    UploadPresignResponse object containing
-    upload URL, app icon object key, and the expiration time"""
+    **Возвращает**: 
+    UploadPresignResponse c URL для загрузки."""
     return await media_service.presign_icon_upload(
         app_id=app_id, user_id=user_id, content_type=payload.content_type
     )
@@ -84,11 +80,10 @@ async def confirm_icon_upload(
     user_id: UserIdDep,
     media_service: MediaServiceDep
 ) -> MediaConfirmResponse:
-    """Confirms that the app icon file has been uploaded to MinIO storage,
-    makes it public, and generates image variants using Celery workers.
+    """Подтверждает загрузку иконки приложения в MinIO,
+    делая ключ объекта иконки (pending_icon_key) действительным.
     
-    *Returns*: 
-    MediaConfirmResponse object containing URL to download app icon"""
+    **Возвращает**: MediaConfirmResponse с URL для скачивания файлы."""
     return await media_service.confirm_icon_upload(
         app_id=app_id, user_id=user_id
     )
@@ -103,11 +98,10 @@ async def request_cover_upload_url(
     user_id: UserIdDep,
     media_service: MediaServiceDep,
 ) -> UploadPresignResponse:
-    """Requests URL to upload the app cover to MinIO storage.
+    """Запрашивает URL для загрузки обложки приложения в MinIO.
     
-    *Returns*: 
-    UploadPresignResponse object containing
-    upload URL, app cover object key, and the expiration time"""
+    **Возвращает**: 
+    UploadPresignResponse c URL для загрузки."""
     return await media_service.presign_cover_upload(
         app_id=app_id, user_id=user_id, content_type=payload.content_type
     )
@@ -123,11 +117,10 @@ async def confirm_cover_upload(
     user_id: UserIdDep,
     media_service: MediaServiceDep,
 ) -> AppCoverResponse:
-    """Confirms that the app cover file has been uploaded to MinIO storage,
-    makes it public, and generates image variants using Celery workers.
+    """Подтверждает загрузку иконки приложения в MinIO и
+    создаёт обложку (AppCover) в базе данных.
     
-    *Returns*: 
-    AppCoverResponse object containing URL to download app cover"""
+    **Возвращает**: AppCoverResponse."""
     return await media_service.confirm_cover_upload(
         app_id=app_id, user_id=user_id, object_key=payload.object_key
     )
@@ -141,8 +134,10 @@ async def get_app_covers(
     app_id: UUID,
     user_id: UserIdDep,
     media_service: MediaServiceDep,
-) -> AppCoverListResponse:
-    """Returns app covers"""
+) -> list[AppCoverResponse]:
+    """Находит обложки приложения с указанным *id* в базе данных.
+    
+    **Возвращает**: list[AppCoverResponse]."""
     skip, limit = skip_limit
     return await media_service.get_app_covers(
         app_id=app_id, user_id=user_id,
@@ -160,7 +155,9 @@ async def delete_cover(
     user_id: UserIdDep,
     media_service: MediaServiceDep
 ) -> None:
-    """Deletes app cover and its variants using BackgroundTasks"""
+    """Удаляет обложку приложения с указанным *id* из базы данных.
+    
+    **Возвращает**: None."""
     await media_service.delete_cover(
         app_id=app_id, 
         user_id=user_id, 

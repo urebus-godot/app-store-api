@@ -23,9 +23,10 @@ async def create_review(
     user_id: UserIdDep,
     review_service: ReviewServiceDep
 ) -> ReviewResponse:
-    """Creates a review of the app and adds it to the database.
+    """Создаёт отзыв к приложению с указанным *id* в базе данных,
+    вызывает фоновую задачу обновления его рейтинга.
     
-    *Returns*: ReviewResponse object"""
+    **Возвращает**: ReviewResponse"""
     return await review_service.create_review(data, app_id, user_id)
 
 
@@ -38,9 +39,9 @@ async def get_app_reviews(
     app_id: UUID, 
     review_service: ReviewServiceDep
 ) -> list[ReviewResponse]:
-    """Fetches app reviews from the database.
+    """Находит отзывы к приложению с указанным *id*.
     
-    *Returns*: list of ReviewResponse objects"""
+    **Возвращает**: list[ReviewResponse]"""
     skip, limit = skip_limit
     reviews = await review_service.get_app_reviews(app_id, skip, limit)
     return reviews
@@ -55,9 +56,9 @@ async def get_own_reviews(
     user_id: UserIdDep, 
     review_service: ReviewServiceDep
 ) -> list[ReviewResponse]:
-    """Fetches the user's reviews from the database.
+    """Находит отзывы, созданные текущим пользователем.
     
-    *Returns*: list of ReviewResponse objects"""
+    **Возвращает**: list[ReviewResponse]"""
     skip, limit = skip_limit
     return await review_service.get_user_reviews(user_id, skip, limit)
 
@@ -71,7 +72,8 @@ async def delete_review(
     user_id: UserIdDep,
     review_service: ReviewServiceDep
 ) -> None:
-    """Deletes the review from the database.
+    """Удаляет отзыв с указанным *id*,
+    вызывает фоновую задачу обновления рейтинга приложения.
     
-    *Returns*: None"""
+    **Возвращает**: None."""
     await review_service.delete_review(id, user_id)

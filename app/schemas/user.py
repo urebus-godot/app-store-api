@@ -6,7 +6,7 @@ from typing import Optional
 from pydantic import ConfigDict, field_validator
 from sqlmodel import SQLModel, Field
 
-from app.base_models.user import BaseUser, UserRole
+from app.base_models.user import BaseUser, UserRole, BaseUserRole
 from app.core.config import settings
 
 
@@ -44,7 +44,7 @@ class UserRequest(BaseUser):
 
 
 class UserRoleRequest(SQLModel):
-    role: UserRole
+    role: BaseUserRole
 
 
 class UserRoleResponse(SQLModel):

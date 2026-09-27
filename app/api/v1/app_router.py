@@ -48,9 +48,9 @@ async def upload_app(
     publisher_id: PublisherDep,
     app_service: AppServiceDep
 ) -> AppResponse:
-    """Creates app and adds it to the database.
+    """Создаёт приложение в базе данных.
     
-    *Returns*: AppResponse object"""
+    **Возвращает**: AppResponse"""
     app = await app_service.create_app(data, publisher_id)
     return app
 
@@ -65,9 +65,9 @@ async def upload_game(
     publisher_id: PublisherDep,
     app_service: AppServiceDep
 ) -> GameResponse:
-    """Creates app and adds it to the database as game.
+    """Создаёт игру в базе данных.
     
-    *Returns*: GameResponse object"""
+    **Возвращает**: GameResponse"""
     game = await app_service.create_app(data, publisher_id)
     return game
 
@@ -82,9 +82,10 @@ async def update_app(
     user_id: UserIdDep,
     app_service: AppServiceDep
 ) -> AppResponse:
-    """Updates app attributes.
+    """Обновляет атрибуты приложения 
+    (если его категория равна "application").
     
-    *Returns*: AppResponse object"""
+    **Возвращает**: AppResponse"""
     app = await app_service.update_app(
         data=data, id=id, user_id=user_id
     )
@@ -101,9 +102,9 @@ async def update_game(
     user_id: UserIdDep,
     app_service: AppServiceDep
 ) -> GameResponse:
-    """Updates game attributes.
+    """Обновляет атрибуты игры.
     
-    *Returns*: AppResponse object"""
+    **Возвращает**: GameResponse"""
     app = await app_service.update_app(
         data=data, id=id, user_id=user_id
     )
@@ -117,9 +118,9 @@ async def update_game(
 async def get_app(
     id: UUID, app_service: AppServiceDep
 ) -> AppResponseWithPublisher | GameResponseWithPublisher:
-    """Fetches app from the database with specified ID.
+    """Находит приложение по id в базе данных.
     
-    *Returns*: AppResponse or GameResponseWithPublisher object"""
+    **Возвращает**: AppResponseWithPublisher или GameResponseWithPublisher"""
     logger.info("get_app")
     app = await app_service.get_app(id)
     return app
@@ -134,11 +135,12 @@ async def get_apps(
     app_service: AppServiceDep,
     search_query: Optional[SearchQuery] = None,
 ) -> list[AppResponseWithPublisher]:
-    """Fetches apps from the database.
-    Returns apps whose keywords match the 
-    *search_query* parameter if specified.
+    """Находит приложения в базе данных.
+
+    **Параметры**: *search_query* - если указан,
+    приложения фильтруются по совпадающим ключевым словам
     
-    *Returns*: list of AppResponseWithPublisher objects"""
+    **Возвращает**: list[AppResponseWithPublisher]"""
     skip, limit = skip_limit
     apps = await app_service.get_apps(
         search_query=search_query, skip=skip, limit=limit
@@ -155,11 +157,12 @@ async def get_games(
     app_service: AppServiceDep,
     search_query: Optional[SearchQuery] = None
 ) -> list[GameResponseWithPublisher]:
-    """Fetches games from the database.
-    Returns games whose keywords match the 
-    *search_query* parameter if specified
+    """Находит игры в базе данных.
 
-    *Returns*: list of GameResponseWithPublisher objects"""
+    **Параметры**: *search_query* - если указан,
+    игры фильтруются по совпадающим ключевым словам
+    
+    **Возвращает**: list[GameResponseWithPublisher]"""
     skip, limit = skip_limit
     games = await app_service.get_games(
         search_query=search_query, skip=skip, limit=limit
@@ -177,12 +180,12 @@ async def get_games_with_genre(
     search_query: Optional[SearchQuery] = None,
     genre: Optional[GameGenre] = None,
 ) -> list[GameResponseWithPublisher]:
-    """Fetches games from the database.
-    Returns games whose keywords match the 
-    *search_query* parameter if specified.
-    Only games of specified genre are returned.
+    """Находит игры в базе данных.
+
+    **Параметры**: *search_query* - если указан,
+    игры фильтруются по совпадающим ключевым словам
     
-    *Returns*: list of GameResponseWithPublisher objects"""
+    **Возвращает**: list[GameResponseWithPublisher]"""
     skip, limit = skip_limit
     games = await app_service.get_games_with_genre(
         search_query=search_query, genre=genre, skip=skip, limit=limit
@@ -199,11 +202,13 @@ async def get_top_games(
     skip_limit: SkipLimitParams,
     genre: Optional[GameGenre] = Query(default=None)
 ) -> list[GameResponseWithPublisher]:
-    """Fetches games from the database.
-    They are sorted first by *times_purchased* attribute, then by *rating*.
-    If *genre* is specified only games of that genre are returned.
+    """Находит игры в базе данных, 
+    отсортированные по количеству покупок, рейтингу в порядке убывания.
+
+    **Параметры**: *genre* - если указан,
+    игры фильтруются по совпадающему жанру
     
-    *Returns*: list of GameResponseWithPublisher objects"""
+    **Возвращает**: GameResponseWithPublisher"""
     if genre is None:
         games = await app_service.get_top_games(*skip_limit)
     else:
@@ -220,9 +225,10 @@ async def get_purchased_apps(
     skip_limit: SkipLimitParams,
     app_service: AppServiceDep,
 ) -> list[AppResponse | GameResponse]:
-    """Fetches apps purchased by the current user from the database.
+    """Находит приложения в базе данных, 
+    приобретённые пользователем.
     
-    *Returns*: list of AppResponse and GameResponse objects"""
+    **Возвращает**: list[AppResponse | GameResponse]"""
     apps = await app_service.get_purchased_apps(
         user_id, *skip_limit
     )
@@ -238,9 +244,10 @@ async def get_own_published_apps(
     skip_limit: SkipLimitParams,
     app_service: AppServiceDep,
 ) -> list[AppResponse | GameResponse]:
-    """Fetches apps published by the current user from the database.
+    """Находит приложения в базе данных, 
+    опубликованные пользователем.
     
-    *Returns*: list of AppResponse and GameResponse objects"""
+    **Возвращает**: list[AppResponse | GameResponse]"""
     skip, limit = skip_limit
     apps = await app_service.get_publisher_apps(
         skip=skip, limit=limit, user_id=user_id, public_only=False
@@ -257,9 +264,10 @@ async def get_publisher_apps(
     skip_limit: SkipLimitParams,
     app_service: AppServiceDep
 ) -> list[AppResponse | GameResponse]:
-    """Fetches apps published by the user with specified ID from the database.
+    """Находит приложения в базе данных, 
+    опубликованные пользователем с указанным *user_id*.
     
-    *Returns*: list of AppResponse and GameResponse objects"""
+    **Возвращает**: list[AppResponse | GameResponse]"""
     skip, limit = skip_limit
     apps = await app_service.get_publisher_apps(
         skip=skip, limit=limit, user_id=user_id
@@ -276,9 +284,10 @@ async def delete_app(
     user_id: UserIdDep, 
     app_service: AppServiceDep
 ) -> None:
-    """Deletes app from the database and its files from the MinIO storage.
+    """Удаляет приложение с указанным *id*
+    и связанные с ним файлы в MinIO.
     
-    *Returns*: None"""
+    **Возвращает**: None"""
     await app_service.delete_app(
         id=id, user_id=user_id
     )

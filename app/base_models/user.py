@@ -7,9 +7,12 @@ from pydantic import EmailStr
 from app.core.config import settings
 
 
-class UserRole(StrEnum):
+class BaseUserRole(StrEnum):
     USER = "user"
     PUBLISHER = "publisher"
+
+
+class UserRole(BaseUserRole):
     ADMIN = "admin"
 
 

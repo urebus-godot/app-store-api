@@ -7,7 +7,6 @@ from fastapi import HTTPException, status
 from app.models.app_cover import AppCoverDB
 
 from app.schemas.media import (
-    AppCoverListResponse, 
     AppCoverResponse, 
     MediaConfirmResponse
 )
@@ -314,7 +313,7 @@ class MediaService:
         self, 
         app_id: UUID, user_id: UUID,
         skip: int, limit: int
-    ) -> AppCoverListResponse:
+    ) -> list[AppCoverResponse]:
         async with self.uow:
             app = await self.uow.app_repo.get_app(app_id)
 
@@ -338,7 +337,7 @@ class MediaService:
                 )
                 for c in covers
         ]
-        return AppCoverListResponse(covers=covers)
+        return covers
 
     async def delete_cover(
         self, 
