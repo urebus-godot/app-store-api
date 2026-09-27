@@ -329,7 +329,7 @@ async def real_auth_client(
         db_session, 
         session_factory,
         fake_redis,
-        )
+    )
 
     transport = ASGITransport(app)
     async with AsyncClient(

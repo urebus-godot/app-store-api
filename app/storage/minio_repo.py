@@ -20,14 +20,13 @@ class MinioStorage:
         internal_endpoint = options.pop(
             "internal_endpoint", settings.MINIO_INTERNAL_ENDPOINT)
         public_endpoint = options.pop(
-                    "public_endpoint", settings.MINIO_PUBLIC_ENDPOINT)
+            "public_endpoint", settings.MINIO_PUBLIC_ENDPOINT)
         self._internal_kwargs = {
             **options, "endpoint_url": internal_endpoint
         }
         self._public_kwargs = {
             **options, "endpoint_url":  public_endpoint
         }
-        logger.info(f"{self._internal_kwargs}\n\n{self._public_kwargs}")
 
     async def create_bucket(self, bucket_name: str, public: bool) -> None:
         async with self._session.client(
@@ -35,10 +34,8 @@ class MinioStorage:
             **self._internal_kwargs
         ) as client:
             try:
-                logger.info("Checking if the bucket is already created")
                 await client.head_bucket(Bucket=bucket_name)
             except Exception:
-                logger.info("Creating the bucket")
                 await client.create_bucket(Bucket=bucket_name)
 
                 if public:
@@ -146,4 +143,3 @@ class MinioStorage:
                 bucket=bucket,
                 key=key
             )
-            logger.info(f"Deleted image file.\nBucket: {bucket}\n Key: {key}")

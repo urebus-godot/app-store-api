@@ -223,14 +223,12 @@ class AppService:
         self, app: AppDB, uow: UnitOfWork
     ) -> None:
         if app.archive_key is not None:
-            logger.info(f"Deleting app archive")
             await self.storage.delete_object(
                 settings.APP_ARCHIVE_BUCKET,
                 app.archive_key
             )
 
         if app.icon_key is not None:
-            logger.info(f"Deleting app icon")
             await self.storage.delete_image_variants(
                 settings.APP_ICON_BUCKET,
                 app.icon_key

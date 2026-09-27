@@ -194,6 +194,9 @@ class UserService:
             )
         stored_family = await redis.get(f"refresh_token:{jti}")
 
+        if isinstance(stored_family, bytes):
+            stored_family = stored_family.decode()
+
         if stored_family is None or stored_family != family_id:
             raise HTTPException(
                 status.HTTP_401_UNAUTHORIZED, 

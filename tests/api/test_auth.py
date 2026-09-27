@@ -38,7 +38,6 @@ class TestLogin:
         test_user: UserDB,
         fake_redis: FakeRedis,
     ):
-        refresh_token_data["token"]
         jti = refresh_token_data["jti"]
         response = await real_auth_client.post("/api/v1/auth/logout")
 
@@ -54,11 +53,11 @@ class TestRefresh:
         refresh_token_data: dict[str, str],
         fake_redis: FakeRedis
     ):
-        refresh_token_data["token"]
         jti = refresh_token_data["jti"]
 
         response = await real_auth_client.post("/api/v1/auth/refresh")
 
+        print(f"\n\n{response.json()}\n\n")
         assert response.status_code == 200
         assert "refresh_token" in response.json()
         assert await fake_redis.exists(f"blacklist:{jti}")
@@ -119,6 +118,8 @@ class TestProtectedEndpoints:
     ):
         response = await client.get(
             "/api/v1/users/me",
-            headers={"Authorization": f"Bearer {refresh_token_data["token"]}"}
+            headers={
+                "Authorization": f"Bearer {refresh_token_data["token"]}"
+            }
         )
         assert response.status_code == 401
