@@ -48,7 +48,7 @@ class AppService:
         self.app_repo = app_repo
         self.redis = redis
 
-    async def create_app( # Update invalidation of top_games later
+    async def create_app(
         self, data: AppRequest, publisher_id: UUID
     ) -> AppDB:
         async with self.uow:
@@ -75,10 +75,12 @@ class AppService:
             if isinstance(data, GameUpdate) and app.category == "application":
                 raise HTTPException(
                     status.HTTP_400_BAD_REQUEST,
-                    "This app is not game"
+                    "This app is not in game category"
                 )
 
-            app = await self.uow.app_repo.update_app(data, app)
+            data = data.model_dump(exclude_unset=True, exclude_none=True)
+            app.sqlmodel_update(data)
+
             await self.uow.commit()
 
         await self.redis.delete("top_games_cache")

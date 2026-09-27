@@ -27,7 +27,7 @@ from app.api.v1 import (
 from app.db.redis import connect_to_redis_client
 
 
-setup_logging()
+setup_logging(settings.LOGGING_LEVEL)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

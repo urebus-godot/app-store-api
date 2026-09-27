@@ -1,6 +1,3 @@
-from typing import Optional
-import logging
-
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from dotenv import load_dotenv
 
@@ -74,8 +71,7 @@ class Settings(BaseSettings):
     MIN_NAME_LEN: int = 3
     MAX_NAME_LEN: int = 64
 
-    LOGGING_LEVEL: int = logging.DEBUG
-    LOG_FILE_PATH: Optional[str] = None
+    LOGGING_LEVEL: str = "INFO"
 
     MINIO_ACCESS_KEY: str = "access-key"
     MINIO_SECRET_KEY: str = "secret-key"

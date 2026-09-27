@@ -74,13 +74,30 @@ class ReviewService:
 
         return review
 
-    async def get_review(self, id: UUID) -> ReviewDB:
-        raise NotImplementedError()
+    async def update_review(
+        self, 
+        data: ReviewRequest,
+        review_id: UUID,
+        user_id: UUID
+    ) -> ReviewDB:
         async with self.uow:
-            review = await self.uow.review_repo.get_review(id)
+            review = await self.uow.review_repo.get_review(review_id)
 
             if review is None:
                 raise review_not_found_exception
+
+            old_rating = review.rating
+            data = data.model_dump()
+
+            if "rating" in data and data["rating"] is None:
+                del data["rating"]
+
+            review.sqlmodel_update(data.model_dump())
+            await self.uow.commit()
+
+        if old_rating != review.rating:
+            update_app_rating.delay(str(review.app_id))
+            await self.redis.delete("top_games_cache")
 
         return review
 

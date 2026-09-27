@@ -7,6 +7,5 @@ class BaseDiscussion(SQLModel):
     topic: Optional[str] = Field(default=None)
 
 
-
 class BaseMessage(SQLModel):
     text: str

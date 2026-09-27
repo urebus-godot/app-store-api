@@ -5,7 +5,7 @@ from fastapi import APIRouter, status, Depends
 from app.api.deps import (
     UserIdDep, ReviewServiceDep, rate_limit, SkipLimitParams
     )
-from app.schemas.review import ReviewRequest, ReviewResponse
+from app.schemas.review import ReviewRequest, ReviewResponse, ReviewUpdate
 
 router = APIRouter(
     dependencies=[Depends(rate_limit)]
@@ -28,6 +28,24 @@ async def create_review(
     
     **Возвращает**: ReviewResponse"""
     return await review_service.create_review(data, app_id, user_id)
+
+
+@router.patch(
+    "/reviews/{id}",
+    response_model=ReviewResponse
+)
+async def update_review(
+    data: ReviewUpdate,
+    review_id: UUID,
+    user_id: UserIdDep,
+    review_service: ReviewServiceDep
+) -> ReviewResponse:
+    """Обновляет атрибуты отзыва с указанным *id* в базе данных.
+    
+    **Возвращает**: ReviewResponse"""
+    return await review_service.update_review(
+        data=data, review_id=review_id, user_id=user_id
+    )
 
 
 @router.get(

@@ -47,7 +47,7 @@ logger = logging.getLogger("task_queue.celery_app")
 
 @setup_logging_signal.connect
 def configure_celery_logging(*args, **kwargs):
-    setup_logging()
+    setup_logging(settings.LOGGING_LEVEL)
 
 @worker_shutdown_signal.connect
 def on_worker_shutdown(*args, **kwargs):

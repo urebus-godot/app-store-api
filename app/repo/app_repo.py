@@ -11,7 +11,7 @@ from app.base_models.app import (
     GameGenre,
     AppCategory
 )
-from app.schemas.app import AppRequest, GameRequest, AppUpdate
+from app.schemas.app import AppRequest, GameRequest
 from app.models.purchase import PurchaseDB
 
 
@@ -43,16 +43,6 @@ class AppRepository:
             app.genre = None
 
         self.session.add(app)
-
-        return app
-
-    async def update_app(
-        self,
-        data: AppUpdate,
-        app: AppDB,
-    ) -> AppDB:
-        data = data.model_dump(exclude_unset=True, exclude_none=True)
-        app.sqlmodel_update(data)
 
         return app
 
