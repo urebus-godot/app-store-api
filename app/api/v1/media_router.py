@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status, BackgroundTasks
+from fastapi import APIRouter, Depends, status
 
 from app.api.deps import (
     UserIdDep, MediaServiceDep, rate_limit, SkipLimitParams
@@ -44,7 +44,6 @@ async def request_avatar_upload_url(
 async def confirm_avatar_upload(
     user_id: UserIdDep,
     media_service: MediaServiceDep,
-    bg_tasks: BackgroundTasks
 ) -> MediaConfirmResponse:
     """Confirms that the user avatar file has been uploaded to MinIO storage,
     makes it public, and generates image variants using Celery workers.
@@ -52,7 +51,7 @@ async def confirm_avatar_upload(
     *Returns*: 
     MediaConfirmResponse object containing URL to download user avatar"""
     return await media_service.confirm_avatar_upload(
-        user_id=user_id, bg_tasks=bg_tasks,
+        user_id=user_id
         
     )
 
@@ -83,8 +82,7 @@ async def request_icon_upload_url(
 async def confirm_icon_upload(
     app_id: UUID,
     user_id: UserIdDep,
-    media_service: MediaServiceDep,
-    bg_tasks: BackgroundTasks
+    media_service: MediaServiceDep
 ) -> MediaConfirmResponse:
     """Confirms that the app icon file has been uploaded to MinIO storage,
     makes it public, and generates image variants using Celery workers.
@@ -92,7 +90,7 @@ async def confirm_icon_upload(
     *Returns*: 
     MediaConfirmResponse object containing URL to download app icon"""
     return await media_service.confirm_icon_upload(
-        app_id=app_id, user_id=user_id, bg_tasks=bg_tasks
+        app_id=app_id, user_id=user_id
     )
 
 
@@ -138,15 +136,16 @@ async def confirm_cover_upload(
 @router.get(
     "/apps/{app_id}/covers"
 )
-async def list_covers(
+async def get_app_covers(
     skip_limit: SkipLimitParams,
     app_id: UUID,
+    user_id: UserIdDep,
     media_service: MediaServiceDep,
 ) -> AppCoverListResponse:
     """Returns app covers"""
     skip, limit = skip_limit
-    return await media_service.list_covers(
-        app_id=app_id, 
+    return await media_service.get_app_covers(
+        app_id=app_id, user_id=user_id,
         skip=skip, limit=limit
     )
 
@@ -159,13 +158,11 @@ async def delete_cover(
     app_id: UUID,
     cover_id: UUID,
     user_id: UserIdDep,
-    media_service: MediaServiceDep,
-    bg_tasks: BackgroundTasks
+    media_service: MediaServiceDep
 ) -> None:
     """Deletes app cover and its variants using BackgroundTasks"""
     await media_service.delete_cover(
         app_id=app_id, 
         user_id=user_id, 
-        cover_id=cover_id, 
-        bg_tasks=bg_tasks
+        cover_id=cover_id
     )

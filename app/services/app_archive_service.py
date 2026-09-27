@@ -8,7 +8,8 @@ from app.core.exceptions import (
     no_rights_exception,
     app_not_found_exception,
     file_not_found_exception,
-    no_data_to_confirm_exception
+    no_data_to_confirm_exception,
+    invalid_file_type_exception
 )
 from app.core.config import settings
 
@@ -48,7 +49,11 @@ class AppArchiveService:
         extension = validate_and_get_extension(
             ALLOWED_ARCHIVE_CONTENT_TYPES, content_type
         )
-        object_key = f"apps/{app_id}/{filename}.{extension}"
+        logger.info(extension)
+        if not filename.endswith(f".{extension}"):
+            raise invalid_file_type_exception
+        
+        object_key = f"apps/{app_id}/{filename}"
 
         async with self.uow:
             app = await self.uow.app_repo.get_app(app_id)
@@ -116,6 +121,9 @@ class AppArchiveService:
             app = await self.uow.app_repo.get_app(app_id)
 
             if app is None:
+                raise app_not_found_exception
+
+            if not app.public and app_id.publisher_id != user_id:
                 raise app_not_found_exception
 
             if app.archive_key is None:

@@ -132,7 +132,7 @@ class UserService:
                 [str(user.email)],
                 "Someone has logged into your account",
                 email_body
-        )
+            )
         return LoginResponse(
             access_token=tokens["access_token"],
             refresh_token=tokens["refresh_token"],
@@ -193,8 +193,6 @@ class UserService:
                 "Token reuse detected. All sessions revoked",
             )
         stored_family = await redis.get(f"refresh_token:{jti}")
-        if isinstance(stored_family, bytes):
-            stored_family = stored_family.decode()
 
         if stored_family is None or stored_family != family_id:
             raise HTTPException(
@@ -291,8 +289,7 @@ class UserService:
     async def delete_user(
         self, 
         user_id: UUID, 
-        redis: Redis,
-        bg_tasks: BackgroundTasks
+        redis: Redis
     ) -> None:
         async with self.uow:
             user = await self.uow.user_repo.get_user_by_id(user_id)
@@ -302,16 +299,16 @@ class UserService:
 
             await redis.delete(f"user_tokens:{user_id}")
             await self.app_service.delete_publisher_apps(
-                user_id, bg_tasks, self.uow
+                user_id, self.uow
             )
             await self.uow.delete(user)
 
             logger.info(f"{user.avatar_key}")
 
             if user.avatar_key is not None:
-                bg_tasks.add_task(
-                    self.storage.delete_image_variants, 
-                    settings.USER_AVATAR_BUCKET, 
+                logger.info("Deleting user avatar")
+                await self.storage.delete_image_variants(
+                    settings.USER_AVATAR_BUCKET,
                     user.avatar_key
                 )
 

@@ -19,6 +19,13 @@ class AppCoverRepository:
         cover = (await self.session.exec(stmt)).one_or_none()
         return cover
 
+    async def get_cover_by_object_key(
+        self, object_key: str
+    ) -> Optional[AppCoverDB]:
+        stmt = select(AppCoverDB).where(AppCoverDB.object_key == object_key)
+        cover = (await self.session.exec(stmt)).one_or_none()
+        return cover
+
     async def get_app_covers(
         self, app_id: UUID, 
         skip: int = 0, 
@@ -30,9 +37,7 @@ class AppCoverRepository:
             .offset(skip).limit(limit)
             .order_by(AppCoverDB.created_at.desc())
         )
-            
         covers = (await self.session.exec(stmt)).all()
-        logger.info(f"App covers: {covers}")
         return covers
 
     async def get_all_app_covers(
@@ -42,9 +47,7 @@ class AppCoverRepository:
             select(AppCoverDB)
             .where(AppCoverDB.app_id == app_id)
         )
-
         covers = (await self.session.exec(stmt)).all()
-        logger.info(f"App covers: {covers}")
         return covers
 
     async def delete_app_covers(

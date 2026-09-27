@@ -4,7 +4,7 @@ import json
 import logging
 
 from redis.asyncio import Redis
-from fastapi import HTTPException, status, BackgroundTasks
+from fastapi import HTTPException, status
 
 from app.core.config import settings
 from app.core.exceptions import (
@@ -48,7 +48,7 @@ class AppService:
         self.app_repo = app_repo
         self.redis = redis
 
-    async def create_app(
+    async def create_app( # Update invalidation of top_games later
         self, data: AppRequest, publisher_id: UUID
     ) -> AppDB:
         async with self.uow:
@@ -220,54 +220,55 @@ class AppService:
         return games
 
     async def delete_app_with_its_files(
-        self, app: AppDB, bg_tasks: BackgroundTasks
+        self, app: AppDB, uow: UnitOfWork
     ) -> None:
         if app.archive_key is not None:
-            bg_tasks.add_task(
-                self.storage.delete_object,
+            logger.info(f"Deleting app archive")
+            await self.storage.delete_object(
                 settings.APP_ARCHIVE_BUCKET,
                 app.archive_key
             )
 
         if app.icon_key is not None:
-            bg_tasks.add_task(
-                self.storage.delete_image_variants,
+            logger.info(f"Deleting app icon")
+            await self.storage.delete_image_variants(
                 settings.APP_ICON_BUCKET,
                 app.icon_key
             )
 
-        bg_tasks.add_task(
-            self.media_service.delete_app_covers,
-            app.id
-        )
-        await self.uow.delete(app)
+        await self.media_service.delete_app_covers(app.id)
+        await uow.delete(app)
 
     async def delete_app(
-        self, id: UUID, user_id: UUID, bg_tasks: BackgroundTasks
+        self, id: UUID, user_id: UUID
     ) -> None:
         async with self.uow:
             app = await self.uow.app_repo.get_app(id)
 
             if app is None:
                 raise app_not_found_exception
+
+            if not app.public and app.publisher_id != user_id:
+                raise app_not_found_exception
             
-            if not app.publisher_id == user_id:
+            if app.publisher_id != user_id:
                 raise no_rights_exception
 
             await self.redis.delete("top_games_cache")
-            await self.delete_app_with_its_files(app, bg_tasks)
+            await self.delete_app_with_its_files(app, self.uow)
             await self.uow.commit()
 
     async def delete_publisher_apps(
         self, 
         publisher_id: UUID, 
-        bg_tasks: BackgroundTasks,
         uow: UnitOfWork
     ) -> None:
+        logger.info("Start deleting publisher apps")
         apps = await uow.app_repo.get_publisher_apps(
             publisher_id, public_only=False
         )
         for app in apps:
-            await self.delete_app_with_its_files(app, bg_tasks)
+            logger.info(f"Deleting app: {app.title}")
+            await self.delete_app_with_its_files(app, uow)
 
         await self.redis.delete("top_games_cache")

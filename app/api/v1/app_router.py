@@ -6,8 +6,7 @@ from fastapi import (
     APIRouter, 
     status, 
     Depends, 
-    Query,
-    BackgroundTasks
+    Query
 )
 
 from app.api.deps import (
@@ -275,12 +274,11 @@ async def get_publisher_apps(
 async def delete_app(
     id: UUID, 
     user_id: UserIdDep, 
-    app_service: AppServiceDep,
-    bg_tasks: BackgroundTasks
+    app_service: AppServiceDep
 ) -> None:
     """Deletes app from the database and its files from the MinIO storage.
     
     *Returns*: None"""
     await app_service.delete_app(
-        id=id, user_id=user_id, bg_tasks=bg_tasks
+        id=id, user_id=user_id
     )

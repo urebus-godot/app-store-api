@@ -5,6 +5,9 @@ from fastapi import HTTPException, status
 class NotFoundError(Exception):
     pass
 
+class InvalidFileTypeError(Exception):
+    pass
+
 
 # ----- Token -----
 
@@ -18,12 +21,6 @@ class InvalidTokenError(TokenError):
     pass
 
 class TokenExpiredError(TokenError):
-    pass
-
-
-# ----- User -----
-
-class UserNotFoundError(NotFoundError):
     pass
 
 
@@ -41,7 +38,7 @@ no_rights_exception = HTTPException(
 
 # ----- Storage ------
 
-invalid_file_exception = HTTPException(
+invalid_file_type_exception = HTTPException(
     status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
     "Invalid type of file"
 )

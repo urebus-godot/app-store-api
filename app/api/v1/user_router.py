@@ -279,11 +279,14 @@ async def delete_current_user(
     user_id: UserIdDep,
     redis: RedisDep,
     user_service: UserServiceDep,
-    bg_tasks: BackgroundTasks
+    response: Response
 ) -> None:
     """Deletes the current user and his files.
         
     *Returns*: None"""
     await user_service.delete_user(
-        user_id=user_id, redis=redis, bg_tasks=bg_tasks
+        user_id=user_id, redis=redis
+    )
+    response.delete_cookie(
+        key="refresh_token", httponly=True, secure=True, samesite="lax"
     )

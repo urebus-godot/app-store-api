@@ -2,7 +2,7 @@ from uuid import UUID, uuid4
 import logging
 
 from botocore.exceptions import EndpointConnectionError
-from fastapi import HTTPException, status, BackgroundTasks
+from fastapi import HTTPException, status
 
 from app.models.app_cover import AppCoverDB
 
@@ -84,7 +84,7 @@ class MediaService:
 
     async def confirm_avatar_upload(
         self, 
-        user_id: UUID, bg_tasks: BackgroundTasks
+        user_id: UUID
     ) -> MediaConfirmResponse:
         try:
             async with self.uow:
@@ -120,8 +120,7 @@ class MediaService:
                 logger.info(f"{new_key = }")
 
             if old_key:
-                bg_tasks.add_task(
-                    self.storage.delete_image_variants, 
+                self.storage.delete_image_variants(
                     settings.USER_AVATAR_BUCKET, 
                     old_key
                 )
@@ -150,7 +149,7 @@ class MediaService:
         extension = validate_and_get_extension(
             ALLOWED_IMAGE_CONTENT_TYPES, content_type
             )
-        object_key = f"apps/{app_id}/icon.{extension}"
+        object_key = f"apps/{app_id}/{uuid4()}.{extension}"
 
         async with self.uow:
             app = await self.uow.app_repo.get_app(app_id)
@@ -177,7 +176,7 @@ class MediaService:
         )
 
     async def confirm_icon_upload(
-        self, app_id: UUID, user_id: UUID, bg_tasks: BackgroundTasks
+        self, app_id: UUID, user_id: UUID
     ) -> MediaConfirmResponse:
         async with self.uow:
             app = await self.uow.app_repo.get_app(app_id)
@@ -205,13 +204,13 @@ class MediaService:
             old_key = app.icon_key
             app.icon_key = app.pending_icon_key
             app.pending_icon_key = None
-            await self.uow.commit()
             new_key = app.icon_key
+
+            await self.uow.commit()
 
         if old_key:
             logger.info(f"Found old key of icon\nOld key: {old_key}")
-            bg_tasks.add_task(
-                self.storage.delete_image_variants, 
+            await self.storage.delete_image_variants(
                 settings.APP_ICON_BUCKET, 
                 old_key
             )
@@ -235,7 +234,7 @@ class MediaService:
         extension = validate_and_get_extension(
             ALLOWED_IMAGE_CONTENT_TYPES, content_type
             )
-        object_key = f"apps/{app_id}/covers/{uuid4()}.{extension}"
+        object_key = f"apps/{app_id}/{uuid4()}.{extension}"
 
         async with self.uow:
             app = await self.uow.app_repo.get_app(app_id)
@@ -262,13 +261,6 @@ class MediaService:
     async def confirm_cover_upload(
         self, app_id: UUID, user_id: UUID, object_key: str
     ) -> AppCoverResponse:
-        expected_prefix = f"apps/{app_id}/covers/"
-        if not object_key.startswith(expected_prefix):
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST, 
-                "Incorrect object_key"
-            )
-
         async with self.uow:
             app = await self.uow.app_repo.get_app(app_id)
             if app is None:
@@ -289,12 +281,19 @@ class MediaService:
                 )
                 raise file_too_large_exception
 
+            cover_with_object_key_exists = (
+                await self.uow.app_cover_repo.get_cover_by_object_key(
+                    object_key
+                )
+            ) is not None
+            if cover_with_object_key_exists:
+                raise no_data_to_confirm_exception
+
             cover = AppCoverDB(
                 app_id=app_id, object_key=object_key
                 )
             self.uow.add(cover)
             await self.uow.commit()
-            cover_id = cover.id
 
         generate_image_variants.delay(
             settings.APP_COVER_BUCKET, object_key,
@@ -304,21 +303,25 @@ class MediaService:
         )
 
         return AppCoverResponse(
-            id=cover_id,
+            id=cover.id,
             url=self.storage.build_public_url(
                 settings.APP_COVER_BUCKET, object_key
             ),
             created_at=cover.created_at
         )
 
-    async def list_covers(
-        self, app_id: UUID,
+    async def get_app_covers(
+        self, 
+        app_id: UUID, user_id: UUID,
         skip: int, limit: int
     ) -> AppCoverListResponse:
         async with self.uow:
             app = await self.uow.app_repo.get_app(app_id)
 
-            if app is None or not app.public:
+            if app is None:
+                raise app_not_found_exception
+
+            if not app.public and app.publisher_id != user_id:
                 raise app_not_found_exception
 
             covers = await self.uow.app_cover_repo.get_app_covers(
@@ -339,8 +342,7 @@ class MediaService:
 
     async def delete_cover(
         self, 
-        app_id: UUID, user_id: UUID, cover_id: UUID,
-        bg_tasks: BackgroundTasks
+        app_id: UUID, user_id: UUID, cover_id: UUID
     ) -> None:
         async with self.uow:
             app = await self.uow.app_repo.get_app(app_id)
@@ -358,13 +360,11 @@ class MediaService:
 
             object_key = cover.object_key
             await self.uow.delete(cover)
-            await self.uow.commit()
-
-            bg_tasks.add_task(
-                self.storage.delete_image_variants, 
+            await self.storage.delete_image_variants(
                 settings.APP_COVER_BUCKET, 
                 object_key
             )
+            await self.uow.commit()
 
     async def delete_app_covers(
         self, app_id: UUID

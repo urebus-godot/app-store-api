@@ -5,8 +5,9 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import ResponseValidationError
 
 import botocore.exceptions as boto_exceptions
-
 import httpx
+
+from app.core.exceptions import InvalidFileTypeError
 
 logger = logging.getLogger("core.exception_handlers")
 
@@ -53,9 +54,21 @@ def boto_client_error_handler(
     )
 
 
+def invalid_file_type_error_handler(
+    request: Request, exception: InvalidFileTypeError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        content={
+            "detail": "Invalid type of file"
+        },
+    )
+
+
 exception_handlers = {
     ResponseValidationError: response_validation_error_handler,
     httpx.RequestError: request_error_handler,
     httpx.ReadTimeout: timeout_error_handler,
-    boto_exceptions.ClientError: boto_client_error_handler
+    boto_exceptions.ClientError: boto_client_error_handler,
+    InvalidFileTypeError: invalid_file_type_error_handler
 }
