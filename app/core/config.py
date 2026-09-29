@@ -20,7 +20,7 @@ class Settings(BaseSettings):
 
     DB_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/db"
     TEST_DB_URL: str = (
-        "postgresql+asyncpg://postgres:postgres@localhost:6432/test_db"
+        "postgresql+asyncpg://postgres:postgres@localhost:5432/test_db"
     )
     LOCAL_DB_URL: str = (
         "postgresql+asyncpg://postgres:postgres@localhost:5432/db"
@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     RESULT_BACKEND_URL: str = "redis://redis:6379/0"
     WORKER_DB_URL: str = "postgresql+psycopg://postgres:postgres@db:5432/db"
     TEST_WORKER_DB_URL: str = (
-        "postgresql+psycopg://postgres:postgres@localhost:6432/test_db"
+        "postgresql+psycopg://postgres:postgres@localhost:5432/test_db"
     )
 
     WINDOW_SECONDS: int = 60

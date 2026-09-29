@@ -7,7 +7,7 @@
 - **Язык / фреймворк:** Python 3.11+, FastAPI (async)
 - **Архитектура:** Router → Service → Repository + Unit of Work
 - **БД:** PostgreSQL, SQLModel (ORM), Alembic (миграции)
-- **Аутентификация:** JWT (access + refresh), refresh-токены в Redis + httponly cookies, blacklist токенов в Redis, роли (`user`, `publisher`, `admin`) зашиты в JWT
+- **Аутентификация:** JWT (access + refresh), refresh-токены в Redis + httponly cookies, blacklist токенов в Redis, роли (`user`, `publisher`, `admin`) в access токене
 - **Хранилище файлов:** MinIO (архивы приложений/игр, изображения), presigned URL для загрузки/скачивания
 - **Очереди задач:** Celery (обработка изображений), Celery Beat (ежедневная рассылка промокодов на день рождения), Celery Flower (мониторинг)
 - **Кэш:** Redis (корзина с приложениями пользователя, rate limiting на Lua-скрипте)
@@ -25,6 +25,7 @@
 - 💬 Обсуждения в реальном времени (WebSocket + pub/sub)
 - 🔐 JWT-аутентификация с ролями и blacklist'ом токенов
 - 🛒 Корзина с кэшированием в Redis
+- ⭐ Кэширование самых популярных игр в последнее время (в процессе)
 - 🎁 Промокоды на пополнение баланса ко дню рождения (Celery Beat)
 - 🚦 Rate limiting на основе Redis
 - 📊 Мониторинг фоновых задач через Flower
@@ -85,6 +86,7 @@ docker compose up --build
 ### Миграции
 
 ```bash
+alembic revision -m "Что изменилось в базе данных" --autogenerate
 alembic upgrade head
 ```
 
@@ -92,16 +94,17 @@ alembic upgrade head
 
 | Переменная | Описание |
 |---|---|
-| `DB_URL` | строка подключения к PostgreSQL |
+| `DB_URL` | адрес PostgreSQL |
 | `REDIS_URL` | адрес Redis |
-| `MINIO_ENDPOINT` / `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | доступ к MinIO |
-| `ACCESS_SECRET_KEY` | секрет для подписи JWT access токена |
-| `REFRESH_SECRET_KEY` | секрет для подписи JWT refresh токена |
+| `MINIO_ENDPOINT` / `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | доступ к MinIO JWT access и refresh токена ||
+| `ACCESS_SECRET_KEY` / `REFRESH_SECRET_KEY` | секрет для подписи 
+| `BROKER_URL` / `RESULT_BACKEND_URL` / `WORKER_DB_URL`| адрес брокер, бэкенда для хранения результатов задач, базы данных для Celery |
+| `ADMIN_PASSWORD` | пароль для доступа к роли администратора |
 
 ## Тесты
 
 ```bash
-pytest --cov=app
+pytest
 ```
 
 ## Линтинг
@@ -112,10 +115,4 @@ ruff check .
 
 ## CI/CD
 
-Пайплайн запускает тесты и ruff, затем собирает и пушит Docker-образ при merge и push в основную ветку.
-
-## Roadmap / TODO
-
-- [ ] Описать API подробнее (примеры запросов/ответов)
-- [ ] Добавить схему архитектуры (диаграмму)
-- [ ] ...
+Пайплайн запускает тесты (pytest) и проверку кода (ruff), затем собирает и отправляет Docker-образ в реестр при merge или push в основную ветку.

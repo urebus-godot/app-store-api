@@ -158,7 +158,7 @@ class TestMedia:
             f"/api/v1/media/apps/{test_app.id}/covers"
         )
         data = covers_response.json()
-        cover = data["covers"][0]
+        cover = data[0]
 
         cover = (await db_session.exec(
             select(AppCoverDB).where(AppCoverDB.app_id == test_app.id)

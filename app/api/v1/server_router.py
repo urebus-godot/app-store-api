@@ -14,7 +14,7 @@ router = APIRouter(tags=["Server"])
 
 @router.get("/live")
 async def liveness_probe() -> dict:
-    """Liveness probe: проверяет, запущено и работает ли FastAPI приложение.
+    """Liveness probe: проверяет, запущено ли FastAPI-приложение.
     
     **Возвращает**: dict со статусом и временной меткой выполнения."""
     return {"status": "ok", "timestamp": time.time()}

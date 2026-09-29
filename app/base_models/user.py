@@ -12,7 +12,9 @@ class BaseUserRole(StrEnum):
     PUBLISHER = "publisher"
 
 
-class UserRole(BaseUserRole):
+class UserRole(StrEnum):
+    USER = "user"
+    PUBLISHER = "publisher"
     ADMIN = "admin"
 
 

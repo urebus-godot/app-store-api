@@ -33,7 +33,8 @@ too_many_requests_exception = HTTPException(
 )
 
 no_rights_exception = HTTPException(
-    status.HTTP_403_FORBIDDEN, "You have no rights to perform this action"
+    status.HTTP_403_FORBIDDEN, 
+    "You have no rights to perform this action"
 )
 
 # ----- Storage ------

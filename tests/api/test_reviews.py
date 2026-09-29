@@ -1,5 +1,3 @@
-from typing import Any
-
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 import pytest_asyncio
@@ -18,7 +16,7 @@ async def test_review(
     review = ReviewDB(
         rating=3,
         subject="It's OK",
-        content="This app, well, it is quite alright for tests",
+        content="OK app for tests",
         author_id=test_user.id,
         app_id=test_app_2.id,
     )
@@ -36,7 +34,7 @@ async def test_review_2(
     review = ReviewDB(
         rating=3,
         subject="It's OK",
-        content="This app, well, it is quite alright for tests",
+        content="OK app for tests",
         author_id=test_user_2.id,
         app_id=test_app.id,
     )
@@ -103,7 +101,7 @@ class TestReviews:
         db_session: AsyncSession,
         test_user: UserDB,
         test_app_2: AppDB,
-        request_data: dict[str, Any],
+        request_data: dict,
         expected_status_code: int,
         create_purchase: bool
     ):
@@ -155,6 +153,87 @@ class TestReviews:
             },
         )
         assert response.status_code == 409
+
+    @pytest.mark.parametrize(
+        argnames=["request_data", "expected_data", "expected_status_code"],
+        argvalues=[
+            [
+                {
+                    "rating": 5,
+                }, {
+                    "rating": 5,
+                    "subject": "It's OK",
+                    "content": "OK app for tests"
+                },
+                200
+            ], [
+                {
+                    "rating": 1,
+                    "subject": "UPD: Bad",
+                    "content": "This is bad app"
+                }, {
+                    "rating": 1,
+                    "subject": "UPD: Bad",
+                    "content": "This is bad app"
+                },
+                200
+            ], [
+                {
+                    "rating": None,
+                    "subject": None,
+                }, {
+                    "rating": 3,
+                    "subject": None,
+                    "content": "OK app for tests"
+                },
+                200
+            ], [
+                {
+                    "rating": 10,
+                }, {},
+                422
+            ]
+        ]
+    )
+    async def test_update_review(
+        self, 
+        auth_client: AsyncClient, 
+        test_review: ReviewDB,
+        request_data: dict,
+        expected_data: dict,
+        expected_status_code: int
+    ):
+        response = await auth_client.patch(
+            f"/api/v1/reviews/{test_review.id}",
+            json=request_data,
+        )
+        data = response.json()
+        print(data)
+        assert response.status_code == expected_status_code
+        for key in expected_data.keys():
+            assert data[key] == expected_data[key]
+
+    async def test_update_review_no_rights(
+        self, 
+        auth_client_2: AsyncClient, 
+        test_review: ReviewDB
+    ):
+        response = await auth_client_2.patch(
+            f"/api/v1/reviews/{test_review.id}",
+            json={"content": "Update is forbidden"},
+        )
+        assert response.status_code == 403
+
+    async def test_update_review_not_exists(
+        self, 
+        auth_client_2: AsyncClient, 
+        test_review: ReviewDB
+    ):
+        response = await auth_client_2.patch(
+            "/api/v1/reviews/df3f3e9f-6196-4a9f-8bd4-73ac788accec",
+            json={"content": "Update is forbidden"},
+        )
+        assert response.status_code == 404
 
     async def test_get_app_reviews(
         self,

@@ -36,7 +36,7 @@ async def create_review(
 )
 async def update_review(
     data: ReviewUpdate,
-    review_id: UUID,
+    id: UUID,
     user_id: UserIdDep,
     review_service: ReviewServiceDep
 ) -> ReviewResponse:
@@ -44,7 +44,7 @@ async def update_review(
     
     **Возвращает**: ReviewResponse"""
     return await review_service.update_review(
-        data=data, review_id=review_id, user_id=user_id
+        data=data, review_id=id, user_id=user_id
     )
 
 

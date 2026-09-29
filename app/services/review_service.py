@@ -10,7 +10,7 @@ from app.core.exceptions import (
     app_not_found_exception
     )
 
-from app.schemas.review import ReviewRequest
+from app.schemas.review import ReviewRequest, ReviewUpdate
 from app.models.review import ReviewDB
 
 from app.services.app_service import AppService
@@ -76,7 +76,7 @@ class ReviewService:
 
     async def update_review(
         self, 
-        data: ReviewRequest,
+        data: ReviewUpdate,
         review_id: UUID,
         user_id: UUID
     ) -> ReviewDB:
@@ -86,13 +86,16 @@ class ReviewService:
             if review is None:
                 raise review_not_found_exception
 
+            if review.author_id != user_id:
+                raise no_rights_exception
+
             old_rating = review.rating
-            data = data.model_dump()
+            data = data.model_dump(exclude_unset=True)
 
             if "rating" in data and data["rating"] is None:
                 del data["rating"]
 
-            review.sqlmodel_update(data.model_dump())
+            review.sqlmodel_update(data)
             await self.uow.commit()
 
         if old_rating != review.rating:
