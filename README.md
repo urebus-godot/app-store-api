@@ -98,7 +98,7 @@ alembic upgrade head
 | `REDIS_URL` | адрес Redis |
 | `MINIO_ENDPOINT` / `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | доступ к MinIO ||
 | `ACCESS_SECRET_KEY` / `REFRESH_SECRET_KEY` | секрет для подписи JWT access и refresh токена
-| `BROKER_URL` / `RESULT_BACKEND_URL` / `WORKER_DB_URL`| адрес брокер, бэкенда для хранения результатов задач, базы данных для Celery |
+| `BROKER_URL` / `RESULT_BACKEND_URL` / `WORKER_DB_URL`| адрес брокера, бэкенда для хранения результатов задач, базы данных для Celery |
 | `ADMIN_PASSWORD` | пароль для доступа к роли администратора |
 
 ## Тесты
