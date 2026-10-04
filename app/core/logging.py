@@ -9,7 +9,7 @@ user_id_var: ContextVar[str] = ContextVar("user_id", default="-")
  
 
 class RequestContextFilter(logging.Filter):
-    """Прокидывает request_id/user_id из contextvars в каждый LogRecord."""
+    """Прокидывает request_id из contextvars в каждый LogRecord."""
     def filter(self, record: logging.LogRecord) -> bool:
         record.request_id = request_id_var.get()
         record.user_id = user_id_var.get()

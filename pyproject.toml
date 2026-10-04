@@ -33,6 +33,8 @@ dependencies = [
     "aioboto3>=15.5.0",
     "httpx-ws>=0.9.0",
     "python-json-logger>=4.2.0",
+    "prometheus-client>=0.25.0",
+    "prometheus-fastapi-instrumentator>=8.1.0",
 ]
 
 [tool.uv.workspace]

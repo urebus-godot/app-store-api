@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from httpx import AsyncClient
 
+from app.prometheus.instrumentator import create_instrumentator
+
 from app.middleware.request_logger import RequestLoggerMiddleware
 
 from app.core.exception_handlers import exception_handlers
@@ -25,7 +27,6 @@ from app.api.v1 import (
     server_router
 )
 from app.db.redis import connect_to_redis_client
-
 
 setup_logging(settings.LOGGING_LEVEL)
 
@@ -67,6 +68,8 @@ app.add_middleware(
     ],
     allow_credentials=True
 )
+
+create_instrumentator(app)
 
 
 app.include_router(
