@@ -9,7 +9,9 @@ def create_instrumentator(app: FastAPI) -> Instrumentator:
     )
     instrumentator.instrument(app).expose(app, endpoint="/metrics")
     instrumentator.add(
-        metrics.latency(buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0))
+        metrics.latency(
+            buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)
+        )
     )
     instrumentator.add(metrics.requests())
     instrumentator.add(metrics.request_size())
