@@ -1,4 +1,11 @@
 services:
+  prom-init:
+    image: alpine
+    user: root
+    volumes:
+      - prom_multiproc:/tmp/prom
+    command: sh -c "chown -R 1000:1000 /tmp/prom"
+
   db:
     image: postgres:16-alpine
     ports:
@@ -93,8 +100,8 @@ services:
         target: /src/app
 
       - type: bind
-        source: media
-        target: /src/media
+        source: prom_multiproc
+        target: /tmp/prom
 
     restart: always
     env_file:
@@ -104,6 +111,8 @@ services:
     command: celery -A app.task_queue.celery_app worker --loglevel=info --logfile=app/worker.log
     networks:
       - app_network
+    environment:
+      PROMETHEUS_MULTIPROC_DIR: /tmp/prom
 
   celery_beat:
     build:
@@ -172,19 +181,30 @@ services:
       context: .
     expose:
       - "8000"
+    user: "1000:1000"
     volumes:
       - type: bind
         source: ./app
         target: /src/app
+
       - type: bind
         source: ./.env
         target: /src/.env
+  
+      - type: bind
+        source: prom_multiproc
+        target: /tmp/prom
+
     depends_on:
       pgbouncer:
         condition: service_healthy
+      prom-init:
+        condition: service_completed_successfully
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      PROMETHEUS_MULTIPROC_DIR: /tmp/prom
     command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*
     networks:
       - app_network
@@ -213,3 +233,4 @@ volumes:
   redis_data:
   minio_data:
   grafana_data:
+  prom_multiproc:

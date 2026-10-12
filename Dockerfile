@@ -1,32 +1,18 @@
-FROM python:3.13-slim AS builder
+#syntax=docker/dockerfile:1.7
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+ARG PYTHON_VERSION=3.13
+
+FROM python:${PYTHON_VERSION}-slim AS builder
+
+COPY --from=ghcr.io/astral-sh/uv:0.12.3 /uv /uvx /bin/
 
 ENV UV_COMPILE_BYTECODE=1 \
-    UV_LINK_MODE=copy \
-    UV_PROJECT_ENVIRONMENT=/src/.venv
+    UV_LINK_MODE=copy \ 
+    UV_PYTHON_DOWNLOADS=never
 
 WORKDIR /src
-COPY pyproject.toml uv.lock ./
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --no-install-project
-
-COPY . .
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev
-
-FROM python:3.13-slim AS runner
-WORKDIR /src
-
-RUN useradd -u 10001 -m appuser
-RUN chown -R appuser .
-COPY --from=builder /src/.venv /src/.venv
-COPY . .
-
-ENV PATH="/src/.venv/bin:$PATH" \
-    PYTHONUNBUFFERED=1
-USER appuser
-
-EXPOSE 8000
-CMD ["python", "-m", "app.main"]
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --locked
