@@ -5,15 +5,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from httpx import AsyncClient
 
-from app.prometheus.setup import setup_multiproc_dir
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 
-setup_multiproc_dir()
-
-from prometheus_client import REGISTRY, generate_latest, CONTENT_TYPE_LATEST
-from prometheus_client.multiprocess import MultiProcessCollector
-from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.prometheus.instrumentator import create_instrumentator
+from app.prometheus.exporter import build_registry
 
 from app.middleware.request_logger import RequestLoggerMiddleware
 
@@ -79,11 +75,9 @@ app.add_middleware(
 
 create_instrumentator(app)
 
-MultiProcessCollector(REGISTRY)
-
 @app.get("/metrics")
-def metrics():
-    return Response(generate_latest(REGISTRY), media_type=CONTENT_TYPE_LATEST)
+def metrics_endpoint():
+    return Response(generate_latest(build_registry()), media_type=CONTENT_TYPE_LATEST)
 
 app.include_router(
     server_router.router

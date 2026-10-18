@@ -4,20 +4,17 @@ import time
 from celery import Celery
 from celery.schedules import crontab
 from celery.signals import (
-    setup_logging, 
+    setup_logging as setup_logging_signal, 
     worker_shutdown,
     task_retry,
     task_postrun,
     task_prerun
 )
 
-from app.prometheus.setup import setup_multiproc_dir
-
-setup_multiproc_dir()
-
 from app.prometheus.metrics import (
     celery_task_duration_seconds, 
-    celery_task_retries_total
+    celery_task_retries_total,
+    celery_tasks_total
 )
 
 from app.db.redis import connect_to_sync_redis_client
@@ -61,19 +58,15 @@ _task_start_times: dict[str, float] = {}
 logger = logging.getLogger("task_queue.celery_app")
 
 
-@setup_logging.connect
+@setup_logging_signal.connect
 def configure_celery_logging(*args, **kwargs):
     setup_logging(settings.LOGGING_LEVEL)
-
-
-@task_retry.connect
-def on_task_retry(request, reason, *args, **kwargs):
-    celery_task_retries_total.labels(task_name=request.task).inc()
 
 
 @task_prerun.connect
 def on_task_prerun(task_id, task, *args, **kwargs):
     _task_start_times[task_id] = time.perf_counter()
+    celery_tasks_total.labels(task_name=task.name, status="started").inc()
 
 
 @task_postrun.connect
@@ -83,8 +76,19 @@ def on_task_postrun(task_id, task, retval, state, *args, **kwargs):
         celery_task_duration_seconds.labels(
             task_name=task.name
         ).observe(time.perf_counter() - started)
+        logger.info(f"ID: {task_id[:12]}\n Duration time: {time.perf_counter() - started}")
+
+    task_status = "success" if task.status == "SUCCESS" else "failed"
+    celery_tasks_total.labels(task_name=task.name, status=task_status).inc()
+
+
+@task_retry.connect
+def on_task_retry(request, reason, *args, **kwargs):
+    celery_task_retries_total.labels(task_name=request.task).inc()
+    logger.info(f"Retrying task...")
 
 
 @worker_shutdown.connect
 def on_worker_shutdown(*args, **kwargs):
+    logger.info("Shutting down worker")
     redis_client.close_conn()

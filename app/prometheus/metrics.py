@@ -1,4 +1,10 @@
-from prometheus_client import Gauge, Counter, Histogram
+from prometheus_client import Counter, Histogram
+
+celery_tasks_total = Counter(
+    "celery_tasks_total",
+    "Total number of Celery tasks.",
+    labelnames=("task_name", "status")
+)
 
 celery_task_duration_seconds = Histogram(
     "celery_task_duration_seconds",
@@ -9,5 +15,5 @@ celery_task_duration_seconds = Histogram(
 
 celery_task_retries_total = Counter(
     "celery_task_retries_total",
-    "Total number of task retries in Celery workers."
+    "Total number of celery task retries."
 )

@@ -1,9 +1,6 @@
 from fastapi import HTTPException, status
 
-# ----- Base ------
-
-class NotFoundError(Exception):
-    pass
+# ----- File ------
 
 class InvalidFileTypeError(Exception):
     pass

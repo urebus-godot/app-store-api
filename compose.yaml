@@ -1,11 +1,4 @@
 services:
-  prom-init:
-    image: alpine
-    user: root
-    volumes:
-      - prom_multiproc:/tmp/prom
-    command: sh -c "chown -R 1000:1000 /tmp/prom"
-
   db:
     image: postgres:16-alpine
     ports:
@@ -90,47 +83,6 @@ services:
     networks:
       - app_network
 
-  celery_worker:
-    build:
-      context: .
-    container_name: worker
-    volumes:
-      - type: bind
-        source: app
-        target: /src/app
-
-      - type: bind
-        source: prom_multiproc
-        target: /tmp/prom
-
-    restart: always
-    env_file:
-      - .env
-    depends_on:
-      - redis
-    command: celery -A app.task_queue.celery_app worker --loglevel=info --logfile=app/worker.log
-    networks:
-      - app_network
-    environment:
-      PROMETHEUS_MULTIPROC_DIR: /tmp/prom
-
-  celery_beat:
-    build:
-      context: .
-    container_name: beat
-    restart: unless-stopped
-    env_file:
-      - .env
-    volumes:
-      - type: bind
-        source: app
-        target: /src/app
-    depends_on:
-      - redis
-    command: celery -A app.task_queue.celery_app beat --loglevel=info
-    networks:
-      - app_network
-
   celery_flower:
     image: mher/flower:2.0
     container_name: flower
@@ -175,6 +127,46 @@ services:
     networks:
       - app_network
 
+  celery_worker:
+    user: "1000:1000"
+    build:
+      context: .
+    container_name: worker
+    volumes:
+      - type: bind
+        source: ./app
+        target: /src/app
+    
+      - prom:/tmp/prom
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    command: celery -A app.task_queue.celery_app worker --loglevel=info
+    networks:
+      - app_network
+    environment:
+      PROMETHEUS_MULTIPROC_DIR: /tmp/prom
+
+  celery_beat:
+    user: "1000:1000"
+    build:
+      context: .
+    container_name: beat
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - type: bind
+        source: ./app
+        target: /src/app
+    depends_on:
+      - redis
+    command: celery -A app.task_queue.celery_app beat --loglevel=info
+    networks:
+      - app_network
+
   web:
     container_name: web
     build:
@@ -190,16 +182,11 @@ services:
       - type: bind
         source: ./.env
         target: /src/.env
-  
-      - type: bind
-        source: prom_multiproc
-        target: /tmp/prom
 
+      - prom:/tmp/prom
     depends_on:
       pgbouncer:
         condition: service_healthy
-      prom-init:
-        condition: service_completed_successfully
     restart: unless-stopped
     env_file:
       - .env
@@ -233,4 +220,4 @@ volumes:
   redis_data:
   minio_data:
   grafana_data:
-  prom_multiproc:
+  prom:
