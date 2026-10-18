@@ -2,7 +2,7 @@ from prometheus_client import CollectorRegistry
 from prometheus_client.multiprocess import MultiProcessCollector
 from prometheus_client import REGISTRY as DEFAULT_REGISTRY
 
-from app.prometheus import metrics # noqa: F401
+from app.prometheus import metrics
 
 
 def build_registry() -> CollectorRegistry:

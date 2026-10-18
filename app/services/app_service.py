@@ -12,10 +12,15 @@ from app.core.exceptions import (
     no_rights_exception,
     user_not_found_exception
 )
+from app.prometheus.metrics import (
+    redis_cache_hits_total, 
+    redis_cache_misses_total, 
+    redis_operation_duration_seconds
+)
 
 from app.schemas.app import (
     AppRequest, AppUpdate, GameUpdate, GameResponseWithPublisher
-    )
+)
 from app.models.app import GameGenre, AppDB
 
 from app.services.media_service import MediaService
@@ -188,29 +193,31 @@ class AppService:
     ) -> list[GameResponseWithPublisher]:
         cached_games = await self.redis.get("top_games_cache")
 
-        if cached_games is None:
-            games = await self.app_repo.get_top_games(skip, limit)
+        if cached_games is not None:
+            logger.info("Returning games from cache")
             response_games = [
-                (GameResponseWithPublisher
-                .model_validate(game)
-                .model_dump(mode='json'))
-                for game in games
+                GameResponseWithPublisher.model_validate_json(json.dumps(game_json))
+                for game_json in json.loads(cached_games)
             ]
-            json_games = json.dumps(response_games)
-            await self.redis.set(
-                name="top_games_cache", 
-                value=json_games,
-                ex=settings.CACHE_TTL_SECONDS
-            )
-            logger.info("Returning games from db")
-            return response_games
-
-        logger.info("Returning games from cache")
+            redis_cache_hits_total.labels(endpoint="/games/top").inc()
+            return response_games[skip : skip + limit]
+        
+        games = await self.app_repo.get_top_games(skip, limit)
         response_games = [
-            GameResponseWithPublisher.model_validate_json(json.dumps(game_json))
-            for game_json in json.loads(cached_games)
+            (GameResponseWithPublisher
+            .model_validate(game)
+            .model_dump(mode='json'))
+            for game in games
         ]
-        return response_games[skip : skip + limit]
+        json_games = json.dumps(response_games)
+        await self.redis.set(
+            name="top_games_cache", 
+            value=json_games,
+            ex=settings.CACHE_TTL_SECONDS
+        )
+        logger.info("Returning games from db")
+        redis_cache_misses_total.labels(endpoint="/games/top").inc()
+        return response_games
 
     async def get_top_games_genre(
         self, genre: Optional[GameGenre], 

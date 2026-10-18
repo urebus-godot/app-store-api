@@ -133,10 +133,7 @@ services:
       context: .
     container_name: worker
     volumes:
-      - type: bind
-        source: ./app
-        target: /src/app
-    
+      - ./app:/app/app
       - prom:/tmp/prom
     restart: unless-stopped
     env_file:
@@ -158,9 +155,7 @@ services:
     env_file:
       - .env
     volumes:
-      - type: bind
-        source: ./app
-        target: /src/app
+      - ./app:/app/app
     depends_on:
       - redis
     command: celery -A app.task_queue.celery_app beat --loglevel=info -s /tmp/celerybeat-schedule
@@ -175,14 +170,7 @@ services:
       - "8000"
     user: "1000:1000"
     volumes:
-      - type: bind
-        source: ./app
-        target: /src/app
-
-      - type: bind
-        source: ./.env
-        target: /src/.env
-
+      - ./app:/app/app
       - prom:/tmp/prom
     depends_on:
       pgbouncer:
@@ -192,6 +180,7 @@ services:
       - .env
     environment:
       PROMETHEUS_MULTIPROC_DIR: /tmp/prom
+      WATCHFILES_FORCE_POLLING: true
     command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*
     networks:
       - app_network

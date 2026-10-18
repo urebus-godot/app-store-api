@@ -7,7 +7,6 @@ from httpx import AsyncClient
 
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 
-
 from app.prometheus.instrumentator import create_instrumentator
 from app.prometheus.exporter import build_registry
 
@@ -77,7 +76,10 @@ create_instrumentator(app)
 
 @app.get("/metrics")
 def metrics_endpoint():
-    return Response(generate_latest(build_registry()), media_type=CONTENT_TYPE_LATEST)
+    return Response(
+        generate_latest(build_registry()), 
+        media_type=CONTENT_TYPE_LATEST
+    )
 
 app.include_router(
     server_router.router

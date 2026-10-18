@@ -6,10 +6,15 @@ import logging
 from redis.asyncio import Redis
 from fastapi import BackgroundTasks, status, HTTPException
 
-from app.uow.protocol import UnitOfWork
 from app.utils.email_send import send_email
-
 from app.utils.time import get_time_string
+
+from app.prometheus.metrics import (
+    redis_operation_duration_seconds,
+    redis_cache_misses_total,
+    redis_cache_hits_total
+)
+
 from app.core.config import settings
 from app.core.exceptions import (
     insufficient_funds_exception,
@@ -20,6 +25,7 @@ from app.core.exceptions import (
     app_not_found_exception,
     no_app_archive_exception
 )
+from app.uow.protocol import UnitOfWork
 
 from app.services.app_service import AppService
 from app.services.user_service import UserService
@@ -70,6 +76,8 @@ class PurchaseService:
 
         if cached_cart is not None:
             cart = CartResponse.model_validate_json(cached_cart)
+            redis_cache_hits_total.labels(endpoint="/cart/my").inc()
+            logger.info("Hit Cache!")
             return cart
 
         async with self.uow:
@@ -83,12 +91,13 @@ class PurchaseService:
             cart = CartResponse.model_validate(cart)
             cart.total_price = total_price
 
-            await self.redis.set(
-                name=f"cart_cache:{user_id}",
-                value=cart.model_dump_json(),
-                ex=settings.CACHE_TTL_SECONDS,
-            )
-
+        await self.redis.set(
+            name=f"cart_cache:{user_id}",
+            value=cart.model_dump_json(),
+            ex=settings.CACHE_TTL_SECONDS,
+        )
+        redis_cache_misses_total.labels(endpoint="/cart/my").inc()
+        logger.info("Miss Cache!")
         return cart
 
     async def get_purchase_history(

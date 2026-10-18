@@ -7,7 +7,7 @@ def create_instrumentator(app: FastAPI) -> Instrumentator:
         should_ignore_untemplated=True,
         excluded_handlers=["/metrics", "/live", "/ready"],
     )
-    instrumentator.instrument(app).expose(app, endpoint="/metrics")
+    instrumentator.instrument(app)#.expose(app)
     instrumentator.add(
         metrics.latency(
             buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)

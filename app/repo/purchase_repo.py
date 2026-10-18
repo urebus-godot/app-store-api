@@ -121,7 +121,6 @@ class PurchaseRepository:
         await self.session.delete(item)
 
     async def delete_cart(
-        self, user_id: UUID
+        self, cart: CartDB
     ) -> None:
-        stmt = delete(CartDB).where(CartDB.user_id == user_id)
-        await self.session.exec(stmt)
+        await self.session.delete(cart)

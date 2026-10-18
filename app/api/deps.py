@@ -18,6 +18,8 @@ from fastapi.security import OAuth2PasswordBearer
 from app.db.postgres import get_session, session_factory
 from app.db.redis import get_redis
 
+from app.prometheus.metrics import redis_rate_limiter_rejections_total
+
 from app.core.exceptions import (
     no_rights_exception,
     invalid_token_payload_exception,
@@ -164,6 +166,10 @@ async def rate_limit(
     response: Response,
     user_id: Optional[UUID] = Depends(get_current_user_id_optionally),
 ):
+    request_url_path = (
+        request.url.path[7:] 
+        if request.url.path.startswith("/api") 
+        else request.url.path)
     if user_id is None:
         ip_result = await rate_limiter.check(
             request.client.host,
@@ -172,6 +178,9 @@ async def rate_limit(
         response.headers["X-RateLimit-Remaining"] = (
             str(ip_result.remaining_requests))
         if not ip_result.allowed:
+            redis_rate_limiter_rejections_total.labels(
+                endpoint=request_url_path, method=request.method, scope="ip"
+            ).inc()
             raise too_many_requests_exception
     else:
         user_result = await rate_limiter.check(
@@ -183,6 +192,9 @@ async def rate_limit(
         response.headers["X-RateLimit-Remaining"] = (
             str(user_result.remaining_requests))
         if not user_result.allowed:
+            redis_rate_limiter_rejections_total.labels(
+                endpoint=request_url_path, method=request.method, scope="user"
+            ).inc()
             raise too_many_requests_exception
 
  
