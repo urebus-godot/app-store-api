@@ -124,3 +124,4 @@ ruff check .
 - Добавить проверку MinIO в /ready эндпоинте
 - Добавить индексы к внешним ключам таблиц (Foreign key)
 - Добавить health check при запуске Redis в compose.yaml
+- Проброс request_id в Websocket эндпоинте

@@ -163,7 +163,7 @@ services:
         target: /src/app
     depends_on:
       - redis
-    command: celery -A app.task_queue.celery_app beat --loglevel=info
+    command: celery -A app.task_queue.celery_app beat --loglevel=info -s /tmp/celerybeat-schedule
     networks:
       - app_network
 
