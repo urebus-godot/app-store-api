@@ -5,7 +5,9 @@ from uuid import UUID
 from decimal import Decimal
 
 from sqlmodel import SQLModel, Field
-from pydantic import ConfigDict, TypeAdapter, field_validator
+from pydantic import (
+    ConfigDict, field_validator, field_serializer
+)
 
 from app.base_models.app import BaseApp, GameGenre, AppCategory
 from app.core.config import settings
@@ -24,11 +26,14 @@ class AppResponse(BaseApp):
     id: UUID
     category: AppCategory = AppCategory.APPLICATION
     published_at: datetime
-    rating: Optional[float] = Field(default=None, gt=0.0, le=5.0)
+    rating: float = Field(default=0.0, ge=0.0, le=5.0)
     times_purchased: int = Field(ge=0)
 
     model_config = ConfigDict(from_attributes=True)
 
+    @field_serializer("rating")
+    def serialize_rating(self, val: Decimal) -> float:
+        return round(val, 1)
 
 class AppResponseWithPublisher(AppResponse):
     publisher: "PublisherResponse"
@@ -78,4 +83,4 @@ class GameResponseWithPublisher(GameResponse):
     publisher: "PublisherResponse"
 
 
-game_list_adapter = TypeAdapter(list[GameResponseWithPublisher])
+#game_list_adapter = TypeAdapter(list[GameResponseWithPublisher])

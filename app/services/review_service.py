@@ -8,7 +8,7 @@ from app.core.exceptions import (
     no_rights_exception,
     app_not_purchased_exception,
     app_not_found_exception
-    )
+)
 
 from app.schemas.review import ReviewRequest, ReviewUpdate
 from app.models.review import ReviewDB
@@ -18,7 +18,6 @@ from app.repo.review_repo import ReviewRepository
 from app.repo.app_repo import AppRepository
 
 from app.uow.protocol import UnitOfWork
-from app.task_queue.tasks.db_tasks import update_app_rating
 
 
 class ReviewService:
@@ -67,11 +66,10 @@ class ReviewService:
             review = await self.uow.review_repo.create_review(
                 data, user_id, app_id
             )
+            await self.uow.review_repo.update_app_rating(app_id)
             await self.uow.commit()
  
-        update_app_rating.delay(str(app_id))
         await self.redis.delete("top_games_cache")
-
         return review
 
     async def update_review(
@@ -96,12 +94,14 @@ class ReviewService:
                 del data["rating"]
 
             review.sqlmodel_update(data)
+
+            if old_rating != review.rating:
+                await self.uow.review_repo.update_app_rating(review.app_id)
+            
+    
             await self.uow.commit()
 
-        if old_rating != review.rating:
-            update_app_rating.delay(str(review.app_id))
-            await self.redis.delete("top_games_cache")
-
+        await self.redis.delete("top_games_cache")
         return review
 
     async def get_app_reviews(
@@ -141,8 +141,7 @@ class ReviewService:
                 raise no_rights_exception
 
             await self.uow.delete(review)
+            await self.uow.review_repo.update_app_rating(review.app_id)
             await self.uow.commit()
-            
-        app_id = str(review.app_id)
-        update_app_rating.delay(app_id)
+
         await self.redis.delete("top_games_cache")

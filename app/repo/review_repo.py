@@ -2,9 +2,10 @@ from uuid import UUID
 from typing import Optional
 
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select
+from sqlmodel import select, func, update
 
 from app.models.review import ReviewDB
+from app.models.app import AppDB
 from app.schemas.review import ReviewRequest
 
 
@@ -73,3 +74,25 @@ class ReviewRepository:
             .order_by(ReviewDB.created_at.desc())
         )
         return user_reviews
+
+    async def update_app_rating(
+        self, app_id: UUID
+    ) -> None:
+        select_stmt = select(
+            func.coalesce(
+                func.round(func.avg(ReviewDB.rating), 2), 
+                Decimal("0.00")
+            ),
+            func.count(ReviewDB.app_id)
+        ).where(ReviewDB.app_id == app_id)
+        avg_rating, reviews_count = await self.session.exec(select_stmt).all()
+
+        upd_stmt = (
+            update(AppDB)
+            .where(AppDB.id == app_id)
+            .values(
+                rating=avg_rating,
+                reviews_count=reviews_count
+            )
+        )
+        await self.session.exec(upd_stmt)

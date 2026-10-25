@@ -88,7 +88,7 @@ class AppService:
 
             await self.uow.commit()
 
-        await self.redis.delete("top_games_cache")
+        await self.redis.delete("v1:games:top")
         return app
 
     async def get_app(self, id: UUID) -> AppDB:
@@ -191,17 +191,20 @@ class AppService:
         self, 
         skip: int, limit: int
     ) -> list[GameResponseWithPublisher]:
-        cached_games = await self.redis.get("top_games_cache")
+        try:
+            cached_games = await self.redis.get("v1:games:top")
+        except:
+            logger.error("Redis `get` method failed")
 
         if cached_games is not None:
-            logger.info("Returning games from cache")
             response_games = [
-                GameResponseWithPublisher.model_validate_json(json.dumps(game_json))
-                for game_json in json.loads(cached_games)
+                GameResponseWithPublisher.model_validate(game_data)
+                for game_data in json.loads(cached_games)
             ]
             redis_cache_hits_total.labels(endpoint="/games/top").inc()
             return response_games[skip : skip + limit]
-        
+
+        redis_cache_misses_total.labels(endpoint="/games/top").inc()
         games = await self.app_repo.get_top_games(skip, limit)
         response_games = [
             (GameResponseWithPublisher
@@ -210,13 +213,14 @@ class AppService:
             for game in games
         ]
         json_games = json.dumps(response_games)
-        await self.redis.set(
-            name="top_games_cache", 
-            value=json_games,
-            ex=settings.CACHE_TTL_SECONDS
-        )
-        logger.info("Returning games from db")
-        redis_cache_misses_total.labels(endpoint="/games/top").inc()
+        try:
+            await self.redis.set(
+                name="v1:games:top", 
+                value=json_games,
+                ex=settings.CACHE_TTL_SECONDS
+            )
+        except:
+            logger.error("Redis `set` method failed")
         return response_games
 
     async def get_top_games_genre(
@@ -261,7 +265,7 @@ class AppService:
             if app.publisher_id != user_id:
                 raise no_rights_exception
 
-            await self.redis.delete("top_games_cache")
+            await self.redis.delete("v1:games:top")
             await self.delete_app_with_its_files(app, self.uow)
             await self.uow.commit()
 
@@ -278,4 +282,4 @@ class AppService:
             logger.info(f"Deleting app: {app.title}")
             await self.delete_app_with_its_files(app, uow)
 
-        await self.redis.delete("top_games_cache")
+        await self.redis.delete("v1:games:top")

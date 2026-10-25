@@ -169,7 +169,8 @@ async def rate_limit(
     request_url_path = (
         request.url.path[7:] 
         if request.url.path.startswith("/api") 
-        else request.url.path)
+        else request.url.path
+    )
     if user_id is None:
         ip_result = await rate_limiter.check(
             request.client.host,

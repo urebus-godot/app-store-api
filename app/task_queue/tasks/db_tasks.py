@@ -28,6 +28,7 @@ SessionLocal = sessionmaker(
 
 @celery_app.task(name="db_tasks.update_app_rating")
 def update_app_rating(app_id: str) -> None:
+    return
     with SessionLocal() as session:
         app_id = UUID(app_id)
         result = session.exec(

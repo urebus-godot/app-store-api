@@ -12,6 +12,7 @@ from app.core.exceptions import (
     InvalidTokenError, 
     InvalidTokenPayloadError
 )
+from app.prometheus.metrics import websocket_active_connections
 from app.schemas.discussion import (
     DiscussionRequest,
     DiscussionResponse,
@@ -54,12 +55,13 @@ async def ws_discussion(
     discussion_manager: DiscussionManagerDep,
     secret_key: AccessSecretKeyDep
 ) -> None:
-    """WebSockets эндпоинт для обмена сообщения в обсуждении 
+    """WebSocket-эндпоинт для обмена сообщения в обсуждении 
     в реальном времени. Первое сообщение должно содержать токен доступа
     для аутентификации пользователя.
     
     **Возвращает**: None"""
     await websocket.accept()
+    websocket_active_connections.labels(endpoint="/ws/discussions").inc()
     try:
         logger.info("Awaiting data from websocket...")
         ws_data = await asyncio.wait_for(
@@ -83,6 +85,7 @@ async def ws_discussion(
                 code=status.WS_1003_UNSUPPORTED_DATA,
                 reason="User not found"
             )
+            websocket_active_connections.labels(endpoint="/ws/discussions").dec()
 
         logger.info("Validated token from user")
     except asyncio.TimeoutError:
@@ -90,12 +93,14 @@ async def ws_discussion(
             code=status.WS_1008_POLICY_VIOLATION,
             reason="Authentication timeout"
         )
+        websocket_active_connections.labels(endpoint="/ws/discussions").dec()
         return
     except (InvalidTokenError, InvalidTokenPayloadError):
         await websocket.close(
             code=status.WS_1008_POLICY_VIOLATION,
             reason="Invalid token"
         )
+        websocket_active_connections.labels(endpoint="/ws/discussions").dec()
         return
     except ValidationError as e:
         await websocket.send_json(
@@ -110,6 +115,7 @@ async def ws_discussion(
             code=status.WS_1003_UNSUPPORTED_DATA,
             reason="Discussion not found"
         )
+        websocket_active_connections.labels(endpoint="/ws/discussions").dec()
         return
     
     logger.info("Start connecting ws in the manager")
@@ -137,7 +143,7 @@ async def ws_discussion(
             logger.info("Published message")
             
     except WebSocketDisconnect:
-        pass
+        websocket_active_connections.labels(endpoint="/ws/discussions").dec()
     finally:
         await discussion_manager.disconnect(id, websocket)
 

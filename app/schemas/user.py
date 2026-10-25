@@ -89,6 +89,7 @@ class UserResponse(BaseUser):
 
 
 class PublisherResponse(BaseUser):
+    username: str
     id: UUID
 
     model_config = ConfigDict(from_attributes=True)

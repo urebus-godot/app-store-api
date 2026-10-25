@@ -1,4 +1,4 @@
-from prometheus_client import Counter, Histogram
+from prometheus_client import Counter, Histogram, Gauge
 
 # ------ Celery ------
 
@@ -20,14 +20,13 @@ celery_task_retries_total = Counter(
     "Total number of celery task retries."
 )
 
+celery_task_queue_length = Gauge(
+    "celery_task_queue_length",
+    "Total number of tasks in queue"
+) # Update later
+
 
 # ------ Redis ------
-
-redis_operation_duration_seconds = Histogram(
-    "redis_operation_duration_seconds",
-    "Execution time of an operation in Redis",
-    buckets=(0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60),
-) 
 
 redis_cache_hits_total = Counter(
     "redis_cache_hits_total",
@@ -46,3 +45,12 @@ redis_rate_limiter_rejections_total = Counter(
     "Total number of requests rejected by Redis rate limiter",
     labelnames=("endpoint", "method", "scope")
 ) 
+
+
+# ------ WebSocket ------
+
+websocket_active_connections = Gauge(
+    "websocket_active_connections",
+    "Total number of currently active connections",
+    labelnames=("endpoint",)
+)

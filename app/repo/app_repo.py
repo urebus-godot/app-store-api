@@ -13,7 +13,7 @@ from app.base_models.app import (
 )
 from app.schemas.app import AppRequest, GameRequest
 from app.models.purchase import PurchaseDB
-
+import redis
 
 logger = logging.getLogger("repo.app")
 
@@ -226,17 +226,19 @@ class AppRepository:
                 )
             .order_by(
                 AppDB.times_purchased.desc(),
-                AppDB.rating.desc()
+                AppDB.rating.desc(),
+                AppDB.reviews_count.desc()
             )
             .offset(skip).limit(limit)
             .options(*self.load_attrs)
-        )).all()
+            )
+        ).all()
 
         return games
 
     async def get_top_games(
         self,
-        skip: int, limit: int
+        #skip: int, limit: int
     ) -> list[AppDB]:
         games = (await self.session.exec(
             select(AppDB)
@@ -246,10 +248,12 @@ class AppRepository:
                 )
             .order_by(
                 AppDB.times_purchased.desc(),
-                AppDB.rating.desc()
+                AppDB.rating.desc(),
+                AppDB.reviews_count.desc()
             )
-            .offset(skip).limit(limit)
-            .options(*self.load_attrs)
+            .limit(100)
+            .options(AppDB.publisher)
         )).all()
 
         return games
+

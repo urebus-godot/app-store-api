@@ -1,10 +1,11 @@
 from typing import Optional
 from datetime import datetime, timezone
+from decimal import Decimal
 
 from uuid import UUID, uuid4
 
 from sqlalchemy.dialects.postgresql import ARRAY, TIMESTAMP
-from sqlalchemy import String, Index
+from sqlalchemy import String, Index, Numeric, text, CheckConstraint
 from sqlmodel import Field, Relationship
 
 from app.models.purchase import PurchaseDB
@@ -19,18 +20,23 @@ class AppDB(BaseApp, table=True):
     published_at: datetime = Field(
         sa_type=TIMESTAMP(timezone=True),
         default_factory=lambda: datetime.now(timezone.utc)
-        )
+    )
     genre: Optional[GameGenre] = Field(default=None, nullable=True)
     category: AppCategory = AppCategory.APPLICATION
     
     keywords: Optional[list[str]] = Field(
         default=None, sa_type=ARRAY(String)
-        )
+    )
 
-    rating: Optional[float] = Field(
-        default=None, 
-        ge=1.0, le=5.0
-        )
+    rating: Decimal = Field(
+        default=Decimal("0.00"),
+        sa_column_kwargs={
+            "type_": Numeric(3, 2),
+            "nullable": False,
+            "server_default": text("0.00"),
+        },
+    )
+    reviews_count: int = Field(default=0, ge=0)
     times_purchased: int = Field(default=0, ge=0)
 
     publisher_id: UUID = Field(foreign_key="users.id", ondelete="CASCADE")
@@ -64,4 +70,7 @@ class AppDB(BaseApp, table=True):
             postgresql_using="gin",
             postgresql_where=("public = true")
         ),
+        CheckConstraint(
+            "rating >= 0 AND rating <= 5", name="ck_game_rating_range"
+        )
     )
