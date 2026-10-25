@@ -11,7 +11,8 @@ from fastapi import (
 
 from app.api.deps import (
     UserIdDep,
-    SkipLimitParams,
+    SkipLimitParams, 
+    SkipLimitParamsForTopGames,
     PublisherDep,
     AppServiceDep,
     rate_limit
@@ -199,7 +200,7 @@ async def get_games_with_genre(
 )
 async def get_top_games(
     app_service: AppServiceDep,
-    skip_limit: SkipLimitParams,
+    skip_limit: SkipLimitParamsForTopGames,
     genre: Optional[GameGenre] = Query(default=None)
 ) -> list[GameResponseWithPublisher]:
     """Находит игры в базе данных, 

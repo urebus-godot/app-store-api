@@ -215,7 +215,7 @@ class AppRepository:
     async def get_top_games_genre(
         self, 
         genre: GameGenre,
-        skip: int = 0, limit: int = 10
+        limit: int
     ) -> list[AppDB]:
         games = (await self.session.exec(
             select(AppDB)
@@ -229,16 +229,15 @@ class AppRepository:
                 AppDB.rating.desc(),
                 AppDB.reviews_count.desc()
             )
-            .offset(skip).limit(limit)
-            .options(*self.load_attrs)
+            .limit(limit)
+            .options(selectinload(AppDB.publisher))
             )
         ).all()
 
         return games
 
     async def get_top_games(
-        self,
-        #skip: int, limit: int
+        self, limit: int
     ) -> list[AppDB]:
         games = (await self.session.exec(
             select(AppDB)
@@ -251,8 +250,8 @@ class AppRepository:
                 AppDB.rating.desc(),
                 AppDB.reviews_count.desc()
             )
-            .limit(100)
-            .options(AppDB.publisher)
+            .limit(limit)
+            .options(selectinload(AppDB.publisher))
         )).all()
 
         return games

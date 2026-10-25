@@ -4,7 +4,10 @@ import json
 import logging
 
 from redis.asyncio import Redis
+from redis import RedisError
+
 from fastapi import HTTPException, status
+from pydantic import ValidationError
 
 from app.core.config import settings
 from app.core.exceptions import (
@@ -14,8 +17,7 @@ from app.core.exceptions import (
 )
 from app.prometheus.metrics import (
     redis_cache_hits_total, 
-    redis_cache_misses_total, 
-    redis_operation_duration_seconds
+    redis_cache_misses_total
 )
 
 from app.schemas.app import (
@@ -44,7 +46,7 @@ class AppService:
         user_repo: UserRepository,
         uow: UnitOfWork,
         storage: ObjectStorage,
-        redis: Redis
+        redis: Redis,
     ):
         self.uow = uow
         self.storage = storage
@@ -88,7 +90,7 @@ class AppService:
 
             await self.uow.commit()
 
-        await self.redis.delete("v1:games:top")
+        await self.redis.delete(settings.TOP_GAMES_CACHE_KEY)
         return app
 
     async def get_app(self, id: UUID) -> AppDB:
@@ -192,43 +194,49 @@ class AppService:
         skip: int, limit: int
     ) -> list[GameResponseWithPublisher]:
         try:
-            cached_games = await self.redis.get("v1:games:top")
-        except:
-            logger.error("Redis `get` method failed")
+            cached_games = await self.redis.get(settings.TOP_GAMES_CACHE_KEY)
+        except RedisError:
+            logger.error("Redis 'get' method failed", exc_info=True)
+            cached_games = None
 
         if cached_games is not None:
-            response_games = [
-                GameResponseWithPublisher.model_validate(game_data)
-                for game_data in json.loads(cached_games)
-            ]
-            redis_cache_hits_total.labels(endpoint="/games/top").inc()
-            return response_games[skip : skip + limit]
+            try:
+                response_games = [
+                    GameResponseWithPublisher.model_validate(game_data)
+                    for game_data in json.loads(cached_games)
+                ]
+                redis_cache_hits_total.labels(endpoint="/games/top").inc()
+                return response_games[skip : skip + limit]
+            except ValidationError:
+                redis_cache_misses_total.labels(endpoint="/games/top").inc()
 
         redis_cache_misses_total.labels(endpoint="/games/top").inc()
-        games = await self.app_repo.get_top_games(skip, limit)
+        games = await self.app_repo.get_top_games(limit=settings.TOP_GAMES_LIMIT )
         response_games = [
             (GameResponseWithPublisher
             .model_validate(game)
-            .model_dump(mode='json'))
-            for game in games
+            for game in games)
         ]
-        json_games = json.dumps(response_games)
         try:
+            json_games = json.dumps(
+                [game.model_dump(mode="json") for game in response_games]
+            )
             await self.redis.set(
-                name="v1:games:top", 
+                name=settings.TOP_GAMES_CACHE_KEY, 
                 value=json_games,
                 ex=settings.CACHE_TTL_SECONDS
             )
-        except:
-            logger.error("Redis `set` method failed")
-        return response_games
+        except RedisError:
+            logger.error("Redis 'set' method failed", exc_info=True)
+
+        return response_games[skip : skip + limit]
 
     async def get_top_games_genre(
         self, genre: Optional[GameGenre], 
         skip: int, limit: int
     ) -> list[AppDB]:
         games = await self.app_repo.get_top_games_genre(
-            genre, skip, limit
+            genre, settings.TOP_GAMES_LIMIT 
         )
         return games
 
@@ -265,7 +273,7 @@ class AppService:
             if app.publisher_id != user_id:
                 raise no_rights_exception
 
-            await self.redis.delete("v1:games:top")
+            await self.redis.delete(settings.TOP_GAMES_CACHE_KEY)
             await self.delete_app_with_its_files(app, self.uow)
             await self.uow.commit()
 
@@ -282,4 +290,4 @@ class AppService:
             logger.info(f"Deleting app: {app.title}")
             await self.delete_app_with_its_files(app, uow)
 
-        await self.redis.delete("v1:games:top")
+        await self.redis.delete(settings.TOP_GAMES_CACHE_KEY)

@@ -85,10 +85,4 @@ def on_task_postrun(task_id, task, retval, state, *args, **kwargs):
 @task_retry.connect
 def on_task_retry(request, reason, *args, **kwargs):
     celery_task_retries_total.labels(task_name=request.task).inc()
-    logger.info(f"Retrying task...")
-
-
-@worker_shutdown.connect
-def on_worker_shutdown(*args, **kwargs):
-    logger.info("Shutting down worker")
-    redis_client.close_conn()
+    logger.info("Retrying task...")

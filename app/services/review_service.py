@@ -3,13 +3,13 @@ from uuid import UUID
 from redis.asyncio import Redis
 from fastapi import HTTPException, status
 
+from app.core.config import settings
 from app.core.exceptions import (
     review_not_found_exception, 
     no_rights_exception,
     app_not_purchased_exception,
     app_not_found_exception
 )
-
 from app.schemas.review import ReviewRequest, ReviewUpdate
 from app.models.review import ReviewDB
 
@@ -69,7 +69,7 @@ class ReviewService:
             await self.uow.review_repo.update_app_rating(app_id)
             await self.uow.commit()
  
-        await self.redis.delete("top_games_cache")
+        await self.redis.delete(settings.TOP_GAMES_CACHE_KEY)
         return review
 
     async def update_review(
@@ -101,7 +101,7 @@ class ReviewService:
     
             await self.uow.commit()
 
-        await self.redis.delete("top_games_cache")
+        await self.redis.delete(settings.TOP_GAMES_CACHE_KEY)
         return review
 
     async def get_app_reviews(
@@ -144,4 +144,4 @@ class ReviewService:
             await self.uow.review_repo.update_app_rating(review.app_id)
             await self.uow.commit()
 
-        await self.redis.delete("top_games_cache")
+        await self.redis.delete(settings.TOP_GAMES_CACHE_KEY)

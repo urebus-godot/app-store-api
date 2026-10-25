@@ -54,6 +54,9 @@ class PurchaseService:
         self.uow = uow
         self.purchase_repo = purchase_repo
 
+    def get_cart_cache_key(user_id: UUID) -> str:
+        return settings.CART_CACHE_KEY.format(user_id=user_id.hex)
+
     async def get_or_create_cart(
         self, user_id: UUID, 
     ) -> CartDB:
@@ -72,7 +75,7 @@ class PurchaseService:
     async def get_cart_for_user(
         self, user_id: UUID, 
     ) -> CartResponse:
-        cached_cart = await self.redis.get(f"cart_cache:{user_id}")
+        cached_cart = await self.redis.get(self.get_cart_cache_key(user_id))
 
         if cached_cart is not None:
             cart = CartResponse.model_validate_json(cached_cart)
@@ -92,7 +95,7 @@ class PurchaseService:
             cart.total_price = total_price
 
         await self.redis.set(
-            name=f"cart_cache:{user_id}",
+            name=self.get_cart_cache_key(user_id),
             value=cart.model_dump_json(),
             ex=settings.CACHE_TTL_SECONDS,
         )
@@ -140,7 +143,7 @@ class PurchaseService:
             if app.archive_key is None:
                 raise no_app_archive_exception
 
-            await self.redis.delete(f"cart_cache:{user_id}")
+            await self.redis.delete(self.get_cart_cache_key(user_id))
 
             cart_item = await self.uow.purchase_repo.add_app_to_cart(
                 user_cart, app_id
@@ -243,7 +246,7 @@ class PurchaseService:
             if cart_item is None:
                 raise app_not_in_cart_exception
 
-            await self.redis.delete(f"cart_cache:{user_id}")
+            await self.redis.delete(self.get_cart_cache_key(user_id))
             await self.uow.purchase_repo.remove_item_from_cart(cart_item)
             await self.uow.commit()
 
@@ -261,6 +264,6 @@ class PurchaseService:
             if cart is None:
                 raise empty_cart_exception
             
-            await self.redis.delete(f"cart_cache:{user_id}")
+            await self.redis.delete(self.get_cart_cache_key(user_id))
             await self.uow.purchase_repo.delete_cart(cart)
             await self.uow.commit()

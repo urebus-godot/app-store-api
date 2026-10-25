@@ -29,6 +29,7 @@ from app.api.v1 import (
     finance_router,
     server_router
 )
+from app.db.postgres import engine
 from app.db.redis import connect_to_redis_client
 
 setup_logging(settings.LOGGING_LEVEL)
@@ -48,6 +49,7 @@ async def lifespan(app: FastAPI):
     
     await app.state.redis_client.close_conn()
     await app.state.conversion_api_client.aclose()
+    await engine.dispose()
 
 app = FastAPI(
     title=settings.API_TITLE,

@@ -85,10 +85,16 @@ def skip_limit_params(
 ) -> tuple[int, int]:
     return skip, limit
 
+def skip_limit_params_for_top_games(
+    skip: Annotated[int, Query(ge=0, le=100)] = 0,
+    limit: Annotated[int, Query(gt=0, le=100)] = 10,
+) -> tuple[int, int]:
+    """Skip is limited to 100"""
+    return skip, limit
+
 
 def get_refresh_secret_key() -> str:
     return settings.REFRESH_SECRET_KEY
-
 
 def get_access_secret_key() -> str:
     return settings.ACCESS_SECRET_KEY
@@ -406,6 +412,10 @@ AdminDep = Annotated[UserDB, Depends(require_role(UserRole.ADMIN))]
 TokenDep = Annotated[str, Depends(oauth_scheme)]
 
 SkipLimitParams = Annotated[tuple[int, int], Depends(skip_limit_params)]
+SkipLimitParamsForTopGames = Annotated[
+    tuple[int, int], 
+    Depends(skip_limit_params_for_top_games)
+]
 
 UserServiceDep = Annotated[UserService, Depends(get_user_service)]
 UserRepoDep = Annotated[UserRepository, Depends(get_user_repo)]
@@ -424,7 +434,7 @@ PurchaseRepoDep = Annotated[PurchaseRepository, Depends(get_purchase_repo)]
 
 AppArchiveServiceDep = Annotated[
     AppArchiveService, Depends(get_app_archive_service)
-    ]
+]
 MediaServiceDep = Annotated[MediaService, Depends(get_media_service)]
 
 UnitOfWorkDep = Annotated[OrmUnitOfWork, Depends(get_unit_of_work)]

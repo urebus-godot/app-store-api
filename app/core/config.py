@@ -10,6 +10,7 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
+    # Инфомация про API
     API_TITLE: str = "App Store API"
     API_DESC: str = """RESTful API for an online store 
         selling games and apps."""
@@ -18,6 +19,7 @@ class Settings(BaseSettings):
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8000
 
+    # Адреса для подключениям к сервисам
     DB_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/db"
     TEST_DB_URL: str = (
         "postgresql+asyncpg://postgres:postgres@localhost:5432/test_db"
@@ -35,17 +37,24 @@ class Settings(BaseSettings):
         "postgresql+psycopg://postgres:postgres@localhost:5432/test_db"
     )
 
+    # Rate Limiter
     WINDOW_SECONDS: int = 60
     REQUEST_LIMIT_IP: int = 15
     REQUEST_LIMIT_USER: int = 20
 
+    # Кэширование
     CACHE_TTL_SECONDS: int = 3600
+
+    # Название ключей кэша
+    TOP_GAMES_CACHE_KEY: str = "games:all:top"
+    CART_CACHE_KEY: str = "users:{user_id}:cart"
 
     DB_OUTPUT: bool = False
     DEBUG: bool = True
 
     ADMIN_PASSWORD: str = "secret"
 
+    # JWT-аутентификация
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15 * 100
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
@@ -63,6 +72,9 @@ class Settings(BaseSettings):
 
     WS_AUTH_TIMEOUT: float = 5.0
 
+    # Валидация Pydantic
+    TOP_GAMES_LIMIT: int = 400
+
     MIN_PASSWORD_LEN: int = 8
 
     MIN_TITLE_LEN: int = 3
@@ -73,6 +85,7 @@ class Settings(BaseSettings):
 
     LOGGING_LEVEL: str = "INFO"
 
+    # MinIO
     MINIO_ACCESS_KEY: str = "access-key"
     MINIO_SECRET_KEY: str = "secret-key"
     MINIO_INTERNAL_ENDPOINT: str = "http://minio:9000"
@@ -94,7 +107,7 @@ class Settings(BaseSettings):
         APP_ICON_BUCKET: True, 
         USER_AVATAR_BUCKET: True
     }
-    "Key is bucket's name, value determines whether it is public"
+    "Ключ - имя бакета; значение определяет, публичный ли бакет."
  
     THUMBNAIL_SIZE: tuple[int, int] = (128, 128)
     MEDIUM_SIZE: tuple[int, int] = (640, 640)
@@ -109,6 +122,7 @@ class Settings(BaseSettings):
     MAX_AVATAR_ICON_SIZE_MB: int = 5
     MAX_COVER_SIZE_MB: int = 10
 
+    # Отправка email
     MAIL_USERNAME: str = "username"
     MAIL_PASSWORD: str = "password"
     MAIL_FROM: str = "username@gmail.com"
@@ -120,6 +134,7 @@ class Settings(BaseSettings):
     USE_CREDENTIALS: bool = True
     VALIDATE_CERTS: bool = True
 
+    # HTML-шаблоны для email
     RECEIPT_TEMPLATE: str = """
     <body>
         <h3>
