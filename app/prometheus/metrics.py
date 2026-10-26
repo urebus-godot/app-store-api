@@ -22,7 +22,8 @@ celery_task_retries_total = Counter(
 
 celery_task_queue_length = Gauge(
     "celery_task_queue_length",
-    "Total number of tasks in queue"
+    "Total number of tasks in queue",
+    labelnames=("queue_name")
 ) # Update later
 
 

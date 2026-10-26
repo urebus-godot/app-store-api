@@ -37,31 +37,51 @@
 ```
 ├── .github/workflows       # CI/CD
 ├── app/
-│   └── api/v1
-│       └── deps.py
-│───├─ base_models/         # Базовые модели SQLModel
-│   ├── core/               # Конфигурация, JWT аутентификация, логирование
-│   ├── db/                 # Соединение с PostgreSQL, Redis, Redis rate limiter
-│   ├── middleware/         # FastAPI middleware
-│   ├── models/             # Табличные модели SQLModel
-│   ├── repo/               # Взаимодействие с базой данных
-│   ├── schemas/            # Схемы SQLModel
-│   ├── services/           # Бизнес-логика
-│   ├── storage/            # Взаимодействие с хранилищем MinIO
-│   ├── task_queue/         # Конфигурация Celery и задачи
-│   ├── uow/                # Протокол и конкретный Unit of Work классы
-│   ├── utils/              # Вспомогательные функции (работа с датами, отправка email, перевод единиц измерения)
-│   ├── ws/                 # Менеджеры WebSockets соединений
-│   └── main.py             # Точка входа FastAPI
-├── migrations/             # Миграции Alembic
-├── nginx/                  # Конфигурация Nginx
-├── tests/                  # Тесты Pytest
-│   ├── api/                # Тесты эндпоинтов
-│   ├── unit/               # Тесты функций и разных фич
-│   └── conftest.py         # Общие фикстуры
-├── compose.yaml            # Сервисы для запуска API
-└── compose.test.yaml       # Сервисы для тестов
+│   ├── api/v1
+│   │  └── deps.py
+│   ├── base_models/         # Базовые модели SQLModel
+│   ├── core/                # Конфигурация, JWT аутентификация, логирование
+│   ├── db/                  # Соединение с PostgreSQL, Redis, Redis rate limiter
+│   ├── middleware/          # FastAPI middleware
+│   ├── models/              # Табличные модели SQLModel
+│   ├── repo/                # Взаимодействие с базой данных
+│   ├── schemas/             # Схемы SQLModel
+│   ├── services/            # Бизнес-логика
+│   ├── storage/             # Взаимодействие с хранилищем MinIO
+│   ├── task_queue/          # Конфигурация Celery и задачи
+│   ├── uow/                 # Протокол и конкретный Unit of Work классы
+│   ├── utils/               # Вспомогательные функции (работа с датами, отправка email, перевод единиц измерения)
+│   ├── ws/                  # Менеджеры WebSockets соединений
+│   └── main.py              # Точка входа FastAPI
+├── migrations/              # Миграции Alembic
+├── nginx/                   # Конфигурация Nginx
+├── tests/                   # Тесты Pytest
+│   ├── api/                 # Тесты эндпоинтов
+│   ├── unit/                # Тесты функций и разных фич
+│   └── conftest.py          # Общие фикстуры
+├── docker-compose.yml       # Сервисы для запуска API
+└── docker-compose.test.yml  # Сервисы для тестов
 ```
+
+## Переменные окружения
+
+| Переменная | Описание |
+|---|---|
+| `DB_URL` | адрес PostgreSQL |
+| `REDIS_URL` | адрес Redis |
+| `MINIO_ENDPOINT` / `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | доступ к MinIO |
+| `ACCESS_SECRET_KEY` / `REFRESH_SECRET_KEY` | секрет для подписи JWT access и refresh токена
+| `BROKER_URL` / `RESULT_BACKEND_URL` / `WORKER_DB_URL`| адрес брокера, бэкенда для хранения результатов задач, базы данных для Celery |
+| `ADMIN_PASSWORD` | пароль для доступа к роли администратора |
+
+## Метрики Prometheus
+
+| Метрика | Описание | Лейблы |
+|---|---|---|
+| `celery_tasks_total` | Общее число запущенных, завершённых задач Celery | "task_name" - название задачи, "status" - статус задачи ("started", "success", "failed") |
+| `celery_task_duration_seconds` | Распределение задач по длительности выполнения | "task_name" - название задачи |
+| `celery_task_retries_total` | Общее число ретраев задач Celery | - |
+| `celery_task_queue_length` | Длина очереди задач Celery | "queue_name" - название очереди |
 
 ## Быстрый старт
 
@@ -81,9 +101,10 @@ docker compose up --build
 После запуска:
 
 - API доступно на `https://localhost` (через Nginx, HTTP/2)
-- Документация Swagger: `/docs`
+- Документация Swagger: `/docs`, Redoc `/redoc`
 - Flower (мониторинг Celery): `http://localhost:5555`
 - MinIO веб-панель: `http://localhost:9001`
+- Grafana: `http//localhost:3000`
 
 ### Миграции
 
@@ -91,17 +112,6 @@ docker compose up --build
 alembic revision -m "Что изменилось в базе данных" --autogenerate
 alembic upgrade head
 ```
-
-## Переменные окружения
-
-| Переменная | Описание |
-|---|---|
-| `DB_URL` | адрес PostgreSQL |
-| `REDIS_URL` | адрес Redis |
-| `MINIO_ENDPOINT` / `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | доступ к MinIO ||
-| `ACCESS_SECRET_KEY` / `REFRESH_SECRET_KEY` | секрет для подписи JWT access и refresh токена
-| `BROKER_URL` / `RESULT_BACKEND_URL` / `WORKER_DB_URL`| адрес брокера, бэкенда для хранения результатов задач, базы данных для Celery |
-| `ADMIN_PASSWORD` | пароль для доступа к роли администратора |
 
 ## Тесты
 
@@ -126,3 +136,4 @@ ruff check .
 - Добавить health check при запуске Redis в compose.yaml
 - Проброс request_id в Websocket эндпоинте
 - Сделать код чище и однороднее
+- Добавить проброс RateLimiter-Remaining заголовка при исключении

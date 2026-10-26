@@ -10,11 +10,9 @@ from app.utils.email_send import send_email
 from app.utils.time import get_time_string
 
 from app.prometheus.metrics import (
-    redis_operation_duration_seconds,
     redis_cache_misses_total,
     redis_cache_hits_total
 )
-
 from app.core.config import settings
 from app.core.exceptions import (
     insufficient_funds_exception,
@@ -78,11 +76,11 @@ class PurchaseService:
         cached_cart = await self.redis.get(self.get_cart_cache_key(user_id))
 
         if cached_cart is not None:
-            cart = CartResponse.model_validate_json(cached_cart)
             redis_cache_hits_total.labels(endpoint="/cart/my").inc()
-            logger.info("Hit Cache!")
+            cart = CartResponse.model_validate_json(cached_cart)
             return cart
 
+        redis_cache_misses_total.labels(endpoint="/cart/my").inc()
         async with self.uow:
             cart = await self.uow.purchase_repo.get_cart(user_id)
 
@@ -90,7 +88,7 @@ class PurchaseService:
                 cart = await self.uow.purchase_repo.create_cart(user_id)
                 await self.uow.commit()
 
-            total_price = sum([item.app.price for item in cart.items])
+            total_price = sum(item.app.price for item in cart.items)
             cart = CartResponse.model_validate(cart)
             cart.total_price = total_price
 
@@ -99,8 +97,6 @@ class PurchaseService:
             value=cart.model_dump_json(),
             ex=settings.CACHE_TTL_SECONDS,
         )
-        redis_cache_misses_total.labels(endpoint="/cart/my").inc()
-        logger.info("Miss Cache!")
         return cart
 
     async def get_purchase_history(
