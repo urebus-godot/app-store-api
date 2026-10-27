@@ -5,7 +5,7 @@ from typing import Optional
 
 from sqlmodel import Field, Relationship
 from sqlalchemy.dialects.postgresql import ARRAY, TIMESTAMP, DATE
-from sqlalchemy import String
+from sqlalchemy import String, CheckConstraint
 
 from app.models.purchase import PurchaseDB
 from app.base_models.user import BaseUser, UserRole
@@ -15,15 +15,17 @@ from app.models.discussion import DiscussionDB
 class UserDB(BaseUser, table=True):
     __tablename__ = "users"
 
+    __table_args__ = (
+        CheckConstraint("balance >= 0", "balance_not_negative"),
+    )
+
     id: UUID = Field(
         default_factory=uuid4, primary_key=True
     )
-
     hashed_password: str
     roles: list["UserRole"] = Field(
         sa_type=ARRAY(String), default=[UserRole.USER]
     )
-
     registered_at: datetime = Field(
         sa_type=TIMESTAMP(timezone=True),
         default_factory=lambda: datetime.now(timezone.utc)
@@ -32,7 +34,6 @@ class UserDB(BaseUser, table=True):
         default=None,
         sa_type=DATE()
     )
-    
     balance: Decimal = Field(default=0, ge=0)
 
     pending_avatar_key: Optional[str] = None
@@ -42,7 +43,6 @@ class UserDB(BaseUser, table=True):
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
-
     purchased_apps: list["AppDB"] = Relationship(
         back_populates="users_purchased", link_model=PurchaseDB
     )
@@ -50,17 +50,14 @@ class UserDB(BaseUser, table=True):
         back_populates="publisher",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
-
     reviews: list["ReviewDB"] = Relationship(
         back_populates="author",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
-
     discussions: list["DiscussionDB"] = Relationship(
         back_populates="creator",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
-
     messages: list["MessageDB"] = Relationship(
         back_populates="author",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},

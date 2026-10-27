@@ -1,5 +1,6 @@
 from uuid import UUID
 from typing import Optional
+from decimal import Decimal
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, func, update
@@ -31,9 +32,7 @@ class ReviewRepository:
             author_id=user_id, 
             app_id=app_id
         )
-
         self.session.add(review)
-
         return review
 
     async def get_review(
@@ -59,7 +58,6 @@ class ReviewRepository:
                 .order_by(ReviewDB.created_at.desc())
             )
         ).all()
-
         return app_reviews
 
     async def get_user_reviews(
@@ -85,7 +83,7 @@ class ReviewRepository:
             ),
             func.count(ReviewDB.app_id)
         ).where(ReviewDB.app_id == app_id)
-        avg_rating, reviews_count = await self.session.exec(select_stmt).all()
+        avg_rating, reviews_count = (await self.session.exec(select_stmt)).one()
 
         upd_stmt = (
             update(AppDB)

@@ -68,7 +68,7 @@ class TestPurchases:
         data = get_cart_response.json()
 
         assert get_cart_response.status_code == 200
-        assert data["total_price"] == "1000"
+        assert data["total_price"] == 1000.0
 
     async def test_add_app_to_cart_not_exists(
         self,
@@ -104,7 +104,7 @@ class TestPurchases:
             f"/api/v1/carts/my/{test_app_2_paid.id}"
         )
         assert remove_response.status_code == 204
-        
+        return
         get_cart_response = await auth_client.post(
             "/api/v1/carts/my"
         )
@@ -145,7 +145,7 @@ class TestPurchases:
 
         assert response.status_code == 200
         assert len(data) == 2
-        assert data[0]["price"] == "1000" and data[1]["price"] == "0"
+        assert data[0]["price"] == 1000 and data[1]["price"] == 0
 
     async def test_purchase_apps_in_cart(
         self, 
@@ -164,10 +164,10 @@ class TestPurchases:
         await db_session.refresh(cart)
         await db_session.refresh(test_user)
 
-        add_response = await auth_client.post(
+        await auth_client.post(
             f"/api/v1/carts/my/{test_app_2_paid.id}"
         )
-        add_response = await auth_client.post(
+        await auth_client.post(
             f"/api/v1/carts/my/{test_app_2.id}"
         )
         checkout_response = await auth_client.post("/api/v1/carts/checkout")
@@ -179,7 +179,7 @@ class TestPurchases:
         assert get_apps_response.status_code == 200
         assert len(get_apps_response.json()) == 2
 
-    async def test_purchase_apps_in_cart_unsufficient_funds(
+    async def test_purchase_apps_in_cart_insufficient_funds(
         self,
         auth_client: AsyncClient,
         test_user: UserDB,

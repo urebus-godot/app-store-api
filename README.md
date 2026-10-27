@@ -136,4 +136,5 @@ ruff check .
 - Добавить health check при запуске Redis в compose.yaml
 - Проброс request_id в Websocket эндпоинте
 - Сделать код чище и однороднее
-- Добавить проброс RateLimiter-Remaining заголовка при исключении
+- Добавить проброс RateLimiter-Remaining заголовка при исключениях
+- Алерты в Grafana

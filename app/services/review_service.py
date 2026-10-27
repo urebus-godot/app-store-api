@@ -64,7 +64,7 @@ class ReviewService:
                 raise app_not_purchased_exception
 
             review = await self.uow.review_repo.create_review(
-                data, user_id, app_id
+                data=data, user_id=user_id, app_id=app_id
             )
             await self.uow.review_repo.update_app_rating(app_id)
             await self.uow.commit()

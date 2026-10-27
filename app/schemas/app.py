@@ -8,7 +8,6 @@ from sqlmodel import SQLModel, Field
 from pydantic import (
     ConfigDict, field_validator, field_serializer
 )
-
 from app.base_models.app import BaseApp, GameGenre, AppCategory
 from app.core.config import settings
 
@@ -32,8 +31,13 @@ class AppResponse(BaseApp):
     model_config = ConfigDict(from_attributes=True)
 
     @field_serializer("rating")
-    def serialize_rating(self, val: Decimal) -> float:
-        return round(val, 1)
+    def serialize_rating(self, value: Decimal) -> float:
+        return round(float(value), 1)
+
+    @field_serializer("price")
+    def serialize_price(self, value: Decimal) -> float:
+        return round(float(value), 2)
+
 
 class AppResponseWithPublisher(AppResponse):
     publisher: "PublisherResponse"

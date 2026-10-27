@@ -63,7 +63,6 @@ class AppRepository:
             AppDB.id == id,
             AppDB.public
         )
-
         app = (
             await self.session.exec(stmt.options(*self.load_attrs))
         ).one_or_none()

@@ -5,8 +5,7 @@ from botocore.config import Config
 from PIL import Image, UnidentifiedImageError
 
 from app.core.config import settings
-from app.task_queue.celery_app import celery_app
-
+from app.task_queue.celery_app import celery_app, logger
 from app.utils.files import variant_key
 
 
@@ -28,7 +27,7 @@ def get_boto3_client(
 @celery_app.task(
     name="media_tasks.generate_image_variants",
     bind=True,
-    max_retries=3,
+    max_retries=5,
     default_retry_delay=10,
 )
 def generate_image_variants(
@@ -44,7 +43,7 @@ def generate_image_variants(
         response = client.get_object(Bucket=bucket, Key=object_key)
         original_bytes = response["Body"].read()
     except Exception as exc:
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc, countdown=2 ** self.requests.retries)
 
     try:
         with Image.open(io.BytesIO(original_bytes)) as image:
@@ -65,4 +64,4 @@ def generate_image_variants(
                     ContentType="image/webp",
                 )
     except UnidentifiedImageError:
-        pass
+        logger.error( "Image is unidentified")

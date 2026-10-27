@@ -27,7 +27,9 @@ async def create_review(
     вызывает фоновую задачу обновления его рейтинга.
     
     **Возвращает**: ReviewResponse"""
-    return await review_service.create_review(data, app_id, user_id)
+    return await review_service.create_review(
+        data=data, app_id=app_id, user_id=user_id
+    )
 
 
 @router.patch(

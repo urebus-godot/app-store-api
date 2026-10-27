@@ -25,7 +25,6 @@ class CartItemDB(SQLModel, table=True):
     __tablename__ = "cart_items"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-
     added_at: datetime = Field(
         sa_type=TIMESTAMP(timezone=True),
         default_factory=lambda: datetime.now(timezone.utc)

@@ -60,8 +60,8 @@ class TestReviews:
             [
                 {
                     "rating": 1,
-                    "subject": "So Good!",
-                    "content": "This app is so good for tests"
+                    "subject": "So bad!",
+                    "content": "This app is so bad for tests"
                 },
                 201,
                 True
@@ -276,7 +276,6 @@ class TestReviews:
         get_response = await auth_client.get(
             f"/api/v1/reviews/{test_app_2.id}"
         )
-
         delete_response = await auth_client.delete(
             f"/api/v1/reviews/{review.id}"
         )

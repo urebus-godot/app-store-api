@@ -65,7 +65,7 @@ class TestUsers:
         argnames=["update_data", "expected_data", "expected_status_code"],
         argvalues=[
             [{"username": "test1"}, {"username": "test1"}, 200],
-            [{"balance": "10000"}, {"balance": "0"}, 200],
+            [{"balance": 10000}, {"balance": 0}, 200],
             [{"name": "serega"}, {"username": "testUser"}, 200],
             [{"username": " user"}, {}, 422],
             [{"password": "          "}, {}, 422],

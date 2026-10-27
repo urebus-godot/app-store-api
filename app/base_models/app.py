@@ -31,5 +31,5 @@ class BaseApp(SQLModel):
     )
     price: Decimal = Field(default=0.0, ge=0.0)
     public: bool = True
-    keywords: Optional[set[str]] = Field(default=None)
+    keywords: list[str] = Field(default=[])
     version: str = Field(default="1.0")

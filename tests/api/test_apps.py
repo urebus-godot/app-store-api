@@ -15,7 +15,7 @@ class TestApps:
         data = response.json()
 
         assert response.status_code == 201
-        assert data["price"] == "500"
+        assert data["price"] == 500.0
 
     async def test_create_app_not_publisher(self, auth_client: AsyncClient):
         response = await auth_client.post(
@@ -28,7 +28,7 @@ class TestApps:
         argvalues=[
             [{"title": "Code"}, {"title": "Code"}, 200],
             [{"title": "   "}, {}, 422],
-            [{"price": 600}, {"price": "600"}, 200],
+            [{"price": 600}, {"price": 600}, 200],
             [{"price": "money"}, {}, 422],
         ],
     )

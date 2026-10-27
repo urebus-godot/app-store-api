@@ -36,7 +36,6 @@ async def readiness_probe(
         "redis": "unknown",
         "celery": "unknown"
     }
-
     try:
         await session.exec(text("SELECT 1"))
         service_statuses["db"] = "ok"

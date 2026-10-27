@@ -52,6 +52,7 @@ class PurchaseService:
         self.uow = uow
         self.purchase_repo = purchase_repo
 
+    @staticmethod
     def get_cart_cache_key(user_id: UUID) -> str:
         return settings.CART_CACHE_KEY.format(user_id=user_id.hex)
 
@@ -81,16 +82,16 @@ class PurchaseService:
             return cart
 
         redis_cache_misses_total.labels(endpoint="/cart/my").inc()
-        async with self.uow:
-            cart = await self.uow.purchase_repo.get_cart(user_id)
+        cart = await self.purchase_repo.get_cart(user_id)
 
-            if cart is None:
+        if cart is None:
+            async with self.uow:
                 cart = await self.uow.purchase_repo.create_cart(user_id)
                 await self.uow.commit()
 
-            total_price = sum(item.app.price for item in cart.items)
-            cart = CartResponse.model_validate(cart)
-            cart.total_price = total_price
+        total_price = sum(item.app.price for item in cart.items)
+        cart = CartResponse.model_validate(cart)
+        cart.total_price = total_price
 
         await self.redis.set(
             name=self.get_cart_cache_key(user_id),
@@ -172,9 +173,6 @@ class PurchaseService:
                     item.app_id, user.id
                 )
                 if purchased:
-                    logger.info(
-                        f"App {item.app_id} is already purchased, skipping"
-                        )
                     continue
                 
                 purchased_apps.append(item)
@@ -184,7 +182,7 @@ class PurchaseService:
                 publisher_earnings[pub_id] += item.app.price
 
             if not purchased_apps:
-                await self.delete_cart(user_id, self.uow)
+                await self.uow.purchase_repo.delete_cart(cart)
                 await self.redis.delete(f"cart_cache:{user.id}")
                 return []
 
@@ -203,11 +201,9 @@ class PurchaseService:
                     )
                 publisher.balance += earnings
 
-            await self.delete_cart(user_id)
+            await self.uow.purchase_repo.delete_cart(cart)
             await self.redis.delete(f"cart_cache:{user.id}")
-
             await self.uow.commit()
-            logger.info("Transaction has ended successfully")
 
             if user.email is not None:
                 app_names = ", ".join(
@@ -245,11 +241,6 @@ class PurchaseService:
             await self.redis.delete(self.get_cart_cache_key(user_id))
             await self.uow.purchase_repo.remove_item_from_cart(cart_item)
             await self.uow.commit()
-
-    async def delete_cart(
-        self, user_id: UUID, 
-    ) -> None:
-        await self.uow.purchase_repo.delete_cart(user_id)
 
     async def delete_cart_by_user(
         self, user_id: UUID, 

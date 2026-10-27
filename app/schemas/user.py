@@ -3,7 +3,7 @@ from uuid import UUID
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import ConfigDict, field_validator
+from pydantic import ConfigDict, field_validator, field_serializer
 from sqlmodel import SQLModel, Field
 
 from app.base_models.user import BaseUser, UserRole, BaseUserRole
@@ -58,11 +58,11 @@ class UserUpdate(SQLModel):
         default=None, 
         min_length=settings.MIN_NAME_LEN,
         max_length=settings.MAX_NAME_LEN
-        )
+    )
     password: Optional[str] = Field(
         default=None,
         min_length=settings.MIN_PASSWORD_LEN
-        )
+    )
     
     @field_validator("password")
     @classmethod
@@ -98,6 +98,10 @@ class PublisherResponse(BaseUser):
 class CurrentUserResponse(UserResponse):
     balance: Decimal
     birth_date: date
+
+    @field_serializer("balance")
+    def serialize_balance(self, value: Decimal) -> float:
+        return round(float(value), 2)
 
 
 class UserResponseWithReviewsAndApps(UserResponse):

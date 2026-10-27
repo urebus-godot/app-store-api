@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 from datetime import datetime, timezone, date, timedelta
 import asyncio
 import logging
-import logging.config
+import logging.config # noqa: F401
 import json
 
 from botocore.client import Config

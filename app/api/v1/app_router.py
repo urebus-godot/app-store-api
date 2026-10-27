@@ -114,7 +114,7 @@ async def update_game(
 
 @router.get(
     "/apps/{id}",
-    response_model=Union[AppResponseWithPublisher | GameResponseWithPublisher]
+    response_model=Union[AppResponseWithPublisher, GameResponseWithPublisher]
 )
 async def get_app(
     id: UUID, app_service: AppServiceDep
@@ -122,7 +122,6 @@ async def get_app(
     """Находит приложение по id в базе данных.
     
     **Возвращает**: AppResponseWithPublisher или GameResponseWithPublisher"""
-    logger.info("get_app")
     app = await app_service.get_app(id)
     return app
 

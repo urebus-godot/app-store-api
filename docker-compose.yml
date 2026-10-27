@@ -87,21 +87,6 @@ services:
     networks:
       - app_network
 
-  celery_flower:
-    image: mher/flower:2.0
-    container_name: flower
-    restart: unless-stopped
-    ports:
-      - "5555:5555"
-    env_file:
-      - .env
-    depends_on:
-      - redis
-      - celery_worker
-    command: celery flower ${REDIS_URL} --port=5555
-    networks:
-      - app_network
-
   prometheus:
     container_name: prom
     image: prom/prometheus:v2.55.0
@@ -131,11 +116,23 @@ services:
     networks:
       - app_network
 
-  celery_worker:
+  celery_flower:
+    image: mher/flower:2.0
+    container_name: flower
+    restart: unless-stopped
+    ports:
+      - "5555:5555"
+    env_file:
+      - .env
+    command: celery flower ${REDIS_URL} --port=5555
+    networks:
+      - app_network
+
+  images_worker:
     user: "1000:1000"
     build:
       context: .
-    container_name: worker
+    container_name: images_worker
     volumes:
       - ./app:/app/app
       - prom:/tmp/prom
@@ -143,8 +140,29 @@ services:
     env_file:
       - .env
     depends_on:
-      - redis
-    command: celery -A app.task_queue.celery_app worker --loglevel=info
+      redis:
+        condition: service_healthy
+    command: celery -A app.task_queue.celery_app worker --loglevel=info -Q images --concurrency=2
+    networks:
+      - app_network
+    environment:
+      PROMETHEUS_MULTIPROC_DIR: /tmp/prom
+
+  default_worker:
+    user: "1000:1000"
+    build:
+      context: .
+    container_name: default_worker
+    volumes:
+      - ./app:/app/app
+      - prom:/tmp/prom
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: celery -A app.task_queue.celery_app worker --loglevel=info -Q default --concurrency=2
     networks:
       - app_network
     environment:
@@ -161,7 +179,8 @@ services:
     volumes:
       - ./app:/app/app
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     command: celery -A app.task_queue.celery_app beat --loglevel=info -s /tmp/celerybeat-schedule
     networks:
       - app_network
@@ -178,6 +197,8 @@ services:
       - prom:/tmp/prom
     depends_on:
       pgbouncer:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     restart: unless-stopped
     env_file:
